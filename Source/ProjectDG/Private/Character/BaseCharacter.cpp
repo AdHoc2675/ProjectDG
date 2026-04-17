@@ -64,6 +64,11 @@ const UAttributeSet* ABaseCharacter::GetCharacterAttributeSet() const
 	return nullptr;
 }
 
+UCombatComponent* ABaseCharacter::GetCombatComponent() const
+{
+	return CombatComponent;
+}
+
 FGameplayTag ABaseCharacter::GetTeamTag() const
 {
 	return TeamTag;
