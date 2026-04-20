@@ -9,6 +9,8 @@
 class UAbilitySystemComponent;
 class UAttributeSet;
 
+struct FInputActionValue;
+
 /**
  * APlayerCharacterBase
  *
@@ -38,6 +40,10 @@ protected:
 	//player state에서 ASC를 확인하는 함수
 	virtual void InitializePlayerAbilitySystem();	
 	
+	//클라이언트 재시작시 호출되는 함수 오버라이드
+	virtual void PawnClientRestart() override;
+	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+
 public:
 	//BaseCharacter 공용 ASC getter
 	virtual UAbilitySystemComponent* GetCharacterAbilitySystemComponent() const override;
@@ -48,4 +54,35 @@ public:
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
 	
+private:
+	UPROPERTY(EditDefaultsOnly, Category = "View", meta = (AllowPrivateAccess = "true"))
+	class USpringArmComponent* CameraBoom;
+
+	UPROPERTY(EditDefaultsOnly, Category = "View", meta = (AllowPrivateAccess = "true"))
+	class UCameraComponent* FollowCam;
+
+#pragma region Input
+public:
+	void LookAction(const FInputActionValue& InputActionValue);
+
+	void MoveAction(const FInputActionValue& InputActionValue);
+
+	FVector GetLookRightDirection() const;
+	FVector GetLookForwardDirection() const;
+	FVector GetMoveForwardDirection() const;
+
+private:
+	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction* IA_Jump;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	class UInputAction* IA_Look;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+	class UInputMappingContext* BasicInputMappingContext;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+	class UInputAction* IA_Move;
+
+#pragma endregion Input
 };
