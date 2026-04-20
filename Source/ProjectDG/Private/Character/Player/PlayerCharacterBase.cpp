@@ -39,6 +39,17 @@ void APlayerCharacterBase::BeginPlay()
 
 void APlayerCharacterBase::InitializePlayerAbilitySystem()
 {
+	if (ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>())
+	{
+		// ASC 가져오기
+		UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
+		
+		// 정보 갱신: OwnerActor는 PlayerState, AvatarActor는 현재 Character
+		if (ASC)
+		{
+			ASC->InitAbilityActorInfo(PS, this);
+		}
+	}
 }
 
 void APlayerCharacterBase::PawnClientRestart()
@@ -71,12 +82,20 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 
 UAbilitySystemComponent* APlayerCharacterBase::GetCharacterAbilitySystemComponent() const
 {
-    return ABaseCharacter::GetCharacterAbilitySystemComponent();
+	if (ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>())
+	{
+		return PS->GetAbilitySystemComponent();
+	}
+	return nullptr;
 }
 
 const UAttributeSet* APlayerCharacterBase::GetCharacterAttributeSet() const
 {
-    return ABaseCharacter::GetCharacterAttributeSet();
+	if (ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>())
+	{
+		return PS->GetAttributeSet();
+	}
+	return nullptr;
 }
 
 void APlayerCharacterBase::PossessedBy(AController* NewController)

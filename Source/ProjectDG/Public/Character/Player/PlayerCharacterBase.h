@@ -61,6 +61,8 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "View", meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCam;
 
+
+	// Input Action Assets
 #pragma region Input
 public:
 	void LookAction(const FInputActionValue& InputActionValue);
