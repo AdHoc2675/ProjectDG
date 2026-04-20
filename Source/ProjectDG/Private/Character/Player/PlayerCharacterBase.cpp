@@ -1,4 +1,4 @@
-
+ï»¿
 
 #include "Character/Player/PlayerCharacterBase.h"
 
@@ -41,10 +41,10 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 {
 	if (ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>())
 	{
-		// ASC °¡Á®¿À±â
+		// ASC ê°€ì ¸ì˜¤ê¸°
 		UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
 		
-		// Á¤º¸ °»½Å: OwnerActor´Â PlayerState, AvatarActor´Â ÇöÀç Character
+		// ì •ë³´ ê°±ì‹ : OwnerActorëŠ” PlayerState, AvatarActorëŠ” í˜„ì¬ Character
 		if (ASC)
 		{
 			ASC->InitAbilityActorInfo(PS, this);
@@ -61,7 +61,7 @@ void APlayerCharacterBase::PawnClientRestart()
 		UEnhancedInputLocalPlayerSubsystem* InputSubSystem = OwningPlayerController->GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
 		if (InputSubSystem)
 		{
-			//ÀçÁ¢¼Ó½Ã ±âÁ¸¿¡ IMC¸¦ Áö¿ì°í »õ·Î µî·ÏÇÑ´Ù.
+			//ì¬ì ‘ì†ì‹œ ê¸°ì¡´ì— IMCë¥¼ ì§€ìš°ê³  ìƒˆë¡œ ë“±ë¡í•œë‹¤.
 			InputSubSystem->RemoveMappingContext(BasicInputMappingContext);
 			InputSubSystem->AddMappingContext(BasicInputMappingContext, 0);
 		}
@@ -135,6 +135,6 @@ FVector APlayerCharacterBase::GetLookForwardDirection() const
 
 FVector APlayerCharacterBase::GetMoveForwardDirection() const
 {
-	//¿ÜÀûÀ¸·Î("¿À¸¥ÂÊ ¹æÇâ°ú À§ÂÊ ¹æÇâ¿¡ ¼öÁ÷ÀÎ ¹æÇâ ¡æ Áï, Àü¹æ ¹æÇâÀ» ±¸ÇÑ´Ù")
+	//ì™¸ì ìœ¼ë¡œ("ì˜¤ë¥¸ìª½ ë°©í–¥ê³¼ ìœ„ìª½ ë°©í–¥ì— ìˆ˜ì§ì¸ ë°©í–¥ â†’ ì¦‰, ì „ë°© ë°©í–¥ì„ êµ¬í•œë‹¤")
 	return FVector::CrossProduct(GetLookRightDirection(), FVector::UpVector);
 }

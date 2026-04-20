@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "GameFramework/DG_PlayerState.h"
@@ -9,17 +9,17 @@ ADG_PlayerState::ADG_PlayerState()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
-	// ¼­¹ö¿Í Å¬¶óÀÌ¾ğÆ® °£ÀÇ µ¿±âÈ­ ºóµµ »óÇâ Á¶Àı
+	// ì„œë²„ì™€ í´ë¼ì´ì–¸íŠ¸ ê°„ì˜ ë™ê¸°í™” ë¹ˆë„ ìƒí–¥ ì¡°ì ˆ
 	NetUpdateFrequency = 100.f;
 
-	// ASC »ı¼º ¹× ¼³Á¤
+	// ASC ìƒì„± ë° ì„¤ì •
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	
-	// ÇÃ·¹ÀÌ¾îÀÇ °æ¿ì Mixed ¸ğµå ±ÇÀå (ÀÚ½ÅÀÇ GameplayEffect´Â Á÷Á¢ ½Ã¹Ä·¹ÀÌ¼ÇÇÏ°í, Å¸ÀÎ¿¡°Ô´Â Áß¿äÇÑ Á¤º¸¸¸ µ¿±âÈ­)
+	// í”Œë ˆì´ì–´ì˜ ê²½ìš° Mixed ëª¨ë“œ ê¶Œì¥ (ìì‹ ì˜ GameplayEffectëŠ” ì§ì ‘ ì‹œë®¬ë ˆì´ì…˜í•˜ê³ , íƒ€ì¸ì—ê²ŒëŠ” ì¤‘ìš”í•œ ì •ë³´ë§Œ ë™ê¸°í™”)
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
-	// AttributeSet »ı¼º
+	// AttributeSet ìƒì„±
 	AttributeSet = CreateDefaultSubobject<UAttributeSet>(TEXT("AttributeSet"));
 }
 
