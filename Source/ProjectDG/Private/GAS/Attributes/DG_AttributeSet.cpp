@@ -3,3 +3,6 @@
 
 #include "GAS/Attributes/DG_AttributeSet.h"
 
+UDG_AttributeSet::UDG_AttributeSet()
+{
+}
