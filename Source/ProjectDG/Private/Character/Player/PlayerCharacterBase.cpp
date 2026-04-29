@@ -18,6 +18,7 @@
 #include "Net/UnrealNetwork.h"
 
 #include "Animation/AnimInstance.h"
+#include "Character/Player/Data/PlayerCharacterMovementData.h"
 
 APlayerCharacterBase::APlayerCharacterBase()
 {
@@ -314,6 +315,11 @@ void APlayerCharacterBase::MoveAction(const FInputActionValue& InputActionValue)
 	AddMovementInput(MoveDirection.GetSafeNormal());
 }
 
+void APlayerCharacterBase::OnRep_IsSprinting()
+{
+	ApplyCurrentMovementSpeed();
+}
+
 void APlayerCharacterBase::DodgeAction()
 {
 	if (!CanDodge())
@@ -326,64 +332,64 @@ void APlayerCharacterBase::DodgeAction()
 void APlayerCharacterBase::ServerSetSprinting_Implementation(bool bNewSprinting,
 	FVector_NetQuantizeNormal DesiredDirection)
 {
-	// if (bNewSprinting)
-	// {
-	// 	if (IsDead() || bIsDodging)
-	// 	{
-	// 		return;
-	// 	}
-	// 	if (!MovementData || FVector(DesiredDirection).IsNearlyZero())
-	// 	{
-	// 		return;
-	// 	}
-	// 	if (!HasEnoughStamina(1.f))
-	// 	{
-	// 		return;
-	// 	}
-	// }
-	//
-	// SetSprintingState(bNewSprinting);
+	if (bNewSprinting)
+	{
+		if (IsDead() || bIsDodging)
+		{
+			return;
+		}
+		if (!MovementData || FVector(DesiredDirection).IsNearlyZero())
+		{
+			return;
+		}
+		if (!HasEnoughStamina(1.f))
+		{
+			return;
+		}
+	}
+	
+	SetSprintingState(bNewSprinting);
 }
 
 void APlayerCharacterBase::ServerPerformDodge_Implementation(FVector_NetQuantizeNormal DodgeDirection)
 {
-	// if (!MovementData)
-	// {
-	// 	return;
-	// }
-	// if (IsDead() || bIsDodging)
-	// {
-	// 	return;
-	// }
-	//
-	// const FVector Direction = FVector(DodgeDirection).GetSafeNormal();
-	// if (Direction.IsNearlyZero())
-	// {
-	// 	return;
-	// }
-	//
-	// if (!TryConsumeStamina(MovementData->DodgeStaminaCost))
-	// {
-	// 	return;
-	// }
-	//
-	// SetSprintingState(false);
-	// SetDodgingState(true);
-	//
-	// LaunchCharacter(Direction * MovementData->DodgeStrength, true, false);
-	//
-	// if (MovementData->DodgeMontage)
-	// {
-	// 	MulticastPlayMontage(MovementData->DodgeMontage);
-	// }
-	//
-	// GetWorldTimerManager().SetTimer(
-	// 		DodgeTimerHandle,
-	// 		this,
-	// 		&APlayerCharacterBase::FinishDodge,
-	// 		MovementData->DodgeDuration,
-	// 		false
-	// );
+	if (!MovementData)
+	{
+		return;
+	}
+	if (IsDead() || bIsDodging)
+	{
+		return;
+	}
+	
+	const FVector Direction = FVector(DodgeDirection).GetSafeNormal();
+	if (Direction.IsNearlyZero())
+	{
+		return;
+	}
+	
+	if (!TryConsumeStamina(MovementData->DodgeStaminaCost))
+	{
+		return;
+	}
+	
+	SetSprintingState(false);
+	SetDodgingState(true);
+	
+	LaunchCharacter(Direction * MovementData->DodgeStrength, true, false);
+	
+	if (MovementData->DodgeMontage)
+	{
+		MulticastPlayMontage(MovementData->DodgeMontage);
+	}
+	
+	GetWorldTimerManager().SetTimer(
+			DodgeTimerHandle,
+			this,
+			&APlayerCharacterBase::FinishDodge,
+			MovementData->DodgeDuration,
+			false
+	);
 }
 
 void APlayerCharacterBase::MulticastPlayMontage_Implementation(UAnimMontage* Montage)
@@ -425,7 +431,7 @@ void APlayerCharacterBase::SprintCompleted()
 
 FVector APlayerCharacterBase::GetCameraForwardOnPlane() const
 {
-	FVector Forward = (FollowCam ? FollowCam->GetForwardVector() : FVector::ForwardVector); //FVector::ForwardVector은 뭐지
+	FVector Forward = (FollowCam ? FollowCam->GetForwardVector() : FVector::ForwardVector);
 	Forward.Z = 0.f;
 	
 	return Forward.GetSafeNormal();
@@ -434,35 +440,35 @@ FVector APlayerCharacterBase::GetCameraForwardOnPlane() const
 
 void APlayerCharacterBase::ApplyMovementData()
 {
-	// if (!MovementData)
-	// {
-	// 	Debug::Print(TEXT("[PlayerCharacterBase] MovementData is null."));
-	// 	return;
-	// }
-	//
-	// UCharacterMovementComponent* MoveComp = GetCharacterMovement();
-	// if (!MoveComp)
-	// {
-	// 	return;
-	// }
+	if (!MovementData)
+	{
+		Debug::Print(TEXT("[PlayerCharacterBase] MovementData is null."));
+		return;
+	}
 	
-	// MoveComp->RotationRate = MovementData->RotationRate;
-	// MoveComp->JumpVelocity = MovementData->JumpZVelocity;
-	// MoveComp->AirControl = MovementData->AirControl;
+	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
+	if (!MoveComp)
+	{
+		return;
+	}
+	
+	MoveComp->RotationRate = MovementData->RotationRate;
+	MoveComp->JumpZVelocity = MovementData->JumpZVelocity;
+	MoveComp->AirControl = MovementData->AirControl;
 }
 
 void APlayerCharacterBase::UpdateSprintStamina(float DeltaSeconds)
 {
-	// if (!HasAuthority() || !bIsSprinting || !MovementData)
-	// {
-	// 	return;
-	// }
-	//
-	// const float Cost = MovementData->SprintStaminaCostPerSecond * DeltaSeconds;
-	// if (!TryConsumeStamina(Cost))
-	// {
-	// 	SetSprintingState(false);
-	// }
+	if (!HasAuthority() || !bIsSprinting || !MovementData)
+	{
+		return;
+	}
+	
+	const float Cost = MovementData->SprintStaminaCostPerSecond * DeltaSeconds;
+	if (!TryConsumeStamina(Cost))
+	{
+		SetSprintingState(false);
+	}
 }
 
 bool APlayerCharacterBase::HasEnoughStamina(float Amount) const
@@ -485,63 +491,58 @@ bool APlayerCharacterBase::TryConsumeStamina(float Amount)
 
 bool APlayerCharacterBase::CanSprint() const
 {
-	// if (!MovementData)
-	// {
-	// 	return false;
-	// }
-	//
-	// if (IsDead() || bIsDodging)
-	// {
-	// 	return false;
-	// }
-	//
-	// if (CurrentMoveInput.IsNearlyZero())
-	// {
-	// 	return false;
-	// }
-	//
-	// return HasEnoughStamina(1.f);
+	if (!MovementData)
+	{
+		return false;
+	}
 	
-	return false;
+	if (IsDead() || bIsDodging)
+	{
+		return false;
+	}
+	
+	if (CurrentMoveInput.IsNearlyZero())
+	{
+		return false;
+	}
+	
+	return HasEnoughStamina(1.f);
 }
 
 bool APlayerCharacterBase::CanDodge() const
 {
-	// if (!MovementData)
-	// {
-	// 	return false;
-	// }
-	//
-	// if (IsDead() || bIsDodging)
-	// {
-	// 	return false;
-	// }
-	//
-	// if (CurrentMoveInput.IsNearlyZero())
-	// {
-	// 	return false;
-	// }
-	//
-	// return HasEnoughStamina(MovementData->DodgeStaminaCost);
+	if (!MovementData)
+	{
+		return false;
+	}
 	
-	return false;
+	if (IsDead() || bIsDodging)
+	{
+		return false;
+	}
+	
+	if (CurrentMoveInput.IsNearlyZero())
+	{
+		return false;
+	}
+	
+	return HasEnoughStamina(MovementData->DodgeStaminaCost);
 }
 
 void APlayerCharacterBase::ApplyCurrentMovementSpeed()
 {
-	// if (!MovementData)
-	// {
-	// 	return;
-	// }
-	//
-	// UCharacterMovementComponent* MoveComp = GetCharacterMovement();
-	// if (!MoveComp)
-	// {
-	// 	return;
-	// }
-	//
-	// MoveComp->MaxWalkSpeed = bIsSprinting ? MovementData->SprintSpeed : MovementData->WalkSpeed;
-
+	if (!MovementData)
+	{
+		return;
+	}
+	
+	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
+	if (!MoveComp)
+	{
+		return;
+	}
+	
+	MoveComp->MaxWalkSpeed = bIsSprinting ? MovementData->SprintSpeed : MovementData->WalkSpeed;
 }
 
 void APlayerCharacterBase::SetSprintingState(bool bNewSprinting)
