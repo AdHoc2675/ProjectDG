@@ -143,6 +143,15 @@ protected:
 	void SprintCompleted();
 #pragma endregion Movement
 
+#pragma region Animation
+	
+public:
+	// 애니메이션 인스턴스에서 사용할 Getter
+	FORCEINLINE bool IsSprinting() const { return bIsSprinting; }
+	FORCEINLINE bool IsDodging() const { return bIsDodging; }
+	FORCEINLINE bool IsParkouring() const { return bIsParkouring; }
+	
+#pragma endregion Animation
 
 protected:
 	void ApplyMovementData();
