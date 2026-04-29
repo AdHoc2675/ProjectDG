@@ -9,6 +9,7 @@
 class UAbilitySystemComponent;
 class UAttributeSet;
 class UDG_AttributeSet;
+class UAnimMontage;
 
 
 struct FInputActionValue;
@@ -35,6 +36,9 @@ class PROJECTDG_API APlayerCharacterBase : public ABaseCharacter
 	
 public:
 	APlayerCharacterBase();
+	
+	virtual void Tick(float DeltaSeconds) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
 protected:
 	virtual void BeginPlay() override;
@@ -67,38 +71,100 @@ public:
 	//네트워크복제로 PlayerState가 들어 왓을 때 호출
 	virtual void OnRep_PlayerState() override;
 	
-private:
+protected:
 	//카메라 관련 셋팅
-	UPROPERTY(EditDefaultsOnly, Category = "View", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|View", meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* CameraBoom;
 
-	UPROPERTY(EditDefaultsOnly, Category = "View", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|View", meta = (AllowPrivateAccess = "true"))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
 	class UCameraComponent* FollowCam;
-
 
 	// Input Action Assets
 #pragma region Input
-public:
-	void LookAction(const FInputActionValue& InputActionValue);
-
-	void MoveAction(const FInputActionValue& InputActionValue);
-
-	FVector GetLookRightDirection() const;
-	FVector GetLookForwardDirection() const;
-	FVector GetMoveForwardDirection() const;
-
-private:
-	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputAction* IA_Jump;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputAction* IA_Look;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputMappingContext* BasicInputMappingContext;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputAction* IA_Move;
+	
+	//회피
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
+	class UInputAction* IA_Dodge;
+	
+	//질주
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
+	class UInputAction* IA_Sprint;
+	
+protected:
+	void LookAction(const FInputActionValue& InputActionValue);
+	void MoveAction(const FInputActionValue& InputActionValue);
+
+	// z값 보정 적용 함수
+	FVector GetCameraForwardOnPlane() const;
+	FVector GetCameraRightOnPlane() const;
+	FVector GetDesiredMoveDirection() const;
 
 #pragma endregion Input
+	
+#pragma region Movement
+protected:
+	// UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacterBase|Data")
+	// TObjectPtr<UPlayerCharacterMovementData> MovementData = nullptr;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "PlayerCharacterBase|Movement")
+	FVector2D CurrentMoveInput = FVector2D::ZeroVector;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "PlayerCharacterBase|Movement")
+	bool bIsSprinting = false;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "PlayerCharacterBase|Movement")
+	bool bIsDodging = false;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "PlayerCharacterBase|Movement")
+	bool bIsParkouring = false;
+
+	FTimerHandle DodgeTimerHandle;
+	FTimerHandle ParkourTimerHandle;
+	
+protected:
+	void DodgeAction();
+	void SprintStarted();
+	void SprintCompleted();
+#pragma endregion Movement
+
+
+protected:
+	void ApplyMovementData();
+	void ApplyCurrentMovementSpeed();
+
+	void SetSprintingState(bool bNewSprinting);
+	void SetDodgingState(bool bNewDodging);
+
+	void FinishDodge();
+
+protected:
+	void UpdateSprintStamina(float DeltaSeconds);
+
+	bool HasEnoughStamina(float Amount) const;
+	bool TryConsumeStamina(float Amount);
+
+	bool CanSprint() const;
+	bool CanDodge() const;
+
+protected:
+	UFUNCTION(Server, Reliable)
+	void ServerSetSprinting(bool bNewSprinting, FVector_NetQuantizeNormal DesiredDirection);
+
+	UFUNCTION(Server, Reliable)
+	void ServerPerformDodge(FVector_NetQuantizeNormal DodgeDirection);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastPlayMontage(UAnimMontage* Montage);
 };

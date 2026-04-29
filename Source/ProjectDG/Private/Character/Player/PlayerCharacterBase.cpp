@@ -15,20 +15,26 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "Net/UnrealNetwork.h"
+
+#include "Animation/AnimInstance.h"
 
 APlayerCharacterBase::APlayerCharacterBase()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
+	
 	//스프링암 생성
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(GetRootComponent());
-	
 	//컨트롤러 회전 -> 스프링암 따라가도록 
 	CameraBoom->bUsePawnControlRotation = true;
+	CameraBoom->TargetArmLength = 450.f;
 
 	//카메라 생성
 	FollowCam = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCam"));
 	FollowCam->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
-
+	FollowCam->bUsePawnControlRotation = false;
 	bUseControllerRotationYaw = false;
 
 	//이동방향기준회전,속도
@@ -43,6 +49,25 @@ void APlayerCharacterBase::BeginPlay()
     
 	//월드시작시 ASC초기화
     InitializePlayerAbilitySystem();
+	ApplyMovementData();
+	ApplyCurrentMovementSpeed();
+}
+
+void APlayerCharacterBase::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	// sprint/dodge 테스트용 임시함수 - 이후 GA 및 GE로 관리
+	UpdateSprintStamina(DeltaSeconds);
+}
+
+void APlayerCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(APlayerCharacterBase, bIsSprinting);
+	DOREPLIFETIME(APlayerCharacterBase, bIsDodging);
+	DOREPLIFETIME(APlayerCharacterBase, bIsParkouring);
 }
 
 void APlayerCharacterBase::InitializePlayerAbilitySystem()
@@ -160,20 +185,33 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	 * nullptr 상태에서 바인딩하려 하면 문제 생길 수 있으므로
 	 * 하나씩 방어적으로 체크한다.
 	 */
-	if (IA_Jump)
-	{
-		EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Triggered, this, &APlayerCharacterBase::Jump);
-	}
+	 if (IA_Move)
+        {
+                EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered,this,&APlayerCharacterBase::MoveAction);
+                EnhancedInputComponent->BindAction(IA_Move,ETriggerEvent::Completed,this,&APlayerCharacterBase::MoveAction);
+        }
 
-	if (IA_Look)
-	{
-		EnhancedInputComponent->BindAction(IA_Look, ETriggerEvent::Triggered, this, &APlayerCharacterBase::LookAction);
-	}
+        if (IA_Look)
+        {
+                EnhancedInputComponent->BindAction(IA_Look,ETriggerEvent::Triggered,this,&APlayerCharacterBase::LookAction);
+        }
 
-	if (IA_Move)
-	{
-		EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered, this, &APlayerCharacterBase::MoveAction);
-	}
+        if (IA_Jump)
+        {
+                EnhancedInputComponent->BindAction(IA_Jump,ETriggerEvent::Started,this,&ACharacter::Jump);
+                EnhancedInputComponent->BindAction(IA_Jump,ETriggerEvent::Completed,this,&ACharacter::StopJumping);
+        }
+
+        if (IA_Dodge)
+        {
+                EnhancedInputComponent->BindAction(IA_Dodge,ETriggerEvent::Triggered,this,&APlayerCharacterBase::DodgeAction);
+        }
+
+        if (IA_Sprint)
+        {
+                EnhancedInputComponent->BindAction(IA_Sprint,ETriggerEvent::Started,this,&APlayerCharacterBase::SprintStarted);
+                EnhancedInputComponent->BindAction(IA_Sprint,ETriggerEvent::Completed,this,&APlayerCharacterBase::SprintCompleted);
+        }
 }
 
 UAbilitySystemComponent* APlayerCharacterBase::GetCharacterAbilitySystemComponent() const
@@ -229,9 +267,6 @@ UDG_AttributeSet* APlayerCharacterBase::GetPlayerDGAttributeSet() const
 
 void APlayerCharacterBase::PossessedBy(AController* NewController)
 {
-	/**
-	 * 상위 클래스 공통 초기화 먼저 수행
-	 */
 	Super::PossessedBy(NewController);
 
 	/**
@@ -243,14 +278,10 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 
 void APlayerCharacterBase::OnRep_PlayerState()
 {
-	/**
-	 * 상위 클래스 공통 처리 먼저 수행
-	 */
 	Super::OnRep_PlayerState();
 
 	/**
-	 * PlayerState가 복제 완료된 뒤
-	 * ASC 초기화 재시도
+	 * PlayerState가 복제 완료된 뒤 ASC 초기화 재시도
 	 *
 	 * 네트워크 환경에서 매우 중요
 	 */
@@ -259,66 +290,293 @@ void APlayerCharacterBase::OnRep_PlayerState()
 
 void APlayerCharacterBase::LookAction(const FInputActionValue& InputActionValue)
 {
-	/**
-	 * Look 입력은 FVector2D로 들어온다고 가정
-	 * X = 좌우(Yaw), Y = 상하(Pitch)
-	 */
 	const FVector2D InputValue = InputActionValue.Get<FVector2D>();
-
-	/**
-	 * 일반적으로 마우스 Y를 올리면 화면은 위로 가지만
-	 * 입력값 체계에 따라 반전되는 경우가 있으므로
-	 * 현재는 -Y를 사용
-	 */
+	
 	AddControllerPitchInput(-InputValue.Y);
 	AddControllerYawInput(InputValue.X);
 }
 
 void APlayerCharacterBase::MoveAction(const FInputActionValue& InputActionValue)
 {
-	/**
-	 * Move 입력 역시 FVector2D로 받는다.
-	 * X = 좌우 이동
-	 * Y = 전후 이동
-	 */
-	const FVector2D InputValue = InputActionValue.Get<FVector2D>();
-
-	/**
-	 * 현재 구현은 카메라 기준 Forward / Right 벡터를 그대로 사용한다.
-	 *
-	 * 주의:
-	 * - 카메라 Pitch가 크게 들어가면 이동 벡터에 Z 성분이 섞일 수 있다.
-	 * - 보통 3인칭은 Yaw 평면 기준 이동으로 한 번 더 정리하기도 한다.
-	 *
-	 * 하지만 현재 단계에서는 기존 네 구조를 최대한 유지한다.
-	 */
-	AddMovementInput(GetLookForwardDirection() * InputValue.Y + GetLookRightDirection() * InputValue.X);
+	CurrentMoveInput = InputActionValue.Get<FVector2D>();
+	
+	if (CurrentMoveInput.IsNearlyZero())
+	{
+		if (bIsSprinting)
+		{
+			SprintCompleted();
+		}
+		
+		return;
+	}
+	
+	const FVector MoveDirection = GetCameraForwardOnPlane() * CurrentMoveInput.Y + GetCameraRightOnPlane() * CurrentMoveInput.X;
+	AddMovementInput(MoveDirection.GetSafeNormal());
 }
 
-FVector APlayerCharacterBase::GetLookRightDirection() const
+void APlayerCharacterBase::DodgeAction()
 {
-	/**
-	 * 카메라 기준 오른쪽 방향 반환
-	 */
-	return FollowCam ? FollowCam->GetRightVector() : FVector::RightVector;
+	if (!CanDodge())
+	{
+		return;
+	}
+	ServerPerformDodge(GetDesiredMoveDirection());
 }
 
-FVector APlayerCharacterBase::GetLookForwardDirection() const
+void APlayerCharacterBase::ServerSetSprinting_Implementation(bool bNewSprinting,
+	FVector_NetQuantizeNormal DesiredDirection)
 {
-	/**
-	 * 카메라 기준 전방 방향 반환
-	 */
-	return FollowCam ? FollowCam->GetForwardVector() : FVector::ForwardVector;
+	// if (bNewSprinting)
+	// {
+	// 	if (IsDead() || bIsDodging)
+	// 	{
+	// 		return;
+	// 	}
+	// 	if (!MovementData || FVector(DesiredDirection).IsNearlyZero())
+	// 	{
+	// 		return;
+	// 	}
+	// 	if (!HasEnoughStamina(1.f))
+	// 	{
+	// 		return;
+	// 	}
+	// }
+	//
+	// SetSprintingState(bNewSprinting);
 }
 
-FVector APlayerCharacterBase::GetMoveForwardDirection() const
+void APlayerCharacterBase::ServerPerformDodge_Implementation(FVector_NetQuantizeNormal DodgeDirection)
 {
-	/**
-	 * 오른쪽 벡터와 월드 UpVector의 외적을 사용해
-	 * 평면상 전방 벡터를 구하는 보조 함수
-	 *
-	 * 현재 MoveAction에서는 직접 사용하지 않지만,
-	 * 추후 Yaw-only 이동 방식으로 바꿀 때 재사용 가능
-	 */
-	return FVector::CrossProduct(GetLookRightDirection(), FVector::UpVector).GetSafeNormal();
+	// if (!MovementData)
+	// {
+	// 	return;
+	// }
+	// if (IsDead() || bIsDodging)
+	// {
+	// 	return;
+	// }
+	//
+	// const FVector Direction = FVector(DodgeDirection).GetSafeNormal();
+	// if (Direction.IsNearlyZero())
+	// {
+	// 	return;
+	// }
+	//
+	// if (!TryConsumeStamina(MovementData->DodgeStaminaCost))
+	// {
+	// 	return;
+	// }
+	//
+	// SetSprintingState(false);
+	// SetDodgingState(true);
+	//
+	// LaunchCharacter(Direction * MovementData->DodgeStrength, true, false);
+	//
+	// if (MovementData->DodgeMontage)
+	// {
+	// 	MulticastPlayMontage(MovementData->DodgeMontage);
+	// }
+	//
+	// GetWorldTimerManager().SetTimer(
+	// 		DodgeTimerHandle,
+	// 		this,
+	// 		&APlayerCharacterBase::FinishDodge,
+	// 		MovementData->DodgeDuration,
+	// 		false
+	// );
+}
+
+void APlayerCharacterBase::MulticastPlayMontage_Implementation(UAnimMontage* Montage)
+{
+	if (!Montage)
+	{
+		return;
+	}
+
+	USkeletalMeshComponent* MeshComp = GetMesh();
+	if (!MeshComp)
+	{
+		return;
+	}
+
+	UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
+	if (!AnimInstance)
+	{
+		return;
+	}
+
+	AnimInstance->Montage_Play(Montage);
+}
+
+void APlayerCharacterBase::SprintStarted()
+{
+	if (!CanSprint())
+	{
+		return;
+	}
+	
+	ServerSetSprinting(true, GetDesiredMoveDirection());
+}
+
+void APlayerCharacterBase::SprintCompleted()
+{
+	ServerSetSprinting(false, FVector::ZeroVector);
+}
+
+FVector APlayerCharacterBase::GetCameraForwardOnPlane() const
+{
+	FVector Forward = (FollowCam ? FollowCam->GetForwardVector() : FVector::ForwardVector); //FVector::ForwardVector은 뭐지
+	Forward.Z = 0.f;
+	
+	return Forward.GetSafeNormal();
+	
+}
+
+void APlayerCharacterBase::ApplyMovementData()
+{
+	// if (!MovementData)
+	// {
+	// 	Debug::Print(TEXT("[PlayerCharacterBase] MovementData is null."));
+	// 	return;
+	// }
+	//
+	// UCharacterMovementComponent* MoveComp = GetCharacterMovement();
+	// if (!MoveComp)
+	// {
+	// 	return;
+	// }
+	
+	// MoveComp->RotationRate = MovementData->RotationRate;
+	// MoveComp->JumpVelocity = MovementData->JumpZVelocity;
+	// MoveComp->AirControl = MovementData->AirControl;
+}
+
+void APlayerCharacterBase::UpdateSprintStamina(float DeltaSeconds)
+{
+	// if (!HasAuthority() || !bIsSprinting || !MovementData)
+	// {
+	// 	return;
+	// }
+	//
+	// const float Cost = MovementData->SprintStaminaCostPerSecond * DeltaSeconds;
+	// if (!TryConsumeStamina(Cost))
+	// {
+	// 	SetSprintingState(false);
+	// }
+}
+
+bool APlayerCharacterBase::HasEnoughStamina(float Amount) const
+{
+	const UDG_AttributeSet* Attr = GetPlayerDGAttributeSet();
+	return Attr && Attr->GetStamina() >= Amount;
+}
+
+bool APlayerCharacterBase::TryConsumeStamina(float Amount)
+{
+	UDG_AttributeSet* Attr = GetPlayerDGAttributeSet();
+	if (!Attr || Attr->GetStamina() < Amount)
+	{
+		return false;
+	}
+	
+	Attr->SetStamina(FMath::Max(0.f, Attr->GetStamina() - Amount));
+	return true;
+}
+
+bool APlayerCharacterBase::CanSprint() const
+{
+	// if (!MovementData)
+	// {
+	// 	return false;
+	// }
+	//
+	// if (IsDead() || bIsDodging)
+	// {
+	// 	return false;
+	// }
+	//
+	// if (CurrentMoveInput.IsNearlyZero())
+	// {
+	// 	return false;
+	// }
+	//
+	// return HasEnoughStamina(1.f);
+	
+	return false;
+}
+
+bool APlayerCharacterBase::CanDodge() const
+{
+	// if (!MovementData)
+	// {
+	// 	return false;
+	// }
+	//
+	// if (IsDead() || bIsDodging)
+	// {
+	// 	return false;
+	// }
+	//
+	// if (CurrentMoveInput.IsNearlyZero())
+	// {
+	// 	return false;
+	// }
+	//
+	// return HasEnoughStamina(MovementData->DodgeStaminaCost);
+	
+	return false;
+}
+
+void APlayerCharacterBase::ApplyCurrentMovementSpeed()
+{
+	// if (!MovementData)
+	// {
+	// 	return;
+	// }
+	//
+	// UCharacterMovementComponent* MoveComp = GetCharacterMovement();
+	// if (!MoveComp)
+	// {
+	// 	return;
+	// }
+	//
+	// MoveComp->MaxWalkSpeed = bIsSprinting ? MovementData->SprintSpeed : MovementData->WalkSpeed;
+
+}
+
+void APlayerCharacterBase::SetSprintingState(bool bNewSprinting)
+{
+	bIsSprinting = bNewSprinting;
+	ApplyCurrentMovementSpeed();
+}
+
+void APlayerCharacterBase::SetDodgingState(bool bNewDodging)
+{
+	bIsDodging = bNewDodging;
+}
+
+void APlayerCharacterBase::FinishDodge()
+{
+	SetDodgingState(false);
+}
+
+FVector APlayerCharacterBase::GetCameraRightOnPlane() const
+{
+	FVector Right = FollowCam ? FollowCam->GetRightVector() : FVector::RightVector;
+	Right.Z = 0.f;
+	
+	return Right.GetSafeNormal();
+}
+
+FVector APlayerCharacterBase::GetDesiredMoveDirection() const
+{
+	const FVector Direction = GetCameraForwardOnPlane() * CurrentMoveInput.Y + GetCameraRightOnPlane() * CurrentMoveInput.X;
+	
+	if (Direction.IsNearlyZero())
+	{
+		FVector Forward = GetActorForwardVector();
+		Forward.Z = 0.f;
+		return Forward.GetSafeNormal();
+	}
+	return Direction.GetSafeNormal();
 }
