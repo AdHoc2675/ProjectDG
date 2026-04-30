@@ -15,6 +15,14 @@ class UAnimMontage;
 
 struct FInputActionValue;
 
+// Dodge : 회피 타입을 구분하기 위한 열거형 추가
+UENUM(BlueprintType)
+enum class EDodgeType : uint8
+{
+	Forward,   // 이동 중 (슬라이딩)
+	Backward   // 정지 중 (후방 회피)
+};
+
 /**
  * APlayerCharacterBase
  *
@@ -84,28 +92,27 @@ protected:
 #pragma region Input
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
+	class UInputMappingContext* BasicInputMappingContext;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputAction* IA_Jump;
 
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputAction* IA_Look;
 
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
-	class UInputMappingContext* BasicInputMappingContext;
-
-	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputAction* IA_Move;
 	
-	//회피
+	//회피 및 질주를 위한 Shift키 입력 (통일)
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
-	class UInputAction* IA_Dodge;
-	
-	//질주
-	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
-	class UInputAction* IA_Sprint;
-	
+	class UInputAction* IA_Shift;
+
 protected:
 	void LookAction(const FInputActionValue& InputActionValue);
 	void MoveAction(const FInputActionValue& InputActionValue);
+	
+	void ShiftActionStarted();
+	//void ShiftActionCompleted();
 
 	// z값 보정 적용 함수
 	FVector GetCameraForwardOnPlane() const;
@@ -131,6 +138,9 @@ protected:
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "PlayerCharacterBase|Movement")
 	bool bIsParkouring = false;
 	
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "PlayerCharacterBase|Movement")
+	EDodgeType CurrentDodgeType = EDodgeType::Forward;
+	
 	UFUNCTION()
 	void OnRep_IsSprinting();
 
@@ -138,9 +148,9 @@ protected:
 	FTimerHandle ParkourTimerHandle;
 	
 protected:
-	void DodgeAction();
-	void SprintStarted();
-	void SprintCompleted();
+	// void DodgeAction();
+	// void SprintStarted();
+	// void SprintCompleted();
 #pragma endregion Movement
 
 #pragma region Animation
@@ -150,6 +160,9 @@ public:
 	FORCEINLINE bool IsSprinting() const { return bIsSprinting; }
 	FORCEINLINE bool IsDodging() const { return bIsDodging; }
 	FORCEINLINE bool IsParkouring() const { return bIsParkouring; }
+	
+	UFUNCTION(BlueprintCallable, Category = "PlayerCharacterBase|Animation")
+	EDodgeType GetCurrentDodgeType() const { return CurrentDodgeType; }
 	
 #pragma endregion Animation
 
@@ -175,8 +188,12 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void ServerSetSprinting(bool bNewSprinting, FVector_NetQuantizeNormal DesiredDirection);
 
+	// UFUNCTION(Server, Reliable)
+	// void ServerPerformDodge(FVector_NetQuantizeNormal DodgeDirection);
+	
+	// 서버에서 회피와 질주 상태를 한 번에 결정하는 RPC
 	UFUNCTION(Server, Reliable)
-	void ServerPerformDodge(FVector_NetQuantizeNormal DodgeDirection);
+	void ServerPerformShiftAction(FVector_NetQuantizeNormal DodgeDirection, bool bShouldSprintAfterDodge);
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastPlayMontage(UAnimMontage* Montage);
