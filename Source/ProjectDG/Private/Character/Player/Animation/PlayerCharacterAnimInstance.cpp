@@ -48,4 +48,5 @@ void UPlayerCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	bIsDodging = PlayerCharacter->IsDodging();
 	bIsParkouring = PlayerCharacter->IsParkouring();
 	
+	DodgeType = PlayerCharacter->GetCurrentDodgeType();
 }
