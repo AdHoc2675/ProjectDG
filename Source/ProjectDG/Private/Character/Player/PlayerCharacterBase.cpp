@@ -38,6 +38,8 @@ APlayerCharacterBase::APlayerCharacterBase()
 	FollowCam->bUsePawnControlRotation = false;
 	bUseControllerRotationYaw = false;
 
+	// 컨트롤러(마우스) 회전이 캐릭터 몸통에 직접 영향을 주지 않게끔 설정
+	bUseControllerRotationYaw = false;
 	//이동방향기준회전,속도
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 720.0f, 0.f);
