@@ -21,7 +21,10 @@ public class ProjectDG : ModuleRules
 			"Slate",
 			"GameplayTags",
 			"GameplayTasks",
-			"GameplayAbilities"
+			"GameplayAbilities",
+			"HTTP",
+			"Json",
+			"JsonUtilities"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "GameplayAbilities", "GameplayTags", "GameplayTasks" });
