@@ -10,6 +10,6 @@ public class ProjectDGServerTarget : TargetRules
 		Type = TargetType.Server;
 		DefaultBuildSettings = BuildSettingsVersion.V6;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_7;
-		ExtraModuleNames.Add("ProjectDG");
+		ExtraModuleNames.Add("ProjectDG"); 
 	}
 }
