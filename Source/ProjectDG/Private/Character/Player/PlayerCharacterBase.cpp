@@ -19,6 +19,7 @@
 
 #include "Animation/AnimInstance.h"
 #include "Character/Player/Data/PlayerCharacterMovementData.h"
+#include "Character/Player/Data/PlayerCharacterClassData.h"
 
 APlayerCharacterBase::APlayerCharacterBase()
 {
@@ -52,8 +53,8 @@ void APlayerCharacterBase::BeginPlay()
     
 	//월드시작시 ASC초기화
     InitializePlayerAbilitySystem();
-	ApplyMovementData();
-	ApplyCurrentMovementSpeed();
+	// ApplyMovementData();
+	// ApplyCurrentMovementSpeed();
 }
 
 void APlayerCharacterBase::Tick(float DeltaSeconds)
@@ -61,16 +62,16 @@ void APlayerCharacterBase::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 
 	// sprint/dodge 테스트용 임시함수 - 이후 GA 및 GE로 관리
-	UpdateSprintStamina(DeltaSeconds);
+	// UpdateSprintStamina(DeltaSeconds);
 }
 
 void APlayerCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
-	DOREPLIFETIME(APlayerCharacterBase, bIsSprinting);
-	DOREPLIFETIME(APlayerCharacterBase, bIsDodging);
-	DOREPLIFETIME(APlayerCharacterBase, bIsParkouring);
+	// DOREPLIFETIME(APlayerCharacterBase, bIsSprinting);
+	// DOREPLIFETIME(APlayerCharacterBase, bIsDodging);
+	// DOREPLIFETIME(APlayerCharacterBase, bIsParkouring);
 }
 
 void APlayerCharacterBase::InitializePlayerAbilitySystem()
@@ -284,6 +285,14 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 	 * PlayerState 기반 ASC 초기화 재시도 타이밍으로 중요하다.
 	 */
 	InitializePlayerAbilitySystem();
+	
+	// 2. 서버에서 기본 GameplayEffect(회복 등) 부여
+	if (HasAuthority())
+	{
+		InitializeMovementStats();  // 물리 수치 적용
+		ApplyDefaultEffects();      // 어빌리티 부여
+		GrantDefaultAbilities();    // 기본 GE 적용 (Stamina 회복 등)
+	}
 }
 
 void APlayerCharacterBase::OnRep_PlayerState()
@@ -312,13 +321,13 @@ void APlayerCharacterBase::MoveAction(const FInputActionValue& InputActionValue)
 	
 	if (CurrentMoveInput.IsNearlyZero())
 	{
-		if (bIsSprinting)
-		{
-			// 서버에 질주 종료 알림
-			ServerSetSprinting(false, FVector::ZeroVector);
-			
-			//SprintCompleted();
-		}
+		// if (bIsSprinting)
+		// {
+		// 	// 서버에 질주 종료 알림
+		// 	ServerSetSprinting(false, FVector::ZeroVector);
+		// 	
+		// 	//SprintCompleted();
+		// }
 		
 		return;
 	}
@@ -329,19 +338,32 @@ void APlayerCharacterBase::MoveAction(const FInputActionValue& InputActionValue)
 
 void APlayerCharacterBase::ShiftActionStarted()
 {
-	if (IsDead() || bIsDodging) return;
+	if (IsDead()) return;
 
-	// 이동 입력이 있는지 확인
-	bool bHasMovementInput = !CurrentMoveInput.IsNearlyZero();
-
-	// 서버에 회피와 질주 예약 요청
-	ServerPerformShiftAction(GetDesiredMoveDirection(), bHasMovementInput);
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (ASC)
+	{
+		// 태그를 사용하여 회피 어빌리티 활성화 시도
+		// (GA_Player_Dodge BP의 Ability Tag에 Skill.Common.Dodge를 넣어주세요)
+		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(DGGameplayTags::Skill_Common_Dodge));
+	}
 }
 
-void APlayerCharacterBase::OnRep_IsSprinting()
-{
-	ApplyCurrentMovementSpeed();
-}
+// void APlayerCharacterBase::ShiftActionStarted()
+// {
+// 	if (IsDead() || bIsDodging) return;
+//
+// 	// 이동 입력이 있는지 확인
+// 	bool bHasMovementInput = !CurrentMoveInput.IsNearlyZero();
+//
+// 	// 서버에 회피와 질주 예약 요청
+// 	ServerPerformShiftAction(GetDesiredMoveDirection(), bHasMovementInput);
+// }
+
+// void APlayerCharacterBase::OnRep_IsSprinting()
+// {
+// 	ApplyCurrentMovementSpeed();
+// }
 
 // void APlayerCharacterBase::DodgeAction()
 // {
@@ -352,27 +374,27 @@ void APlayerCharacterBase::OnRep_IsSprinting()
 // 	ServerPerformDodge(GetDesiredMoveDirection());
 // }
 
-void APlayerCharacterBase::ServerSetSprinting_Implementation(bool bNewSprinting,
-	FVector_NetQuantizeNormal DesiredDirection)
-{
-	if (bNewSprinting)
-	{
-		if (IsDead() || bIsDodging)
-		{
-			return;
-		}
-		if (!MovementData || FVector(DesiredDirection).IsNearlyZero())
-		{
-			return;
-		}
-		if (!HasEnoughStamina(1.f))
-		{
-			return;
-		}
-	}
-	
-	SetSprintingState(bNewSprinting);
-}
+// void APlayerCharacterBase::ServerSetSprinting_Implementation(bool bNewSprinting,
+// 	FVector_NetQuantizeNormal DesiredDirection)
+// {
+// 	if (bNewSprinting)
+// 	{
+// 		if (IsDead() || bIsDodging)
+// 		{
+// 			return;
+// 		}
+// 		if (!MovementData || FVector(DesiredDirection).IsNearlyZero())
+// 		{
+// 			return;
+// 		}
+// 		if (!HasEnoughStamina(1.f))
+// 		{
+// 			return;
+// 		}
+// 	}
+// 	
+// 	SetSprintingState(bNewSprinting);
+// }
 
 // void APlayerCharacterBase::ServerPerformDodge_Implementation(FVector_NetQuantizeNormal DodgeDirection)
 // {
@@ -415,27 +437,27 @@ void APlayerCharacterBase::ServerSetSprinting_Implementation(bool bNewSprinting,
 // 	);
 // }
 
-void APlayerCharacterBase::MulticastPlayMontage_Implementation(UAnimMontage* Montage)
-{
-	if (!Montage)
-	{
-		return;
-	}
-
-	USkeletalMeshComponent* MeshComp = GetMesh();
-	if (!MeshComp)
-	{
-		return;
-	}
-
-	UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
-	if (!AnimInstance)
-	{
-		return;
-	}
-
-	AnimInstance->Montage_Play(Montage);
-}
+// void APlayerCharacterBase::MulticastPlayMontage_Implementation(UAnimMontage* Montage)
+// {
+// 	if (!Montage)
+// 	{
+// 		return;
+// 	}
+//
+// 	USkeletalMeshComponent* MeshComp = GetMesh();
+// 	if (!MeshComp)
+// 	{
+// 		return;
+// 	}
+//
+// 	UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
+// 	if (!AnimInstance)
+// 	{
+// 		return;
+// 	}
+//
+// 	AnimInstance->Montage_Play(Montage);
+// }
 
 // void APlayerCharacterBase::SprintStarted()
 // {
@@ -461,174 +483,213 @@ FVector APlayerCharacterBase::GetCameraForwardOnPlane() const
 	
 }
 
-void APlayerCharacterBase::ApplyMovementData()
+void APlayerCharacterBase::GrantDefaultAbilities()
 {
-	if (!MovementData)
-	{
-		Debug::Print(TEXT("[PlayerCharacterBase] MovementData is null."));
-		return;
-	}
-	
-	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
-	if (!MoveComp)
-	{
-		return;
-	}
-	
-	MoveComp->RotationRate = MovementData->RotationRate;
-	MoveComp->JumpZVelocity = MovementData->JumpZVelocity;
-	MoveComp->AirControl = MovementData->AirControl;
-}
+	if (!HasAuthority()) return;
 
-void APlayerCharacterBase::UpdateSprintStamina(float DeltaSeconds)
-{
-	if (!HasAuthority() || !bIsSprinting || !MovementData)
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC || !CharacterClassData) return;
+
+	for (const auto& AbilityClass : CharacterClassData->StartupAbilities)
 	{
-		return;
-	}
-	
-	const float Cost = MovementData->SprintStaminaCostPerSecond * DeltaSeconds;
-	if (!TryConsumeStamina(Cost))
-	{
-		SetSprintingState(false);
+		if (AbilityClass)
+		{
+			ASC->GiveAbility(FGameplayAbilitySpec(AbilityClass, 1));
+		}
 	}
 }
 
-bool APlayerCharacterBase::HasEnoughStamina(float Amount) const
+void APlayerCharacterBase::ApplyDefaultEffects()
 {
-	const UDG_AttributeSet* Attr = GetPlayerDGAttributeSet();
-	return Attr && Attr->GetStamina() >= Amount;
+	if (!HasAuthority()) return;
+
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC || !CharacterClassData) return;
+
+	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+	Context.AddSourceObject(this);
+
+	for (const auto& EffectClass : CharacterClassData->StartupEffects)
+	{
+		if (EffectClass)
+		{
+			FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(EffectClass, 1.f, Context);
+			if (Spec.IsValid())
+			{
+				ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+			}
+		}
+	}
 }
 
-bool APlayerCharacterBase::TryConsumeStamina(float Amount)
-{
-	UDG_AttributeSet* Attr = GetPlayerDGAttributeSet();
-	if (!Attr || Attr->GetStamina() < Amount)
-	{
-		return false;
-	}
-	
-	Attr->SetStamina(FMath::Max(0.f, Attr->GetStamina() - Amount));
-	return true;
-}
+// void APlayerCharacterBase::ApplyMovementData()
+// {
+// 	if (!MovementData)
+// 	{
+// 		Debug::Print(TEXT("[PlayerCharacterBase] MovementData is null."));
+// 		return;
+// 	}
+// 	
+// 	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
+// 	if (!MoveComp)
+// 	{
+// 		return;
+// 	}
+// 	
+// 	MoveComp->RotationRate = MovementData->RotationRate;
+// 	MoveComp->JumpZVelocity = MovementData->JumpZVelocity;
+// 	MoveComp->AirControl = MovementData->AirControl;
+// }
 
-bool APlayerCharacterBase::CanSprint() const
-{
-	if (!MovementData)
-	{
-		return false;
-	}
-	
-	if (IsDead() || bIsDodging)
-	{
-		return false;
-	}
-	
-	if (CurrentMoveInput.IsNearlyZero())
-	{
-		return false;
-	}
-	
-	return HasEnoughStamina(1.f);
-}
+// void APlayerCharacterBase::UpdateSprintStamina(float DeltaSeconds)
+// {
+// 	if (!HasAuthority() || !bIsSprinting || !MovementData)
+// 	{
+// 		return;
+// 	}
+// 	
+// 	const float Cost = MovementData->SprintStaminaCostPerSecond * DeltaSeconds;
+// 	if (!TryConsumeStamina(Cost))
+// 	{
+// 		SetSprintingState(false);
+// 	}
+// }
 
-bool APlayerCharacterBase::CanDodge() const
-{
-	if (!MovementData)
-	{
-		return false;
-	}
-	
-	if (IsDead() || bIsDodging)
-	{
-		return false;
-	}
-	
-	if (CurrentMoveInput.IsNearlyZero())
-	{
-		return false;
-	}
-	
-	return HasEnoughStamina(MovementData->DodgeStaminaCost);
-}
+// bool APlayerCharacterBase::HasEnoughStamina(float Amount) const
+// {
+// 	const UDG_AttributeSet* Attr = GetPlayerDGAttributeSet();
+// 	return Attr && Attr->GetStamina() >= Amount;
+// }
 
-void APlayerCharacterBase::ServerPerformShiftAction_Implementation(FVector_NetQuantizeNormal DodgeDirection,
-	bool bShouldSprintAfterDodge)
-{
-	if (!MovementData || bIsDodging) return;
+// bool APlayerCharacterBase::TryConsumeStamina(float Amount)
+// {
+// 	UDG_AttributeSet* Attr = GetPlayerDGAttributeSet();
+// 	if (!Attr || Attr->GetStamina() < Amount)
+// 	{
+// 		return false;
+// 	}
+// 	
+// 	Attr->SetStamina(FMath::Max(0.f, Attr->GetStamina() - Amount));
+// 	return true;
+// }
 
-	// 1. 회피 타입 결정
-	CurrentDodgeType = bShouldSprintAfterDodge ? EDodgeType::Forward : EDodgeType::Backward;
+// bool APlayerCharacterBase::CanSprint() const
+// {
+// 	if (!MovementData)
+// 	{
+// 		return false;
+// 	}
+// 	
+// 	if (IsDead() || bIsDodging)
+// 	{
+// 		return false;
+// 	}
+// 	
+// 	if (CurrentMoveInput.IsNearlyZero())
+// 	{
+// 		return false;
+// 	}
+// 	
+// 	return HasEnoughStamina(1.f);
+// }
 
-	// 2. 스태미나 체크 (임시 로직)
-	// float Cost = (CurrentDodgeType == EDodgeType::Forward) ? MovementData->DodgeStaminaCost : 10.f; // 백스텝은 비용을 다르게 줄 수 있음
-	
-	// if (!TryConsumeStamina(Cost)) return;
+// bool APlayerCharacterBase::CanDodge() const
+// {
+// 	if (!MovementData)
+// 	{
+// 		return false;
+// 	}
+// 	
+// 	if (IsDead() || bIsDodging)
+// 	{
+// 		return false;
+// 	}
+// 	
+// 	if (CurrentMoveInput.IsNearlyZero())
+// 	{
+// 		return false;
+// 	}
+// 	
+// 	return HasEnoughStamina(MovementData->DodgeStaminaCost);
+// }
 
-	// 3. 상태 설정
-	bIsDodging = true;
-	bIsSprinting = bShouldSprintAfterDodge; // 이동 중이었다면 질주 예약
+// void APlayerCharacterBase::ServerPerformShiftAction_Implementation(FVector_NetQuantizeNormal DodgeDirection,
+// 	bool bShouldSprintAfterDodge)
+// {
+// 	if (!MovementData || bIsDodging) return;
+//
+// 	// 1. 회피 타입 결정
+// 	CurrentDodgeType = bShouldSprintAfterDodge ? EDodgeType::Forward : EDodgeType::Backward;
+//
+// 	// 2. 스태미나 체크 (임시 로직)
+// 	// float Cost = (CurrentDodgeType == EDodgeType::Forward) ? MovementData->DodgeStaminaCost : 10.f; // 백스텝은 비용을 다르게 줄 수 있음
+// 	
+// 	// if (!TryConsumeStamina(Cost)) return;
+//
+// 	// 3. 상태 설정
+// 	bIsDodging = true;
+// 	bIsSprinting = bShouldSprintAfterDodge; // 이동 중이었다면 질주 예약
+//
+// 	// 4. 물리적 힘 적용 (Launch)
+// 	FVector FinalDodgeDir = FVector(DodgeDirection);
+// 	if (CurrentDodgeType == EDodgeType::Backward)
+// 	{
+// 		FinalDodgeDir = -GetActorForwardVector(); // 정지 상태면 뒤로
+// 	}
+//
+// 	LaunchCharacter(FinalDodgeDir * MovementData->DodgeStrength, true, false);
+// 	
+// 	// 몽타주 선택
+// 	UAnimMontage* SelectedMontage = (CurrentDodgeType == EDodgeType::Forward)
+// 		? MovementData->ForwardDodgeMontage
+// 		: MovementData->BackwardDodgeMontage;
+//
+// 	if (SelectedMontage)
+// 	{
+// 		MulticastPlayMontage(SelectedMontage);
+// 	}
+//
+// 	// 5. 몽타주 재생 (DodgeType에 따라 다른 몽타주를 보낼 수도 있음)
+// 	// MulticastPlayMontage(MovementData->DodgeMontage);
+//
+// 	// 6. 회피 종료 타이머
+// 	GetWorldTimerManager().SetTimer(DodgeTimerHandle, this, &APlayerCharacterBase::FinishDodge,
+// 		MovementData->DodgeDuration, false);
+//
+// 	ApplyCurrentMovementSpeed();
+// }
 
-	// 4. 물리적 힘 적용 (Launch)
-	FVector FinalDodgeDir = FVector(DodgeDirection);
-	if (CurrentDodgeType == EDodgeType::Backward)
-	{
-		FinalDodgeDir = -GetActorForwardVector(); // 정지 상태면 뒤로
-	}
+// void APlayerCharacterBase::ApplyCurrentMovementSpeed()
+// {
+// 	if (!MovementData)
+// 	{
+// 		return;
+// 	}
+// 	
+// 	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
+// 	if (!MoveComp)
+// 	{
+// 		return;
+// 	}
+// 	
+// 	// MoveComp->MaxWalkSpeed = bIsSprinting ? MovementData->SprintSpeed : MovementData->WalkSpeed;
+// }
 
-	LaunchCharacter(FinalDodgeDir * MovementData->DodgeStrength, true, false);
-	
-	// 몽타주 선택
-	UAnimMontage* SelectedMontage = (CurrentDodgeType == EDodgeType::Forward)
-		? MovementData->ForwardDodgeMontage
-		: MovementData->BackwardDodgeMontage;
+// void APlayerCharacterBase::SetSprintingState(bool bNewSprinting)
+// {
+// 	bIsSprinting = bNewSprinting;
+// 	ApplyCurrentMovementSpeed();
+// }
 
-	if (SelectedMontage)
-	{
-		MulticastPlayMontage(SelectedMontage);
-	}
+// void APlayerCharacterBase::SetDodgingState(bool bNewDodging)
+// {
+// 	bIsDodging = bNewDodging;
+// }
 
-	// 5. 몽타주 재생 (DodgeType에 따라 다른 몽타주를 보낼 수도 있음)
-	// MulticastPlayMontage(MovementData->DodgeMontage);
-
-	// 6. 회피 종료 타이머
-	GetWorldTimerManager().SetTimer(DodgeTimerHandle, this, &APlayerCharacterBase::FinishDodge,
-		MovementData->DodgeDuration, false);
-
-	ApplyCurrentMovementSpeed();
-}
-
-void APlayerCharacterBase::ApplyCurrentMovementSpeed()
-{
-	if (!MovementData)
-	{
-		return;
-	}
-	
-	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
-	if (!MoveComp)
-	{
-		return;
-	}
-	
-	MoveComp->MaxWalkSpeed = bIsSprinting ? MovementData->SprintSpeed : MovementData->WalkSpeed;
-}
-
-void APlayerCharacterBase::SetSprintingState(bool bNewSprinting)
-{
-	bIsSprinting = bNewSprinting;
-	ApplyCurrentMovementSpeed();
-}
-
-void APlayerCharacterBase::SetDodgingState(bool bNewDodging)
-{
-	bIsDodging = bNewDodging;
-}
-
-void APlayerCharacterBase::FinishDodge()
-{
-	SetDodgingState(false);
-}
+// void APlayerCharacterBase::FinishDodge()
+// {
+// 	// SetDodgingState(false);
+// }
 
 FVector APlayerCharacterBase::GetCameraRightOnPlane() const
 {
@@ -649,4 +710,29 @@ FVector APlayerCharacterBase::GetDesiredMoveDirection() const
 		return Forward.GetSafeNormal();
 	}
 	return Direction.GetSafeNormal();
+}
+
+void APlayerCharacterBase::InitializeMovementStats()
+{
+	if (!CharacterClassData || !CharacterClassData->MovementData) return;
+
+	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
+	if (!MoveComp) return;
+
+	// 데이터 에셋의 수치를 CMC에 적용
+	MoveComp->MaxWalkSpeed = CharacterClassData->MovementData->WalkSpeed;
+	MoveComp->RotationRate = CharacterClassData->MovementData->RotationRate;
+	MoveComp->JumpZVelocity = CharacterClassData->MovementData->JumpZVelocity;
+	MoveComp->AirControl = CharacterClassData->MovementData->AirControl;
+}
+
+const FPlayerMovementAnimationSet& APlayerCharacterBase::GetCurrentMovementAnims() const
+{
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	// 전투 상태 태그 확인 (태그 이름은 기획서에 따라 수정)
+	if (ASC && ASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Movement.Combat"))))
+	{
+		return CharacterClassData->CombatAnims;
+	}
+	return CharacterClassData->StandardAnims;
 }

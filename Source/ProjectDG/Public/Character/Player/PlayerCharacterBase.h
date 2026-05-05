@@ -6,7 +6,9 @@
 #include "Character/BaseCharacter.h"
 #include "PlayerCharacterBase.generated.h"
 
+struct FPlayerMovementAnimationSet;
 class UPlayerCharacterMovementData;
+class UPlayerCharacterClassData;
 class UAbilitySystemComponent;
 class UAttributeSet;
 class UDG_AttributeSet;
@@ -16,12 +18,12 @@ class UAnimMontage;
 struct FInputActionValue;
 
 // Dodge : 회피 타입을 구분하기 위한 열거형 추가
-UENUM(BlueprintType)
-enum class EDodgeType : uint8
-{
-	Forward,   // 이동 중 (슬라이딩)
-	Backward   // 정지 중 (후방 회피)
-};
+// UENUM(BlueprintType)
+// enum class EDodgeType : uint8
+// {
+// 	Forward,   // 이동 중 (슬라이딩)
+// 	Backward   // 정지 중 (후방 회피)
+// };
 
 /**
  * APlayerCharacterBase
@@ -81,6 +83,22 @@ public:
 	virtual void OnRep_PlayerState() override;
 	
 protected:
+	/** 서버에서 부여할 기본 어빌리티 목록 (GA_Player_Dodge, GA_Player_Sprint 등) */
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|GAS")
+	TArray<TSubclassOf<class UGameplayAbility>> DefaultAbilities;
+
+	/** 서버에서 부여할 기본 지속 효과 목록 (GE_Stamina_Regen 등) */
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|GAS")
+	TArray<TSubclassOf<class UGameplayEffect>> DefaultEffects;
+
+	// 서버 측 어빌리티 부여 로직
+	void GrantDefaultAbilities();
+	
+	// 서버 측 기본 이펙트 부여 로직
+	void ApplyDefaultEffects();
+	
+	
+protected:
 	//카메라 관련 셋팅
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|View", meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* CameraBoom;
@@ -123,78 +141,90 @@ protected:
 	
 #pragma region Movement
 protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacterBase|Data")
-	TObjectPtr<UPlayerCharacterMovementData> MovementData = nullptr;
+	// UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacterBase|Data")
+	// TObjectPtr<UPlayerCharacterMovementData> MovementData;
+	
+	// --- 신규 데이터 에셋 (MovementData를 포함하는 범용적 데이터) ---
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Data")
+	TObjectPtr<UPlayerCharacterClassData> CharacterClassData;
+	
+	// 데이터 에셋으로 받아오는 movement stat 초기화함수
+	void InitializeMovementStats();
 	
 	UPROPERTY(BlueprintReadOnly, Category = "PlayerCharacterBase|Movement")
 	FVector2D CurrentMoveInput = FVector2D::ZeroVector;
 
-	UPROPERTY(ReplicatedUsing = OnRep_IsSprinting, BlueprintReadOnly, Category = "PlayerCharacterBase|Movement")
-	bool bIsSprinting = false;
+	// UPROPERTY(ReplicatedUsing = OnRep_IsSprinting, BlueprintReadOnly, Category = "PlayerCharacterBase|Movement")
+	// bool bIsSprinting = false;
 
-	UPROPERTY(Replicated, BlueprintReadOnly, Category = "PlayerCharacterBase|Movement")
-	bool bIsDodging = false;
+	// UPROPERTY(Replicated, BlueprintReadOnly, Category = "PlayerCharacterBase|Movement")
+	// bool bIsDodging = false;
 
-	UPROPERTY(Replicated, BlueprintReadOnly, Category = "PlayerCharacterBase|Movement")
-	bool bIsParkouring = false;
+	// UPROPERTY(Replicated, BlueprintReadOnly, Category = "PlayerCharacterBase|Movement")
+	// bool bIsParkouring = false;
 	
-	UPROPERTY(Replicated, BlueprintReadOnly, Category = "PlayerCharacterBase|Movement")
-	EDodgeType CurrentDodgeType = EDodgeType::Forward;
+	// UPROPERTY(Replicated, BlueprintReadOnly, Category = "PlayerCharacterBase|Movement")
+	// EDodgeType CurrentDodgeType = EDodgeType::Forward;
 	
-	UFUNCTION()
-	void OnRep_IsSprinting();
+	// UFUNCTION()
+	// void OnRep_IsSprinting();
 
-	FTimerHandle DodgeTimerHandle;
-	FTimerHandle ParkourTimerHandle;
+	// FTimerHandle DodgeTimerHandle;
+	// FTimerHandle ParkourTimerHandle;
 	
 protected:
 	// void DodgeAction();
 	// void SprintStarted();
 	// void SprintCompleted();
+	
+public:
+	/** GA에서 현재 상황에 맞는 몽타주를 가져가기 위한 Getter */
+	UFUNCTION(BlueprintCallable, Category = "PlayerCharacterBase|Animation")
+	const FPlayerMovementAnimationSet& GetCurrentMovementAnims() const;
+	
 #pragma endregion Movement
 
-#pragma region Animation
 	
 public:
 	// 애니메이션 인스턴스에서 사용할 Getter
-	FORCEINLINE bool IsSprinting() const { return bIsSprinting; }
-	FORCEINLINE bool IsDodging() const { return bIsDodging; }
-	FORCEINLINE bool IsParkouring() const { return bIsParkouring; }
+	// FORCEINLINE bool IsSprinting() const { return bIsSprinting; }
+	// FORCEINLINE bool IsDodging() const { return bIsDodging; }
+	// FORCEINLINE bool IsParkouring() const { return bIsParkouring; }
 	
-	UFUNCTION(BlueprintCallable, Category = "PlayerCharacterBase|Animation")
-	EDodgeType GetCurrentDodgeType() const { return CurrentDodgeType; }
+	//UFUNCTION(BlueprintCallable, Category = "PlayerCharacterBase|Animation")
+	// EDodgeType GetCurrentDodgeType() const { return CurrentDodgeType; }
+
+
 	
-#pragma endregion Animation
+protected:
+	// void ApplyMovementData();
+	// void ApplyCurrentMovementSpeed();
+
+	// void SetSprintingState(bool bNewSprinting);
+	// void SetDodgingState(bool bNewDodging);
+
+	// void FinishDodge();
 
 protected:
-	void ApplyMovementData();
-	void ApplyCurrentMovementSpeed();
+	// void UpdateSprintStamina(float DeltaSeconds);
 
-	void SetSprintingState(bool bNewSprinting);
-	void SetDodgingState(bool bNewDodging);
+	// bool HasEnoughStamina(float Amount) const;
+	// bool TryConsumeStamina(float Amount);
 
-	void FinishDodge();
-
-protected:
-	void UpdateSprintStamina(float DeltaSeconds);
-
-	bool HasEnoughStamina(float Amount) const;
-	bool TryConsumeStamina(float Amount);
-
-	bool CanSprint() const;
-	bool CanDodge() const;
+	// bool CanSprint() const;
+	// bool CanDodge() const;
 
 protected:
-	UFUNCTION(Server, Reliable)
-	void ServerSetSprinting(bool bNewSprinting, FVector_NetQuantizeNormal DesiredDirection);
+	// UFUNCTION(Server, Reliable)
+	// void ServerSetSprinting(bool bNewSprinting, FVector_NetQuantizeNormal DesiredDirection);
 
 	// UFUNCTION(Server, Reliable)
 	// void ServerPerformDodge(FVector_NetQuantizeNormal DodgeDirection);
 	
 	// 서버에서 회피와 질주 상태를 한 번에 결정하는 RPC
-	UFUNCTION(Server, Reliable)
-	void ServerPerformShiftAction(FVector_NetQuantizeNormal DodgeDirection, bool bShouldSprintAfterDodge);
+	// UFUNCTION(Server, Reliable)
+	// void ServerPerformShiftAction(FVector_NetQuantizeNormal DodgeDirection, bool bShouldSprintAfterDodge);
 
-	UFUNCTION(NetMulticast, Unreliable)
-	void MulticastPlayMontage(UAnimMontage* Montage);
+	// UFUNCTION(NetMulticast, Unreliable)
+	// void MulticastPlayMontage(UAnimMontage* Montage);
 };

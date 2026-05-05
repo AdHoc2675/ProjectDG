@@ -71,7 +71,7 @@ public:
      * 추후 GE_Cost_DodgeStamina 같은 GameplayEffect로 대체할 예정.
      */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dodge", meta = (ClampMin = "0.0"))
-    float DodgeStaminaCost = 25.f;
+    float DodgeStaminaCost = 5.f;
 
     /**
      * 질주 중 초당 소모할 스태미나.
