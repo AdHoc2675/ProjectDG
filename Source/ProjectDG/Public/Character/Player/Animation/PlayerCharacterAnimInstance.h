@@ -47,14 +47,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bIsSprinting;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
-	bool bIsDodging;
+	// UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	// bool bIsDodging;
 	
 	/** ABP에서 Dodge Type이 Forward인지 Backward인지 구분하기 위한 변수 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
-	EDodgeType DodgeType;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
-	bool bIsParkouring;
+	// UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	// EDodgeType DodgeType;
 	
 };

@@ -44,9 +44,9 @@ void UPlayerCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	// 캐릭터 상태 변수 동기화
 	// PlayerCharacterBase에 추가한 Getter를 통해 값을 가져옵니다.
-	bIsSprinting = PlayerCharacter->IsSprinting();
-	bIsDodging = PlayerCharacter->IsDodging();
-	bIsParkouring = PlayerCharacter->IsParkouring();
+	// bIsSprinting = PlayerCharacter->IsSprinting();
+	// bIsDodging = PlayerCharacter->IsDodging();
+	// bIsParkouring = PlayerCharacter->IsParkouring();
 	
-	DodgeType = PlayerCharacter->GetCurrentDodgeType();
+	// DodgeType = PlayerCharacter->GetCurrentDodgeType();
 }
