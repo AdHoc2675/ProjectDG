@@ -273,8 +273,8 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 	if (HasAuthority())
 	{
 		InitializeMovementStats();  // 물리 수치 적용
-		ApplyDefaultEffects();      // 어빌리티 부여
 		GrantDefaultAbilities();    // 기본 GE 적용 (Stamina 회복 등)
+		ApplyDefaultEffects();      // 어빌리티 부여
 	}
 }
 
