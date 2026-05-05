@@ -121,6 +121,7 @@ protected:
 	void MoveAction(const FInputActionValue& InputActionValue);
 	
 	void ShiftActionStarted();
+	void SendDodgeEvent(FVector Direction, bool bHasInput);
 
 	// z값 보정 적용 함수
 	FVector GetCameraForwardOnPlane() const;
@@ -147,5 +148,9 @@ public:
 	const FPlayerMovementAnimationSet& GetCurrentMovementAnims() const;
 	
 #pragma endregion Movement
+	
+protected:
+	UFUNCTION(Server, Reliable)
+	void ServerHandleShiftAction(FVector_NetQuantizeNormal DodgeDirection, bool bHasInput);
 	
 };

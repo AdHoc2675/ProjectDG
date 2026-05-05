@@ -324,30 +324,47 @@ void APlayerCharacterBase::MoveAction(const FInputActionValue& InputActionValue)
 
 void APlayerCharacterBase::ShiftActionStarted()
 {
-	if (IsDead()) return;
-
 	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
-	if (ASC)
+	if (!ASC || IsDead()) return;
+
+	// [핵심] 클라이언트에서 먼저 스태미나가 충분한지 확인합니다.
+	// (GE_Player_Dodge_Cost의 소모량을 하드코딩하거나, 데이터 에셋에서 가져와 비교)
+	float DodgeCost = 10.f; // 예시 수치
+	if (GetPlayerDGAttributeSet()->GetStamina() < DodgeCost)
 	{
-		FGameplayEventData Payload;
-		Payload.EventTag = FGameplayTag::RequestGameplayTag(TEXT("Skill.Common.Dodge"));
-		
-		// 실제 사용자의 입력값(W,A,S,D)이 있는지 확인
-		bool bHasMovementInput = !CurrentMoveInput.IsNearlyZero();
-		
-		if (bHasMovementInput)
-		{
-			// 클라이언트의 현재 입력 방향을 타겟 데이터에 담음 (네트워크 동기화 핵심)
-			FGameplayAbilityTargetData_LocationInfo* LocData = new FGameplayAbilityTargetData_LocationInfo();
-			LocData->TargetLocation.LiteralTransform.SetLocation(GetDesiredMoveDirection());
+		// 스태미나가 부족하면 애니메이션도 안 틀고 서버에 요청도 안 보냅니다.
+		return;
+	}
 
-			Payload.TargetData.Add(LocData);
-		}
+	FVector DesiredDir = GetDesiredMoveDirection();
+	bool bHasInput = !CurrentMoveInput.IsNearlyZero();
 
-		// 이벤트 발송 (서버로 데이터 상자가 배달됨)
-		ASC->HandleGameplayEvent(Payload.EventTag, &Payload);
+	// 1. 여기서 이벤트를 발생시키면, 클라이언트 GAS는 '스태미나가 깎일 것'이라고 믿고 애니메이션을 틉니다.
+	SendDodgeEvent(DesiredDir, bHasInput);
+
+	// 2. 서버에도 요청하여 실제 데이터 확정을 요청합니다.
+	if (!HasAuthority())
+	{
+		ServerHandleShiftAction(DesiredDir, bHasInput);
 	}
 }
+
+void APlayerCharacterBase::SendDodgeEvent(FVector Direction, bool bHasInput)
+{
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	FGameplayEventData Payload;
+	Payload.EventTag = FGameplayTag::RequestGameplayTag(TEXT("Skill.Common.Dodge"));
+
+	if (bHasInput)
+	{
+		FGameplayAbilityTargetData_LocationInfo* LocData = new FGameplayAbilityTargetData_LocationInfo();
+		LocData->TargetLocation.LiteralTransform.SetLocation(Direction);
+		Payload.TargetData.Add(LocData);
+	}
+
+	ASC->HandleGameplayEvent(Payload.EventTag, &Payload);
+}
+
 
 FVector APlayerCharacterBase::GetCameraForwardOnPlane() const
 {
@@ -441,4 +458,26 @@ const FPlayerMovementAnimationSet& APlayerCharacterBase::GetCurrentMovementAnims
 		return CharacterClassData->CombatAnims;
 	}
 	return CharacterClassData->StandardAnims;
+}
+
+void APlayerCharacterBase::ServerHandleShiftAction_Implementation(FVector_NetQuantizeNormal DodgeDirection, bool bHasInput)
+{
+	// 서버 로그 추가
+	UE_LOG(LogTemp, Warning, TEXT("Server: Received Shift Action RPC. Direction: %s"), *DodgeDirection.ToString());
+
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC) return;
+
+	FGameplayEventData Payload;
+	Payload.EventTag = FGameplayTag::RequestGameplayTag(TEXT("Skill.Common.Dodge"));
+
+	if (bHasInput)
+	{
+		FGameplayAbilityTargetData_LocationInfo* LocData = new FGameplayAbilityTargetData_LocationInfo();
+		LocData->TargetLocation.LiteralTransform.SetLocation(DodgeDirection);
+		Payload.TargetData.Add(LocData);
+	}
+
+	// 이 호출이 성공하면 서버 로그에 어빌리티 시작 메시지가 떠야 합니다.
+	ASC->HandleGameplayEvent(Payload.EventTag, &Payload);
 }
