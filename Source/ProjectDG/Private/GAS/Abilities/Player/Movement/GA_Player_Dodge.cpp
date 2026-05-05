@@ -44,10 +44,32 @@ void UGA_Player_Dodge::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
         return;
     }
 
+    // [핵심 수정] 클라이언트에서 보낸 방향 벡터를 담을 변수
+    FVector DodgeDirection = FVector::ZeroVector;
+
+    // 1. Payload(TriggerEventData)에 타겟 데이터가 있는지 확인
+    if (TriggerEventData && TriggerEventData->TargetData.Num() > 0)
+    {
+        // 보냈던 LocationInfo 데이터를 꺼냅니다.
+        const FGameplayAbilityTargetData* TargetData = TriggerEventData->TargetData.Get(0);
+        if (TargetData)
+        {
+            // 상자 안에 담긴 위치(방향) 정보를 추출합니다.
+            DodgeDirection = TargetData->GetEndPoint();
+        }
+    }
+
+    // 2. 만약 Payload에 데이터가 없다면 (에디터에서 직접 실행 등) 기존 방식 사용
+    if (DodgeDirection.IsNearlyZero())
+    {
+        DodgeDirection = Character->GetLastMovementInputVector();
+    }
+    
+    
     // [수정된 부분] 캐릭터의 상황별 애니메이션 세트를 가져옵니다.
     const FPlayerMovementAnimationSet& AnimSet = Character->GetCurrentMovementAnims();
 
-    FVector DodgeDirection = Character->GetLastMovementInputVector();
+    // FVector DodgeDirection = Character->GetLastMovementInputVector();
 
     // [수정된 부분] 데이터 에셋에서 정의된 몽타주를 선택합니다.
     UAnimMontage* SelectedMontage = AnimSet.ForwardDodge;
