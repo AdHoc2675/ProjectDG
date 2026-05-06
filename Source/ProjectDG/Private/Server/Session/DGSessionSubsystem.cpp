@@ -36,6 +36,8 @@ void UDGSessionSubsystem::CreateLocalSessionAndTravel(
 		return;
 	}
 
+	bTravelAfterCreateSession = true;
+	
 	FDGCreateSessionRequest RequestData;
 	RequestData.AccountId = AccountId;
 	RequestData.CharacterId = CharacterId;
@@ -51,6 +53,37 @@ void UDGSessionSubsystem::CreateLocalSessionAndTravel(
 		)
 	);
 }
+
+void UDGSessionSubsystem::CreateLocalSessionOnly(
+	int64 AccountId,
+	int64 CharacterId,
+	const FString& RegionId
+)
+{
+	if (!BackendClient)
+	{
+		Debug::Print(TEXT("[DGSessionSubsystem] BackendClient is null."));
+		return;
+	}
+
+	bTravelAfterCreateSession = false;
+
+	FDGCreateSessionRequest RequestData;
+	RequestData.AccountId = AccountId;
+	RequestData.CharacterId = CharacterId;
+	RequestData.RegionId = RegionId;
+
+	Debug::Print(TEXT("[DGSessionSubsystem] Request Create Session Only."));
+
+	BackendClient->CreateSession(
+		RequestData,
+		FDGSessionApiResultCallback::CreateUObject(
+			this,
+			&UDGSessionSubsystem::HandleCreateSessionCompleted
+		)
+	);
+}
+
 
 void UDGSessionSubsystem::JoinSessionAndTravel(
 	const FString& SessionId,
@@ -89,6 +122,29 @@ void UDGSessionSubsystem::JoinSessionAndTravel(
 	);
 }
 
+void UDGSessionSubsystem::TravelToLastSession()
+{
+	if (!LastSessionConnectionInfo.bSuccess)
+	{
+		Debug::Print(TEXT("[DGSessionSubsystem] LastSessionConnectionInfo is not valid."));
+		return;
+	}
+
+	if (LastSessionConnectionInfo.ServerIP.IsEmpty() || LastSessionConnectionInfo.ServerPort <= 0)
+	{
+		Debug::Print(TEXT("[DGSessionSubsystem] Last session server address is invalid."));
+		return;
+	}
+
+	TravelToDedicatedServer(LastSessionConnectionInfo);
+}
+
+FString UDGSessionSubsystem::GetLastSessionId() const
+{
+	return LastSessionConnectionInfo.SessionId;
+}
+
+
 void UDGSessionSubsystem::HandleCreateSessionCompleted(
 	bool bSuccess,
 	const FDGSessionConnectionInfo& Result
@@ -100,8 +156,12 @@ void UDGSessionSubsystem::HandleCreateSessionCompleted(
 			TEXT("[DGSessionSubsystem] Create Session Failed. Error=%s"),
 			*Result.ErrorMessage
 		));
+
+		OnSessionRequestFailed.Broadcast(Result.ErrorMessage);
 		return;
 	}
+
+	LastSessionConnectionInfo = Result;
 
 	Debug::Print(FString::Printf(
 		TEXT("[DGSessionSubsystem] Create Session Success. SessionId=%s Server=%s:%d"),
@@ -110,7 +170,14 @@ void UDGSessionSubsystem::HandleCreateSessionCompleted(
 		Result.ServerPort
 	));
 
-	TravelToDedicatedServer(Result);
+	OnSessionCreated.Broadcast(Result.SessionId);
+
+	if (bTravelAfterCreateSession)
+	{
+		TravelToDedicatedServer(Result);
+	}
+
+	bTravelAfterCreateSession = true;
 }
 
 void UDGSessionSubsystem::HandleJoinSessionCompleted(
@@ -124,8 +191,12 @@ void UDGSessionSubsystem::HandleJoinSessionCompleted(
 			TEXT("[DGSessionSubsystem] Join Session Failed. Error=%s"),
 			*Result.ErrorMessage
 		));
+
+		OnSessionRequestFailed.Broadcast(Result.ErrorMessage);
 		return;
 	}
+
+	LastSessionConnectionInfo = Result;
 
 	Debug::Print(FString::Printf(
 		TEXT("[DGSessionSubsystem] Join Session Success. SessionId=%s Server=%s:%d"),
@@ -157,10 +228,30 @@ void UDGSessionSubsystem::TravelToDedicatedServer(
 		return;
 	}
 
+	if (ConnectionInfo.ServerIP.IsEmpty() || ConnectionInfo.ServerPort <= 0)
+	{
+		Debug::Print(TEXT("[DGSessionSubsystem] Server address is invalid."));
+		return;
+	}
+
+	if (ConnectionInfo.SessionId.IsEmpty())
+	{
+		Debug::Print(TEXT("[DGSessionSubsystem] SessionId is empty."));
+		return;
+	}
+
+	if (ConnectionInfo.JoinToken.IsEmpty())
+	{
+		Debug::Print(TEXT("[DGSessionSubsystem] JoinToken is empty."));
+		return;
+	}
+
 	const FString TravelUrl = FString::Printf(
-		TEXT("%s:%d"),
+		TEXT("%s:%d?SessionId=%s?JoinToken=%s"),
 		*ConnectionInfo.ServerIP,
-		ConnectionInfo.ServerPort
+		ConnectionInfo.ServerPort,
+		*ConnectionInfo.SessionId,
+		*ConnectionInfo.JoinToken
 	);
 
 	Debug::Print(FString::Printf(
@@ -168,10 +259,5 @@ void UDGSessionSubsystem::TravelToDedicatedServer(
 		*TravelUrl
 	));
 
-	Debug::Print(FString::Printf(
-	TEXT("[DGSessionSubsystem] ClientTravel To %s"),
-	*TravelUrl
-));
-	
 	PlayerController->ClientTravel(TravelUrl, TRAVEL_Absolute);
 }
