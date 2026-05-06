@@ -6,9 +6,13 @@
 #include "Character/BaseCharacter.h"
 #include "PlayerCharacterBase.generated.h"
 
+struct FPlayerMovementAnimationSet;
+class UPlayerCharacterMovementData;
+class UPlayerCharacterClassData;
 class UAbilitySystemComponent;
 class UAttributeSet;
 class UDG_AttributeSet;
+class UAnimMontage;
 
 
 struct FInputActionValue;
@@ -35,6 +39,9 @@ class PROJECTDG_API APlayerCharacterBase : public ABaseCharacter
 	
 public:
 	APlayerCharacterBase();
+	
+	virtual void Tick(float DeltaSeconds) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
 protected:
 	virtual void BeginPlay() override;
@@ -67,38 +74,83 @@ public:
 	//네트워크복제로 PlayerState가 들어 왓을 때 호출
 	virtual void OnRep_PlayerState() override;
 	
-private:
+protected:
+	/** 서버에서 부여할 기본 어빌리티 목록 (GA_Player_Dodge, GA_Player_Sprint 등) */
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|GAS")
+	TArray<TSubclassOf<class UGameplayAbility>> DefaultAbilities;
+
+	/** 서버에서 부여할 기본 지속 효과 목록 (GE_Stamina_Regen 등) */
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|GAS")
+	TArray<TSubclassOf<class UGameplayEffect>> DefaultEffects;
+
+	// 서버 측 어빌리티 부여 로직
+	void GrantDefaultAbilities();
+	
+	// 서버 측 기본 이펙트 부여 로직
+	void ApplyDefaultEffects();
+
+protected:
 	//카메라 관련 셋팅
-	UPROPERTY(EditDefaultsOnly, Category = "View", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|View", meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* CameraBoom;
-
-	UPROPERTY(EditDefaultsOnly, Category = "View", meta = (AllowPrivateAccess = "true"))
+	
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|View", meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCam;
-
-
+	
 	// Input Action Assets
 #pragma region Input
-public:
-	void LookAction(const FInputActionValue& InputActionValue);
-
-	void MoveAction(const FInputActionValue& InputActionValue);
-
-	FVector GetLookRightDirection() const;
-	FVector GetLookForwardDirection() const;
-	FVector GetMoveForwardDirection() const;
-
-private:
-	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
+	class UInputMappingContext* BasicInputMappingContext;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputAction* IA_Jump;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputAction* IA_Look;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
-	class UInputMappingContext* BasicInputMappingContext;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputAction* IA_Move;
+	
+	//회피 및 질주를 위한 Shift키 입력 (통일)
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
+	class UInputAction* IA_Shift;
+
+protected:
+	void LookAction(const FInputActionValue& InputActionValue);
+	void MoveAction(const FInputActionValue& InputActionValue);
+	
+	void ShiftActionStarted();
+	void SendDodgeEvent(FVector Direction, bool bHasInput);
+
+	// z값 보정 적용 함수
+	FVector GetCameraForwardOnPlane() const;
+	FVector GetCameraRightOnPlane() const;
+	FVector GetDesiredMoveDirection() const;
 
 #pragma endregion Input
+	
+#pragma region Movement
+protected:
+	// --- 신규 데이터 에셋 (MovementData를 포함하는 범용적 데이터) ---
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Data")
+	TObjectPtr<UPlayerCharacterClassData> CharacterClassData;
+	
+	// 데이터 에셋으로 받아오는 movement stat 초기화함수
+	void InitializeMovementStats();
+	
+	UPROPERTY(BlueprintReadOnly, Category = "PlayerCharacterBase|Movement")
+	FVector2D CurrentMoveInput = FVector2D::ZeroVector;
+	
+public:
+	/** GA에서 현재 상황에 맞는 몽타주를 가져가기 위한 Getter */
+	UFUNCTION(BlueprintCallable, Category = "PlayerCharacterBase|Animation")
+	const FPlayerMovementAnimationSet& GetCurrentMovementAnims() const;
+	
+#pragma endregion Movement
+	
+protected:
+	UFUNCTION(Server, Reliable)
+	void ServerHandleShiftAction(FVector_NetQuantizeNormal DodgeDirection, bool bHasInput);
+	
 };

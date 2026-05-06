@@ -15,22 +15,32 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "Net/UnrealNetwork.h"
+
+#include "Animation/AnimInstance.h"
+#include "Character/Player/Data/PlayerCharacterMovementData.h"
+#include "Character/Player/Data/PlayerCharacterClassData.h"
 
 APlayerCharacterBase::APlayerCharacterBase()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
+	
 	//스프링암 생성
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(GetRootComponent());
-	
 	//컨트롤러 회전 -> 스프링암 따라가도록 
 	CameraBoom->bUsePawnControlRotation = true;
+	CameraBoom->TargetArmLength = 450.f;
 
 	//카메라 생성
 	FollowCam = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCam"));
 	FollowCam->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
-
+	FollowCam->bUsePawnControlRotation = false;
 	bUseControllerRotationYaw = false;
 
+	// 컨트롤러(마우스) 회전이 캐릭터 몸통에 직접 영향을 주지 않게끔 설정
+	bUseControllerRotationYaw = false;
 	//이동방향기준회전,속도
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 720.0f, 0.f);
@@ -43,6 +53,19 @@ void APlayerCharacterBase::BeginPlay()
     
 	//월드시작시 ASC초기화
     InitializePlayerAbilitySystem();
+	// ApplyMovementData();
+	// ApplyCurrentMovementSpeed();
+}
+
+void APlayerCharacterBase::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	
+}
+
+void APlayerCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
 void APlayerCharacterBase::InitializePlayerAbilitySystem()
@@ -87,6 +110,16 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 void APlayerCharacterBase::PawnClientRestart()
 {
 	Super::PawnClientRestart();
+	
+	// 클라이언트에서 Controller가 Pawn에 할당된 직후, 다시 한번 ActorInfo를 업데이트합니다.
+	if (UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent())
+	{
+		ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>();
+		if (PS)
+		{
+			ASC->InitAbilityActorInfo(PS, this);
+		}
+	}
 
 	/**
 	 * 로컬 플레이어 컨트롤러 가져오기
@@ -160,19 +193,28 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	 * nullptr 상태에서 바인딩하려 하면 문제 생길 수 있으므로
 	 * 하나씩 방어적으로 체크한다.
 	 */
-	if (IA_Jump)
-	{
-		EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Triggered, this, &APlayerCharacterBase::Jump);
-	}
+	 if (IA_Move)
+        {
+                EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered,this,&APlayerCharacterBase::MoveAction);
+                EnhancedInputComponent->BindAction(IA_Move,ETriggerEvent::Completed,this,&APlayerCharacterBase::MoveAction);
+        }
 
-	if (IA_Look)
-	{
-		EnhancedInputComponent->BindAction(IA_Look, ETriggerEvent::Triggered, this, &APlayerCharacterBase::LookAction);
-	}
+        if (IA_Look)
+        {
+                EnhancedInputComponent->BindAction(IA_Look,ETriggerEvent::Triggered,this,&APlayerCharacterBase::LookAction);
+        }
 
-	if (IA_Move)
+        if (IA_Jump)
+        {
+                EnhancedInputComponent->BindAction(IA_Jump,ETriggerEvent::Started,this,&ACharacter::Jump);
+                EnhancedInputComponent->BindAction(IA_Jump,ETriggerEvent::Completed,this,&ACharacter::StopJumping);
+        }
+	
+	if (IA_Shift)
 	{
-		EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered, this, &APlayerCharacterBase::MoveAction);
+		// Started: 버튼을 누르는 순간 즉시 Dodge 발동
+		EnhancedInputComponent->BindAction(IA_Shift, ETriggerEvent::Started, this, &APlayerCharacterBase::ShiftActionStarted);
+		// Completed: 버튼을 떼더라도 질주가 유지되게 하려면 여기서 질주를 끄지 않음
 	}
 }
 
@@ -229,9 +271,6 @@ UDG_AttributeSet* APlayerCharacterBase::GetPlayerDGAttributeSet() const
 
 void APlayerCharacterBase::PossessedBy(AController* NewController)
 {
-	/**
-	 * 상위 클래스 공통 초기화 먼저 수행
-	 */
 	Super::PossessedBy(NewController);
 
 	/**
@@ -239,86 +278,216 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 	 * PlayerState 기반 ASC 초기화 재시도 타이밍으로 중요하다.
 	 */
 	InitializePlayerAbilitySystem();
+	
+	// 2. 서버에서 기본 GameplayEffect(회복 등) 부여
+	if (HasAuthority())
+	{
+		InitializeMovementStats();  // 물리 수치 적용
+		GrantDefaultAbilities();    // 기본 GE 적용 (Stamina 회복 등)
+		ApplyDefaultEffects();      // 어빌리티 부여
+	}
 }
 
 void APlayerCharacterBase::OnRep_PlayerState()
 {
-	/**
-	 * 상위 클래스 공통 처리 먼저 수행
-	 */
 	Super::OnRep_PlayerState();
 
 	/**
-	 * PlayerState가 복제 완료된 뒤
-	 * ASC 초기화 재시도
+	 * PlayerState가 복제 완료된 뒤 ASC 초기화 재시도
 	 *
 	 * 네트워크 환경에서 매우 중요
 	 */
 	InitializePlayerAbilitySystem();
+	
+	// 클라이언트도 에셋을 읽어 자기 자신의 물리 수치를 서버와 맞춥니다.
+	InitializeMovementStats();
 }
 
 void APlayerCharacterBase::LookAction(const FInputActionValue& InputActionValue)
 {
-	/**
-	 * Look 입력은 FVector2D로 들어온다고 가정
-	 * X = 좌우(Yaw), Y = 상하(Pitch)
-	 */
 	const FVector2D InputValue = InputActionValue.Get<FVector2D>();
-
-	/**
-	 * 일반적으로 마우스 Y를 올리면 화면은 위로 가지만
-	 * 입력값 체계에 따라 반전되는 경우가 있으므로
-	 * 현재는 -Y를 사용
-	 */
+	
 	AddControllerPitchInput(-InputValue.Y);
 	AddControllerYawInput(InputValue.X);
 }
 
 void APlayerCharacterBase::MoveAction(const FInputActionValue& InputActionValue)
 {
-	/**
-	 * Move 입력 역시 FVector2D로 받는다.
-	 * X = 좌우 이동
-	 * Y = 전후 이동
-	 */
-	const FVector2D InputValue = InputActionValue.Get<FVector2D>();
-
-	/**
-	 * 현재 구현은 카메라 기준 Forward / Right 벡터를 그대로 사용한다.
-	 *
-	 * 주의:
-	 * - 카메라 Pitch가 크게 들어가면 이동 벡터에 Z 성분이 섞일 수 있다.
-	 * - 보통 3인칭은 Yaw 평면 기준 이동으로 한 번 더 정리하기도 한다.
-	 *
-	 * 하지만 현재 단계에서는 기존 네 구조를 최대한 유지한다.
-	 */
-	AddMovementInput(GetLookForwardDirection() * InputValue.Y + GetLookRightDirection() * InputValue.X);
+	CurrentMoveInput = InputActionValue.Get<FVector2D>();
+	
+	if (CurrentMoveInput.IsNearlyZero())
+	{
+		// if (bIsSprinting)
+		// {
+		// 	// 서버에 질주 종료 알림
+		// 	ServerSetSprinting(false, FVector::ZeroVector);
+		// 	
+		// 	//SprintCompleted();
+		// }
+		
+		return;
+	}
+	
+	const FVector MoveDirection = GetCameraForwardOnPlane() * CurrentMoveInput.Y + GetCameraRightOnPlane() * CurrentMoveInput.X;
+	AddMovementInput(MoveDirection.GetSafeNormal());
 }
 
-FVector APlayerCharacterBase::GetLookRightDirection() const
+void APlayerCharacterBase::ShiftActionStarted()
 {
-	/**
-	 * 카메라 기준 오른쪽 방향 반환
-	 */
-	return FollowCam ? FollowCam->GetRightVector() : FVector::RightVector;
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC || IsDead()) return;
+
+	// [핵심] 클라이언트에서 먼저 스태미나가 충분한지 확인합니다.
+	// (GE_Player_Dodge_Cost의 소모량을 하드코딩하거나, 데이터 에셋에서 가져와 비교)
+	float DodgeCost = 10.f; // 예시 수치
+	if (GetPlayerDGAttributeSet()->GetStamina() < DodgeCost)
+	{
+		// 스태미나가 부족하면 애니메이션도 안 틀고 서버에 요청도 안 보냅니다.
+		return;
+	}
+
+	FVector DesiredDir = GetDesiredMoveDirection();
+	bool bHasInput = !CurrentMoveInput.IsNearlyZero();
+
+	// 1. 여기서 이벤트를 발생시키면, 클라이언트 GAS는 '스태미나가 깎일 것'이라고 믿고 애니메이션을 틉니다.
+	SendDodgeEvent(DesiredDir, bHasInput);
+
+	// 2. 서버에도 요청하여 실제 데이터 확정을 요청합니다.
+	// if (!HasAuthority())
+	// {
+	// 	ServerHandleShiftAction(DesiredDir, bHasInput);
+	// }
 }
 
-FVector APlayerCharacterBase::GetLookForwardDirection() const
+void APlayerCharacterBase::SendDodgeEvent(FVector Direction, bool bHasInput)
 {
-	/**
-	 * 카메라 기준 전방 방향 반환
-	 */
-	return FollowCam ? FollowCam->GetForwardVector() : FVector::ForwardVector;
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	FGameplayEventData Payload;
+	Payload.EventTag = FGameplayTag::RequestGameplayTag(TEXT("Skill.Common.Dodge"));
+
+	if (bHasInput)
+	{
+		FGameplayAbilityTargetData_LocationInfo* LocData = new FGameplayAbilityTargetData_LocationInfo();
+		LocData->TargetLocation.LiteralTransform.SetLocation(Direction);
+		Payload.TargetData.Add(LocData);
+	}
+
+	ASC->HandleGameplayEvent(Payload.EventTag, &Payload);
 }
 
-FVector APlayerCharacterBase::GetMoveForwardDirection() const
+
+FVector APlayerCharacterBase::GetCameraForwardOnPlane() const
 {
-	/**
-	 * 오른쪽 벡터와 월드 UpVector의 외적을 사용해
-	 * 평면상 전방 벡터를 구하는 보조 함수
-	 *
-	 * 현재 MoveAction에서는 직접 사용하지 않지만,
-	 * 추후 Yaw-only 이동 방식으로 바꿀 때 재사용 가능
-	 */
-	return FVector::CrossProduct(GetLookRightDirection(), FVector::UpVector).GetSafeNormal();
+	FVector Forward = (FollowCam ? FollowCam->GetForwardVector() : FVector::ForwardVector);
+	Forward.Z = 0.f;
+	
+	return Forward.GetSafeNormal();
+	
+}
+
+void APlayerCharacterBase::GrantDefaultAbilities()
+{
+	if (!HasAuthority()) return;
+
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC || !CharacterClassData) return;
+
+	for (const auto& AbilityClass : CharacterClassData->StartupAbilities)
+	{
+		if (AbilityClass)
+		{
+			ASC->GiveAbility(FGameplayAbilitySpec(AbilityClass, 1));
+		}
+	}
+}
+
+void APlayerCharacterBase::ApplyDefaultEffects()
+{
+	if (!HasAuthority()) return;
+
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC || !CharacterClassData) return;
+
+	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+	Context.AddSourceObject(this);
+
+	for (const auto& EffectClass : CharacterClassData->StartupEffects)
+	{
+		if (EffectClass)
+		{
+			FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(EffectClass, 1.f, Context);
+			if (Spec.IsValid())
+			{
+				ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+			}
+		}
+	}
+}
+
+FVector APlayerCharacterBase::GetCameraRightOnPlane() const
+{
+	FVector Right = FollowCam ? FollowCam->GetRightVector() : FVector::RightVector;
+	Right.Z = 0.f;
+	
+	return Right.GetSafeNormal();
+}
+
+FVector APlayerCharacterBase::GetDesiredMoveDirection() const
+{
+	const FVector Direction = GetCameraForwardOnPlane() * CurrentMoveInput.Y + GetCameraRightOnPlane() * CurrentMoveInput.X;
+	
+	if (Direction.IsNearlyZero())
+	{
+		FVector Forward = GetActorForwardVector();
+		Forward.Z = 0.f;
+		return Forward.GetSafeNormal();
+	}
+	return Direction.GetSafeNormal();
+}
+
+void APlayerCharacterBase::InitializeMovementStats()
+{
+	if (!CharacterClassData || !CharacterClassData->MovementData) return;
+
+	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
+	if (!MoveComp) return;
+
+	// 데이터 에셋의 수치를 CMC에 적용
+	MoveComp->MaxWalkSpeed = CharacterClassData->MovementData->WalkSpeed;
+	MoveComp->RotationRate = CharacterClassData->MovementData->RotationRate;
+	MoveComp->JumpZVelocity = CharacterClassData->MovementData->JumpZVelocity;
+	MoveComp->AirControl = CharacterClassData->MovementData->AirControl;
+}
+
+const FPlayerMovementAnimationSet& APlayerCharacterBase::GetCurrentMovementAnims() const
+{
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	// 전투 상태 태그 확인 (태그 이름은 기획서에 따라 수정)
+	// if (ASC && ASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Movement.Combat"))))
+	// {
+	// 	return CharacterClassData->CombatAnims;
+	// }
+	return CharacterClassData->StandardAnims;
+}
+
+void APlayerCharacterBase::ServerHandleShiftAction_Implementation(FVector_NetQuantizeNormal DodgeDirection, bool bHasInput)
+{
+	// 서버 로그 추가
+	UE_LOG(LogTemp, Warning, TEXT("Server: Received Shift Action RPC. Direction: %s"), *DodgeDirection.ToString());
+
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC) return;
+
+	FGameplayEventData Payload;
+	Payload.EventTag = FGameplayTag::RequestGameplayTag(TEXT("Skill.Common.Dodge"));
+
+	if (bHasInput)
+	{
+		FGameplayAbilityTargetData_LocationInfo* LocData = new FGameplayAbilityTargetData_LocationInfo();
+		LocData->TargetLocation.LiteralTransform.SetLocation(DodgeDirection);
+		Payload.TargetData.Add(LocData);
+	}
+
+	// 이 호출이 성공하면 서버 로그에 어빌리티 시작 메시지가 떠야 합니다.
+	ASC->HandleGameplayEvent(Payload.EventTag, &Payload);
 }
