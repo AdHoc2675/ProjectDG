@@ -48,7 +48,5 @@ public:
 	// --- 상황별 애니메이션 세트 (Dodge/Sprint 중심) ---
 	UPROPERTY(EditDefaultsOnly, Category = "Animation|Standard")
 	FPlayerMovementAnimationSet StandardAnims;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Animation|Combat")
-	FPlayerMovementAnimationSet CombatAnims;
+	
 };

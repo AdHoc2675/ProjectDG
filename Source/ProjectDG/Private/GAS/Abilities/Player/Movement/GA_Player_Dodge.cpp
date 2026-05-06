@@ -24,17 +24,30 @@ UGA_Player_Dodge::UGA_Player_Dodge()
     ActivationBlockedTags.AddTag(DGGameplayTags::State_Movement_Dodge); // 이미 회피 중일 때
     ActivationBlockedTags.AddTag(DGGameplayTags::State_Movement_Jump);  // 점프(공중) 상태일 때
     ActivationBlockedTags.AddTag(DGGameplayTags::Block_Movement_Dodge); // 외부 요인(CC기 등)으로 차단될 때
+    
+    FAbilityTriggerData TriggerData;
+    TriggerData.TriggerTag = FGameplayTag::RequestGameplayTag(TEXT("Skill.Common.Dodge"));
+    TriggerData.TriggerSource = EGameplayAbilityTriggerSource::GameplayEvent;
+    AbilityTriggers.Add(TriggerData);
 }
 
 void UGA_Player_Dodge::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo*
     ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
+    // [Debug] 어빌리티 활성화 시점
+    FString NetMode = ActorInfo->IsNetAuthority() ? TEXT("Server") : TEXT("Client");
+    UE_LOG(LogTemp, Warning, TEXT("[%s] GA_Player_Dodge: ActivateAbility Started!"), *NetMode);
+    
     // 1. 자원(스태미나) 소모 및 쿨타임 체크 (GE_Cost 연동 시 자동 처리)
     if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
     {
+        UE_LOG(LogTemp, Error, TEXT("[%s] GA_Player_Dodge: CommitAbility Failed! (No Stamina or Cooldown)"), *NetMode);
+        
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
         return;
     }
+    
+    UE_LOG(LogTemp, Log, TEXT("[%s] GA_Player_Dodge: CommitAbility Success!"), *NetMode);
 
     // 2. 아바타(캐릭터) 포인터 유효성 검사
     APlayerCharacterBase* Character = Cast<APlayerCharacterBase>(ActorInfo->AvatarActor.Get());

@@ -110,6 +110,16 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 void APlayerCharacterBase::PawnClientRestart()
 {
 	Super::PawnClientRestart();
+	
+	// 클라이언트에서 Controller가 Pawn에 할당된 직후, 다시 한번 ActorInfo를 업데이트합니다.
+	if (UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent())
+	{
+		ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>();
+		if (PS)
+		{
+			ASC->InitAbilityActorInfo(PS, this);
+		}
+	}
 
 	/**
 	 * 로컬 플레이어 컨트롤러 가져오기
@@ -343,10 +353,10 @@ void APlayerCharacterBase::ShiftActionStarted()
 	SendDodgeEvent(DesiredDir, bHasInput);
 
 	// 2. 서버에도 요청하여 실제 데이터 확정을 요청합니다.
-	if (!HasAuthority())
-	{
-		ServerHandleShiftAction(DesiredDir, bHasInput);
-	}
+	// if (!HasAuthority())
+	// {
+	// 	ServerHandleShiftAction(DesiredDir, bHasInput);
+	// }
 }
 
 void APlayerCharacterBase::SendDodgeEvent(FVector Direction, bool bHasInput)
@@ -453,10 +463,10 @@ const FPlayerMovementAnimationSet& APlayerCharacterBase::GetCurrentMovementAnims
 {
 	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
 	// 전투 상태 태그 확인 (태그 이름은 기획서에 따라 수정)
-	if (ASC && ASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Movement.Combat"))))
-	{
-		return CharacterClassData->CombatAnims;
-	}
+	// if (ASC && ASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Movement.Combat"))))
+	// {
+	// 	return CharacterClassData->CombatAnims;
+	// }
 	return CharacterClassData->StandardAnims;
 }
 
