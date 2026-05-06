@@ -18,6 +18,12 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float MaxHealth = 100.f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Stamina = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float MaxStamina = 100.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AttackPower = 10.f;

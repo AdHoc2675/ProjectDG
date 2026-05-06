@@ -110,6 +110,11 @@ void ADG_PlayerState::InitializeAttributesFromDataTable()
 	 */
 	AttributeSet->InitHealth(InitRow->Health);
 	AttributeSet->InitMaxHealth(InitRow->MaxHealth);
+	
+	// 스테미나 초기화
+	AttributeSet->InitStamina(InitRow->MaxStamina);    
+	AttributeSet->InitMaxStamina(InitRow->MaxStamina);
+	
 	AttributeSet->InitAttackPower(InitRow->AttackPower);
 
 	Debug::Print(TEXT("[DG_PlayerState] Attributes initialized from DT_Attribute."));

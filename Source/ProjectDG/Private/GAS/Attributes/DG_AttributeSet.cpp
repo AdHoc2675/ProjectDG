@@ -79,6 +79,13 @@ void UDG_AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbac
 			}
 		}
 	}
+	
+	// Stamina 수치가 변경되었을 때 처리
+	if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
+	{
+		// 수치를 0과 MaxStamina 사이로 강제 고정
+		SetStamina(FMath::Clamp(GetStamina(), 0.0f, GetMaxStamina()));
+	}
 }
 
 // 4. OnRep 함수 구현 (클라이언트에게 값 변경을 통지하는 GAS 매크로 사용)
