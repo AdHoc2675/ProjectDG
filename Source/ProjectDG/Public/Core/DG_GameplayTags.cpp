@@ -7,6 +7,14 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy, "Team.Enemy")
 	UE_DEFINE_GAMEPLAY_TAG(Team_Object, "Team.Object")
 	
+	// Input
+	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_1, "Input.Slot.1")
+	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_2, "Input.Slot.2")
+	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_3, "Input.Slot.3")
+	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_4, "Input.Slot.4")
+	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_Q, "Input.Slot.Q")
+	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_E, "Input.Slot.E")
+	
 	// Skill
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Common_Dodge, "Skill.Common.Dodge")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Common_Sprint, "Skill.Common.Sprint")
