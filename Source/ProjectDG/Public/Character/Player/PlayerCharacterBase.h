@@ -15,6 +15,7 @@ class UDG_AttributeSet;
 class UAnimMontage;
 
 
+
 struct FInputActionValue;
 
 /**
@@ -129,6 +130,47 @@ protected:
 	FVector GetDesiredMoveDirection() const;
 
 #pragma endregion Input
+	
+#pragma region Skill
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input|Skill")
+	class UInputAction* IA_Skill_1;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input|Skill")
+	class UInputAction* IA_Skill_2;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input|Skill")
+	class UInputAction* IA_Skill_3;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input|Skill")
+	class UInputAction* IA_Skill_4;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input|Skill")
+	class UInputAction* IA_Skill_Q;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input|Skill")
+	class UInputAction* IA_Skill_E;
+
+protected:
+	/** 슬롯 태그(Input.Slot.X)와 실제 스킬 태그(Skill.Warrior.SharpStrike 등)의 매핑 테이블 */
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
+	TMap<FGameplayTag, FGameplayTag> SkillSlotMapping;
+
+	/** 슬롯 입력 처리 공통 함수 */
+	void OnSkillInput(FGameplayTag SlotTag);
+
+	/** 특정 슬롯에 할당된 스킬 태그를 가져오는 헬퍼 함수 */
+	FGameplayTag GetSkillTagForSlot(FGameplayTag SlotTag) const;
+	
+protected:
+	void OnSkillInput_1();
+	void OnSkillInput_2();
+	void OnSkillInput_3();
+	void OnSkillInput_4();
+	void OnSkillInput_Q();
+	void OnSkillInput_E();
+	
+#pragma endregion Skill
 	
 #pragma region Movement
 protected:

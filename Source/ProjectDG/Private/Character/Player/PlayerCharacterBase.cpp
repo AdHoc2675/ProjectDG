@@ -194,21 +194,21 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	 * 하나씩 방어적으로 체크한다.
 	 */
 	 if (IA_Move)
-        {
-                EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered,this,&APlayerCharacterBase::MoveAction);
-                EnhancedInputComponent->BindAction(IA_Move,ETriggerEvent::Completed,this,&APlayerCharacterBase::MoveAction);
-        }
+	{
+        EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered,this,&APlayerCharacterBase::MoveAction);
+        EnhancedInputComponent->BindAction(IA_Move,ETriggerEvent::Completed,this,&APlayerCharacterBase::MoveAction);
+	}
 
-        if (IA_Look)
-        {
-                EnhancedInputComponent->BindAction(IA_Look,ETriggerEvent::Triggered,this,&APlayerCharacterBase::LookAction);
-        }
+    if (IA_Look)
+    {
+        EnhancedInputComponent->BindAction(IA_Look,ETriggerEvent::Triggered,this,&APlayerCharacterBase::LookAction);
+    }
 
-        if (IA_Jump)
-        {
-                EnhancedInputComponent->BindAction(IA_Jump,ETriggerEvent::Started,this,&ACharacter::Jump);
-                EnhancedInputComponent->BindAction(IA_Jump,ETriggerEvent::Completed,this,&ACharacter::StopJumping);
-        }
+    if (IA_Jump)
+    {
+        EnhancedInputComponent->BindAction(IA_Jump,ETriggerEvent::Started,this,&ACharacter::Jump);
+        EnhancedInputComponent->BindAction(IA_Jump,ETriggerEvent::Completed,this,&ACharacter::StopJumping);
+    }
 	
 	if (IA_Shift)
 	{
@@ -216,6 +216,14 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 		EnhancedInputComponent->BindAction(IA_Shift, ETriggerEvent::Started, this, &APlayerCharacterBase::ShiftActionStarted);
 		// Completed: 버튼을 떼더라도 질주가 유지되게 하려면 여기서 질주를 끄지 않음
 	}
+	
+	// Skill Mapping
+	if (IA_Skill_1) EnhancedInputComponent->BindAction(IA_Skill_1, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_1);
+	if (IA_Skill_2) EnhancedInputComponent->BindAction(IA_Skill_2, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_2);
+	if (IA_Skill_3) EnhancedInputComponent->BindAction(IA_Skill_3, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_3);
+	if (IA_Skill_4) EnhancedInputComponent->BindAction(IA_Skill_4, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_4);
+	if (IA_Skill_Q) EnhancedInputComponent->BindAction(IA_Skill_Q, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_Q);
+	if (IA_Skill_E) EnhancedInputComponent->BindAction(IA_Skill_E, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_E);
 }
 
 UAbilitySystemComponent* APlayerCharacterBase::GetCharacterAbilitySystemComponent() const
@@ -443,6 +451,62 @@ FVector APlayerCharacterBase::GetDesiredMoveDirection() const
 		return Forward.GetSafeNormal();
 	}
 	return Direction.GetSafeNormal();
+}
+
+void APlayerCharacterBase::OnSkillInput(FGameplayTag SlotTag)
+{
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC) return;
+
+	FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
+	if (SkillTag.IsValid())
+	{
+		// 태그 기반으로 스킬 활성화
+		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(SkillTag));
+		
+		// [수정된 부분] FString::Printf 결과를 FString 변수에 먼저 담아서 넘깁니다.
+		FString Msg = FString::Printf(TEXT("Slot Input: %s -> Ability: %s"), *SlotTag.ToString(), *SkillTag.ToString());
+		Debug::Print(Msg, FColor::Green);
+	}
+}
+
+FGameplayTag APlayerCharacterBase::GetSkillTagForSlot(FGameplayTag SlotTag) const
+{
+	if (SkillSlotMapping.Contains(SlotTag))
+	{
+		return SkillSlotMapping[SlotTag];
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+void APlayerCharacterBase::OnSkillInput_1()
+{
+	OnSkillInput(DGGameplayTags::Input_Slot_1);
+}
+
+void APlayerCharacterBase::OnSkillInput_2()
+{
+	OnSkillInput(DGGameplayTags::Input_Slot_2);
+}
+
+void APlayerCharacterBase::OnSkillInput_3()
+{
+	OnSkillInput(DGGameplayTags::Input_Slot_3);
+}
+
+void APlayerCharacterBase::OnSkillInput_4()
+{
+	OnSkillInput(DGGameplayTags::Input_Slot_4);
+}
+
+void APlayerCharacterBase::OnSkillInput_Q()
+{
+	OnSkillInput(DGGameplayTags::Input_Slot_Q);
+}
+
+void APlayerCharacterBase::OnSkillInput_E()
+{
+	OnSkillInput(DGGameplayTags::Input_Slot_E);
 }
 
 void APlayerCharacterBase::InitializeMovementStats()
