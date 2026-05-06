@@ -6,32 +6,21 @@ echo ProjectDG Run Cooked Dedicated Server
 echo ========================================
 
 set "PROJECT_ROOT=C:\Users\KGA\Desktop\ProjectDG"
-set "ARCHIVE_DIR=%PROJECT_ROOT%\BuildOutput\Server"
+set "SERVER_EXE=%PROJECT_ROOT%\BuildOutput\Server\WindowsServer\ProjectDG\Binaries\Win64\ProjectDGServer.exe"
 set "MAP_NAME=/Game/Personal/DOHEE/Level/ServerTest"
 set "LOG_FILE=%PROJECT_ROOT%\Saved\Logs\Cooked_DedicatedServer.log"
 
-set "SERVER_EXE="
+echo Server EXE:
+echo %SERVER_EXE%
+echo.
 
-for /f "delims=" %%F in ('dir /b /s "%ARCHIVE_DIR%\ProjectDGServer.exe" 2^>nul') do (
-    set "SERVER_EXE=%%F"
-    goto FOUND_SERVER
-)
-
-:FOUND_SERVER
-
-if "%SERVER_EXE%"=="" (
-    echo [ERROR] ProjectDGServer.exe not found under:
-    echo %ARCHIVE_DIR%
-    echo.
-    dir /b /s "%ARCHIVE_DIR%"
+if not exist "%SERVER_EXE%" (
+    echo [ERROR] ProjectDGServer.exe not found.
+    echo Expected:
+    echo %SERVER_EXE%
     pause
     exit /b 1
 )
-
-echo Server EXE: %SERVER_EXE%
-echo Map Name: %MAP_NAME%
-echo Log File: %LOG_FILE%
-echo.
 
 if not exist "%PROJECT_ROOT%\Saved\Logs" (
     mkdir "%PROJECT_ROOT%\Saved\Logs"
@@ -40,6 +29,13 @@ if not exist "%PROJECT_ROOT%\Saved\Logs" (
 for %%A in ("%SERVER_EXE%") do set "SERVER_DIR=%%~dpA"
 
 pushd "%SERVER_DIR%"
+
+echo Current Directory:
+cd
+echo.
+
+echo Starting Dedicated Server...
+echo.
 
 "%SERVER_EXE%" %MAP_NAME% -log -port=7777 -AbsLog="%LOG_FILE%" -FORCELOGFLUSH
 

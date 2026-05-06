@@ -1,26 +1,16 @@
-using System.Collections.Concurrent;
+using DGBackendApi.Data;
+using DGBackendApi.Entities;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddDbContext<DGDbContext>(options =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("ProjectDGDatabase");
+    options.UseNpgsql(connectionString);
+});
+
 var app = builder.Build();
-
-/**
- * 임시 메모리 세션 저장소
- *
- * 지금은 DB를 아직 연결하지 않았기 때문에,
- * 서버가 켜져 있는 동안만 세션 정보를 메모리에 저장한다.
- *
- * 나중에는 PostgreSQL sessions 테이블로 교체한다.
- */
-var sessions = new ConcurrentDictionary<string, SessionInfo>();
-
-/**
- * 임시 메모리 세션 멤버 저장소
- *
- * Key 1: SessionId
- * Key 2: CharacterId
- */
-var sessionMembers = new ConcurrentDictionary<string, ConcurrentDictionary<long, SessionMemberInfo>>();
 
 app.MapGet("/", () =>
 {
@@ -44,9 +34,14 @@ app.MapGet("/health", () =>
 /**
  * 세션 생성 API
  *
- * 현재는 로컬 Dedicated Server 주소를 고정 반환한다.
+ * DB 저장 흐름:
+ * - sessions 테이블에 세션 저장
+ * - session_members 테이블에 Leader 멤버 저장
  */
-app.MapPost("/api/sessions/create", (CreateSessionRequest request) =>
+app.MapPost("/api/sessions/create", async (
+    CreateSessionRequest request,
+    DGDbContext db
+) =>
 {
     if (request.AccountId <= 0)
     {
@@ -77,36 +72,35 @@ app.MapPost("/api/sessions/create", (CreateSessionRequest request) =>
 
     var sessionId = $"local-session-{Guid.NewGuid():N}";
 
-    var session = new SessionInfo(
-        SessionId: sessionId,
-        OwnerAccountId: request.AccountId,
-        CurrentLeaderAccountId: request.AccountId,
-        RegionId: request.RegionId,
-        MapPath: "/Game/Personal/DOHEE/Level/ServerTest",
-        ServerIp: "127.0.0.1",
-        ServerPort: 7777,
-        Status: "Open",
-        MaxPlayers: 4,
-        CreatedAtUtc: DateTime.UtcNow
-    );
+    var session = new GameSession
+    {
+        SessionId = sessionId,
+        OwnerAccountId = request.AccountId,
+        CurrentLeaderAccountId = request.AccountId,
+        RegionId = request.RegionId,
+        MapPath = "/Game/Personal/DOHEE/Level/ServerTest",
+        ServerIp = "127.0.0.1",
+        ServerPort = 7777,
+        Status = "Open",
+        MaxPlayers = 4,
+        CreatedAtUtc = DateTime.UtcNow
+    };
 
-    sessions[sessionId] = session;
+    var leaderMember = new SessionMember
+    {
+        SessionId = sessionId,
+        AccountId = request.AccountId,
+        CharacterId = request.CharacterId,
+        Role = "Leader",
+        Status = "Joined",
+        JoinedAtUtc = DateTime.UtcNow
+    };
 
-    /**
-     * 세션 생성자는 자동으로 Leader 멤버로 등록한다.
-     */
-    var members = new ConcurrentDictionary<long, SessionMemberInfo>();
+    session.Members.Add(leaderMember);
 
-    members[request.CharacterId] = new SessionMemberInfo(
-        SessionId: sessionId,
-        AccountId: request.AccountId,
-        CharacterId: request.CharacterId,
-        Role: "Leader",
-        Status: "Joined",
-        JoinedAtUtc: DateTime.UtcNow
-    );
+    db.Sessions.Add(session);
 
-    sessionMembers[sessionId] = members;
+    await db.SaveChangesAsync();
 
     return Results.Ok(new CreateSessionResponse(
         Success: true,
@@ -121,9 +115,14 @@ app.MapPost("/api/sessions/create", (CreateSessionRequest request) =>
 /**
  * 세션 합류 API
  *
- * 이미 생성된 SessionId를 기준으로 세션에 합류한다.
+ * DB 저장 흐름:
+ * - sessions 테이블에서 세션 조회
+ * - session_members 테이블에 Member 저장
  */
-app.MapPost("/api/sessions/join", (JoinSessionRequest request) =>
+app.MapPost("/api/sessions/join", async (
+    JoinSessionRequest request,
+    DGDbContext db
+) =>
 {
     if (string.IsNullOrWhiteSpace(request.SessionId))
     {
@@ -152,7 +151,11 @@ app.MapPost("/api/sessions/join", (JoinSessionRequest request) =>
         });
     }
 
-    if (!sessions.TryGetValue(request.SessionId, out var session))
+    var session = await db.Sessions
+        .Include(x => x.Members)
+        .FirstOrDefaultAsync(x => x.SessionId == request.SessionId);
+
+    if (session == null)
     {
         return Results.NotFound(new
         {
@@ -170,13 +173,10 @@ app.MapPost("/api/sessions/join", (JoinSessionRequest request) =>
         });
     }
 
-    if (!sessionMembers.TryGetValue(request.SessionId, out var members))
-    {
-        members = new ConcurrentDictionary<long, SessionMemberInfo>();
-        sessionMembers[request.SessionId] = members;
-    }
+    var joinedMemberCount = session.Members.Count(x => x.Status == "Joined");
+    var existingMember = session.Members.FirstOrDefault(x => x.CharacterId == request.CharacterId);
 
-    if (members.Count >= session.MaxPlayers)
+    if (existingMember == null && joinedMemberCount >= session.MaxPlayers)
     {
         return Results.BadRequest(new
         {
@@ -185,18 +185,34 @@ app.MapPost("/api/sessions/join", (JoinSessionRequest request) =>
         });
     }
 
-    /**
-     * 같은 CharacterId가 이미 들어와 있으면 중복 합류로 보고,
-     * 기존 접속 정보를 그대로 갱신한다.
-     */
-    members[request.CharacterId] = new SessionMemberInfo(
-        SessionId: request.SessionId,
-        AccountId: request.AccountId,
-        CharacterId: request.CharacterId,
-        Role: "Member",
-        Status: "Joined",
-        JoinedAtUtc: DateTime.UtcNow
-    );
+    if (existingMember != null)
+    {
+        existingMember.AccountId = request.AccountId;
+        existingMember.Status = "Joined";
+        existingMember.JoinedAtUtc = DateTime.UtcNow;
+        existingMember.LeftAtUtc = null;
+
+        if (existingMember.Role != "Leader")
+        {
+            existingMember.Role = "Member";
+        }
+    }
+    else
+    {
+        var member = new SessionMember
+        {
+            SessionId = session.SessionId,
+            AccountId = request.AccountId,
+            CharacterId = request.CharacterId,
+            Role = "Member",
+            Status = "Joined",
+            JoinedAtUtc = DateTime.UtcNow
+        };
+
+        db.SessionMembers.Add(member);
+    }
+
+    await db.SaveChangesAsync();
 
     return Results.Ok(new JoinSessionResponse(
         Success: true,
@@ -211,12 +227,14 @@ app.MapPost("/api/sessions/join", (JoinSessionRequest request) =>
 /**
  * 세션 조회 API
  *
- * 특정 SessionId의 현재 상태를 조회한다.
- *
- * 예:
- * GET http://localhost:8080/api/sessions/local-session-xxxx
+ * DB 조회 흐름:
+ * - sessions 테이블에서 세션 조회
+ * - session_members 테이블까지 Include
  */
-app.MapGet("/api/sessions/{sessionId}", (string sessionId) =>
+app.MapGet("/api/sessions/{sessionId}", async (
+    string sessionId,
+    DGDbContext db
+) =>
 {
     if (string.IsNullOrWhiteSpace(sessionId))
     {
@@ -227,7 +245,11 @@ app.MapGet("/api/sessions/{sessionId}", (string sessionId) =>
         });
     }
 
-    if (!sessions.TryGetValue(sessionId, out var session))
+    var session = await db.Sessions
+        .Include(x => x.Members)
+        .FirstOrDefaultAsync(x => x.SessionId == sessionId);
+
+    if (session == null)
     {
         return Results.NotFound(new
         {
@@ -236,9 +258,18 @@ app.MapGet("/api/sessions/{sessionId}", (string sessionId) =>
         });
     }
 
-    var members = sessionMembers.TryGetValue(sessionId, out var foundMembers)
-        ? foundMembers.Values.ToList()
-        : new List<SessionMemberInfo>();
+    var members = session.Members
+        .OrderBy(x => x.Id)
+        .Select(x => new SessionMemberResponse(
+            Id: x.Id,
+            AccountId: x.AccountId,
+            CharacterId: x.CharacterId,
+            Role: x.Role,
+            Status: x.Status,
+            JoinedAtUtc: x.JoinedAtUtc,
+            LeftAtUtc: x.LeftAtUtc
+        ))
+        .ToList();
 
     return Results.Ok(new SessionDetailResponse(
         Success: true,
@@ -251,7 +282,7 @@ app.MapGet("/api/sessions/{sessionId}", (string sessionId) =>
         ServerPort: session.ServerPort,
         Status: session.Status,
         MaxPlayers: session.MaxPlayers,
-        CurrentPlayers: members.Count,
+        CurrentPlayers: members.Count(x => x.Status == "Joined"),
         Members: members
     ));
 });
@@ -288,28 +319,6 @@ public record JoinSessionResponse(
     string JoinToken
 );
 
-public record SessionInfo(
-    string SessionId,
-    long OwnerAccountId,
-    long CurrentLeaderAccountId,
-    string RegionId,
-    string MapPath,
-    string ServerIp,
-    int ServerPort,
-    string Status,
-    int MaxPlayers,
-    DateTime CreatedAtUtc
-);
-
-public record SessionMemberInfo(
-    string SessionId,
-    long AccountId,
-    long CharacterId,
-    string Role,
-    string Status,
-    DateTime JoinedAtUtc
-);
-
 public record SessionDetailResponse(
     bool Success,
     string SessionId,
@@ -322,5 +331,15 @@ public record SessionDetailResponse(
     string Status,
     int MaxPlayers,
     int CurrentPlayers,
-    List<SessionMemberInfo> Members
+    List<SessionMemberResponse> Members
+);
+
+public record SessionMemberResponse(
+    long Id,
+    long AccountId,
+    long CharacterId,
+    string Role,
+    string Status,
+    DateTime JoinedAtUtc,
+    DateTime? LeftAtUtc
 );
