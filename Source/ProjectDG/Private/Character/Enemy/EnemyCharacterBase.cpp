@@ -3,16 +3,16 @@
 
 #include "AbilitySystemComponent.h"
 #include "AttributeSet.h"
+#include "GAS/Attributes/DG_AttributeSet.h"
 #include "Core/DG_Debug.h"
 #include "Core/DG_GameplayTags.h"
 
 
 AEnemyCharacterBase::AEnemyCharacterBase()
 {
-    //Enemy는 Character 에서 직접 ASC 를 소유한다.    
     AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
     
-    //추후 Attribute , TeamTag등이 생기면 여기에 붙이면 됨
+    AttributeSet = CreateDefaultSubobject<UDG_AttributeSet>(TEXT("AttributeSet"));
 }
 
 void AEnemyCharacterBase::BeginPlay()
@@ -27,6 +27,13 @@ void AEnemyCharacterBase::PossessedBy(AController* NewController)
     ABaseCharacter::PossessedBy(NewController);
     
     InitializeEnemyAbilitySystem();
+
+    // 서버에서 기본 어빌리티와 초기 스탯(GE) 부여
+    if (HasAuthority())
+    {
+        GrantDefaultAbilities();
+        ApplyDefaultEffects();
+    }
 }
 
 void AEnemyCharacterBase::InitializeEnemyAbilitySystem()
@@ -51,5 +58,38 @@ UAbilitySystemComponent* AEnemyCharacterBase::GetCharacterAbilitySystemComponent
 const UAttributeSet* AEnemyCharacterBase::GetCharacterAttributeSet() const
 {
     return AttributeSet;
+}
+
+void AEnemyCharacterBase::GrantDefaultAbilities()
+{
+    if (!HasAuthority() || !AbilitySystemComponent) return;
+
+    for (const auto& AbilityClass : DefaultAbilities)
+    {
+        if (AbilityClass)
+        {
+            AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilityClass, 1));
+        }
+    }
+}
+
+void AEnemyCharacterBase::ApplyDefaultEffects()
+{
+    if (!HasAuthority() || !AbilitySystemComponent) return;
+
+    FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
+    Context.AddSourceObject(this);
+
+    for (const auto& EffectClass : DefaultEffects)
+    {
+        if (EffectClass)
+        {
+            FGameplayEffectSpecHandle Spec = AbilitySystemComponent->MakeOutgoingSpec(EffectClass, 1.f, Context);
+            if (Spec.IsValid())
+            {
+                AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+            }
+        }
+    }
 }
 

@@ -8,6 +8,9 @@
 
 class UAbilitySystemComponent;
 class UAttributeSet;
+class UDG_AttributeSet;
+class UGameplayAbility;
+class UGameplayEffect;
 
 /**
  * AEnemyCharacterBase
@@ -42,11 +45,25 @@ protected:
 	
 	//Attribute도 직접 소유
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|ASC")
-	TObjectPtr<UAttributeSet> AttributeSet = nullptr;
+	TObjectPtr<UDG_AttributeSet> AttributeSet = nullptr;
 	
 protected:
 	//ASC초기화
 	virtual void InitializeEnemyAbilitySystem();
+	
+	// 서버 측 기본 어빌리티 부여 로직
+	virtual void GrantDefaultAbilities();
+	
+	// 서버 측 기본 이펙트 부여 로직 (초기 스탯 등)
+	virtual void ApplyDefaultEffects();
+
+	/** 서버에서 부여할 기본 어빌리티 목록 */
+	UPROPERTY(EditDefaultsOnly, Category = "EnemyCharacterBase|GAS")
+	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
+
+	/** 서버에서 부여할 기본 지속 효과 목록 (초기 스탯 등) */
+	UPROPERTY(EditDefaultsOnly, Category = "EnemyCharacterBase|GAS")
+	TArray<TSubclassOf<UGameplayEffect>> DefaultEffects;
 	
 public:
 	//BaseCharacter 공용 ASC getter 
