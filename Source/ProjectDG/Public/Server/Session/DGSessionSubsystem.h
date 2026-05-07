@@ -8,6 +8,10 @@
 
 class UDGBackendClient;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDGOnSessionCreated, const FString&, SessionId);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDGOnSessionRequestFailed, const FString&, ErrorMessage);
+
+
 //게임 세션 흐름당담 system
 
 //역할 
@@ -30,6 +34,29 @@ public:
 	UFUNCTION(BlueprintCallable, Category="DG|Session")
 	void CreateLocalSessionAndTravel(int64 AccountId = 1, int64 CharacterId = 1,
 	                                 const FString& RegionId = TEXT("Region_Test"));
+	
+	// 개발용 세션 생성만 수행.
+	// 성공 시 바로 Dedicated Server로 이동하지 않고 SessionId만 UI에 표시할 수 있게 한다.
+	UFUNCTION(BlueprintCallable, Category = "DG|Session")
+	void CreateLocalSessionOnly(
+		int64 AccountId = 1,
+		int64 CharacterId = 1,
+		const FString& RegionId = TEXT("Region_Test")
+	);
+
+	// 마지막으로 생성/합류한 세션 접속 정보로 Dedicated Server 접속
+	UFUNCTION(BlueprintCallable, Category = "DG|Session")
+	void TravelToLastSession();
+
+	// 마지막으로 받은 SessionId 반환
+	UFUNCTION(BlueprintPure, Category = "DG|Session")
+	FString GetLastSessionId() const;
+
+	UPROPERTY(BlueprintAssignable, Category = "DG|Session")
+	FDGOnSessionCreated OnSessionCreated;
+
+	UPROPERTY(BlueprintAssignable, Category = "DG|Session")
+	FDGOnSessionRequestFailed OnSessionRequestFailed;
 
 	//개발용 세션 합류 + 데디서버 접속
 	UFUNCTION(BlueprintCallable, Category="DG|Session")
@@ -55,4 +82,10 @@ private:
 	void TravelToDedicatedServer(
 		const FDGSessionConnectionInfo& ConnectionInfo
 	);
+	
+	UPROPERTY()
+	FDGSessionConnectionInfo LastSessionConnectionInfo;
+
+	UPROPERTY()
+	bool bTravelAfterCreateSession = true;
 };
