@@ -45,6 +45,9 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
 protected:
+	/** 모든 컴포넌트가 생성된 후 초기화 단계 */
+    virtual void PostInitializeComponents() override;
+	
 	virtual void BeginPlay() override;
 	
 	//player state에서 ASC를 확인하는 함수
@@ -97,6 +100,42 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|View", meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCam;
+	
+	//외관 설정
+#pragma region OutLook
+protected:
+	// 메인 루트 메쉬
+	// GetMesh()가 이미 BaseCharacter에 있으므로 별도 선언 불필요
+
+	// 외형 컴포넌트
+	UPROPERTY(VisibleAnywhere, Category = "Modular")
+	TObjectPtr<USkeletalMeshComponent> HeadMesh;
+
+	UPROPERTY(VisibleAnywhere, Category = "Modular")
+	TObjectPtr<USkeletalMeshComponent> Hair1Mesh;
+	UPROPERTY(VisibleAnywhere, Category = "Modular")
+	TObjectPtr<USkeletalMeshComponent> Hair2Mesh;
+	UPROPERTY(VisibleAnywhere, Category = "Modular")
+	TObjectPtr<USkeletalMeshComponent> Hair3Mesh;
+
+	UPROPERTY(VisibleAnywhere, Category = "Modular")
+	TObjectPtr<USkeletalMeshComponent> UpperBodyMesh;
+	UPROPERTY(VisibleAnywhere, Category = "Modular")
+	TObjectPtr<USkeletalMeshComponent> LowerBodyMesh;
+
+	// 장비 컴포넌트
+	UPROPERTY(VisibleAnywhere, Category = "Modular")
+	TObjectPtr<USkeletalMeshComponent> HelmetMesh;
+	UPROPERTY(VisibleAnywhere, Category = "Modular")
+	TObjectPtr<USkeletalMeshComponent> ShoesMesh;
+	UPROPERTY(VisibleAnywhere, Category = "Modular")
+	TObjectPtr<USkeletalMeshComponent> ShoulderMesh;
+	UPROPERTY(VisibleAnywhere, Category = "Modular")
+	TObjectPtr<USkeletalMeshComponent> GlovesMesh;
+	
+#pragma endregion OutLook
+	
+	
 	
 	// Input Action Assets
 #pragma region Input

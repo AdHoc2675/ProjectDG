@@ -26,6 +26,33 @@ APlayerCharacterBase::APlayerCharacterBase()
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 	
+	// 컴포넌트 생성 및 할당
+	HeadMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("HeadMesh"));
+	Hair1Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Hair1Mesh"));
+	Hair2Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Hair2Mesh"));
+	Hair3Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Hair3Mesh"));
+	UpperBodyMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("UpperBodyMesh"));
+	LowerBodyMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("LowerBodyMesh"));
+	HelmetMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("HelmetMesh"));
+	ShoesMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("ShoesMesh"));
+	ShoulderMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("ShoulderMesh"));
+	GlovesMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("GlovesMesh"));
+
+	// 리스트를 만들어 일괄 설정
+	TArray<USkeletalMeshComponent*> ModularMeshes = {
+		HeadMesh, Hair1Mesh, Hair2Mesh, Hair3Mesh, 
+		UpperBodyMesh, LowerBodyMesh, HelmetMesh, 
+		ShoesMesh, ShoulderMesh, GlovesMesh
+	};
+
+	for (USkeletalMeshComponent* MeshComp : ModularMeshes)
+	{
+		if (MeshComp)
+		{
+			MeshComp->SetupAttachment(GetMesh()); // 애니메이션 동기화를 위해 보통 메인 메쉬에 부착합니다.
+		}
+	}
+	
 	//스프링암 생성
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(GetRootComponent());
@@ -66,6 +93,35 @@ void APlayerCharacterBase::Tick(float DeltaSeconds)
 void APlayerCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+}
+
+void APlayerCharacterBase::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	if (GetMesh())
+	{
+		TArray<USkeletalMeshComponent*> ModularMeshes = {
+			HeadMesh, Hair1Mesh, Hair2Mesh, Hair3Mesh,
+			UpperBodyMesh, LowerBodyMesh, HelmetMesh,
+			ShoesMesh, ShoulderMesh, GlovesMesh
+		};
+
+		for (USkeletalMeshComponent* MeshComp : ModularMeshes)
+		{
+			if (MeshComp)
+			{
+				// 메인 메쉬(GetMesh())의 애니메이션 포즈를 따르도록 설정
+				MeshComp->SetLeaderPoseComponent(GetMesh());
+				
+				// [최적화] 리더 포즈 사용 시 틱 옵션 조정
+				MeshComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
+
+				// 추가로, 굳이 애니메이션이 필요 없는 컴포넌트라면 애니메이션 모드를 아예 끕니다.
+				MeshComp->SetAnimationMode(EAnimationMode::AnimationCustomMode);
+			}
+		}
+	}
 }
 
 void APlayerCharacterBase::InitializePlayerAbilitySystem()
