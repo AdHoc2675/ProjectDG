@@ -147,6 +147,8 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 		return;
 	}
 
+	// 이미 ActorInfo가 설정되어 있다면 불필요한 재설정 방지
+	if (ASC->GetAvatarActor() == this) return;
 	/**
 	 * GAS ActorInfo 초기화
 	 *
@@ -336,6 +338,10 @@ UDG_AttributeSet* APlayerCharacterBase::GetPlayerDGAttributeSet() const
 void APlayerCharacterBase::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
+	
+	// 로그에 "누가" 빙의를 요청하는지 출력 (Warrior에서 GA 및 GE의 이중 적용 문제)
+	Debug::Print(FString::Printf(TEXT("PossessedBy: Controller: %s, Pawn: %s"), 
+		*NewController->GetName(), *GetName()), FColor::Red);
 
 	/**
 	 * Controller가 Pawn을 점유한 시점은
@@ -344,11 +350,18 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 	InitializePlayerAbilitySystem();
 	
 	// 2. 서버에서 기본 GameplayEffect(회복 등) 부여
+	// + 서버 단일 실행 보장
 	if (HasAuthority())
 	{
-		InitializeMovementStats();  // 물리 수치 적용
-		GrantDefaultAbilities();    // 기본 GE 적용 (Stamina 회복 등)
-		ApplyDefaultEffects();      // 어빌리티 부여
+		InitializeMovementStats();
+
+		// [수정] 중복 부여를 방지하기 위해 ASC에 이미 스킬이 있는지 확인
+		UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+		if (ASC && ASC->GetActivatableAbilities().Num() == 0)
+		{
+			GrantDefaultAbilities();
+			ApplyDefaultEffects();
+		}
 	}
 }
 
@@ -415,12 +428,6 @@ void APlayerCharacterBase::ShiftActionStarted()
 
 	// 1. 여기서 이벤트를 발생시키면, 클라이언트 GAS는 '스태미나가 깎일 것'이라고 믿고 애니메이션을 틉니다.
 	SendDodgeEvent(DesiredDir, bHasInput);
-
-	// 2. 서버에도 요청하여 실제 데이터 확정을 요청합니다.
-	// if (!HasAuthority())
-	// {
-	// 	ServerHandleShiftAction(DesiredDir, bHasInput);
-	// }
 }
 
 void APlayerCharacterBase::SendDodgeEvent(FVector Direction, bool bHasInput)
