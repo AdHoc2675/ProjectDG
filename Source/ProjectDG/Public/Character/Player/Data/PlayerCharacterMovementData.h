@@ -81,11 +81,5 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sprint", meta = (ClampMin = "0.0"))
     float SprintStaminaCostPerSecond = 15.f;
 	
-	// 기존 DodgeMontage를 아래 두 개로 교체
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dodge")
-	TObjectPtr<UAnimMontage> ForwardDodgeMontage;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dodge")
-	TObjectPtr<UAnimMontage> BackwardDodgeMontage;
 	
 };

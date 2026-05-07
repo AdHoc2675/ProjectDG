@@ -26,6 +26,33 @@ APlayerCharacterBase::APlayerCharacterBase()
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 	
+	// 컴포넌트 생성 및 할당
+	HeadMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("HeadMesh"));
+	Hair1Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Hair1Mesh"));
+	Hair2Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Hair2Mesh"));
+	Hair3Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Hair3Mesh"));
+	UpperBodyMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("UpperBodyMesh"));
+	LowerBodyMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("LowerBodyMesh"));
+	HelmetMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("HelmetMesh"));
+	ShoesMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("ShoesMesh"));
+	ShoulderMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("ShoulderMesh"));
+	GlovesMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("GlovesMesh"));
+
+	// 리스트를 만들어 일괄 설정
+	TArray<USkeletalMeshComponent*> ModularMeshes = {
+		HeadMesh, Hair1Mesh, Hair2Mesh, Hair3Mesh, 
+		UpperBodyMesh, LowerBodyMesh, HelmetMesh, 
+		ShoesMesh, ShoulderMesh, GlovesMesh
+	};
+
+	for (USkeletalMeshComponent* MeshComp : ModularMeshes)
+	{
+		if (MeshComp)
+		{
+			MeshComp->SetupAttachment(GetMesh()); // 애니메이션 동기화를 위해 보통 메인 메쉬에 부착합니다.
+		}
+	}
+	
 	//스프링암 생성
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(GetRootComponent());
@@ -68,6 +95,35 @@ void APlayerCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
+void APlayerCharacterBase::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	if (GetMesh())
+	{
+		TArray<USkeletalMeshComponent*> ModularMeshes = {
+			HeadMesh, Hair1Mesh, Hair2Mesh, Hair3Mesh,
+			UpperBodyMesh, LowerBodyMesh, HelmetMesh,
+			ShoesMesh, ShoulderMesh, GlovesMesh
+		};
+
+		for (USkeletalMeshComponent* MeshComp : ModularMeshes)
+		{
+			if (MeshComp)
+			{
+				// 메인 메쉬(GetMesh())의 애니메이션 포즈를 따르도록 설정
+				MeshComp->SetLeaderPoseComponent(GetMesh());
+				
+				// [최적화] 리더 포즈 사용 시 틱 옵션 조정
+				MeshComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
+
+				// 추가로, 굳이 애니메이션이 필요 없는 컴포넌트라면 애니메이션 모드를 아예 끕니다.
+				MeshComp->SetAnimationMode(EAnimationMode::AnimationCustomMode);
+			}
+		}
+	}
+}
+
 void APlayerCharacterBase::InitializePlayerAbilitySystem()
 {
 	/**
@@ -91,6 +147,8 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 		return;
 	}
 
+	// 이미 ActorInfo가 설정되어 있다면 불필요한 재설정 방지
+	if (ASC->GetAvatarActor() == this) return;
 	/**
 	 * GAS ActorInfo 초기화
 	 *
@@ -194,21 +252,21 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	 * 하나씩 방어적으로 체크한다.
 	 */
 	 if (IA_Move)
-        {
-                EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered,this,&APlayerCharacterBase::MoveAction);
-                EnhancedInputComponent->BindAction(IA_Move,ETriggerEvent::Completed,this,&APlayerCharacterBase::MoveAction);
-        }
+	{
+        EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered,this,&APlayerCharacterBase::MoveAction);
+        EnhancedInputComponent->BindAction(IA_Move,ETriggerEvent::Completed,this,&APlayerCharacterBase::MoveAction);
+	}
 
-        if (IA_Look)
-        {
-                EnhancedInputComponent->BindAction(IA_Look,ETriggerEvent::Triggered,this,&APlayerCharacterBase::LookAction);
-        }
+    if (IA_Look)
+    {
+        EnhancedInputComponent->BindAction(IA_Look,ETriggerEvent::Triggered,this,&APlayerCharacterBase::LookAction);
+    }
 
-        if (IA_Jump)
-        {
-                EnhancedInputComponent->BindAction(IA_Jump,ETriggerEvent::Started,this,&ACharacter::Jump);
-                EnhancedInputComponent->BindAction(IA_Jump,ETriggerEvent::Completed,this,&ACharacter::StopJumping);
-        }
+    if (IA_Jump)
+    {
+        EnhancedInputComponent->BindAction(IA_Jump,ETriggerEvent::Started,this,&ACharacter::Jump);
+        EnhancedInputComponent->BindAction(IA_Jump,ETriggerEvent::Completed,this,&ACharacter::StopJumping);
+    }
 	
 	if (IA_Shift)
 	{
@@ -216,6 +274,14 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 		EnhancedInputComponent->BindAction(IA_Shift, ETriggerEvent::Started, this, &APlayerCharacterBase::ShiftActionStarted);
 		// Completed: 버튼을 떼더라도 질주가 유지되게 하려면 여기서 질주를 끄지 않음
 	}
+	
+	// Skill Mapping
+	if (IA_Skill_1) EnhancedInputComponent->BindAction(IA_Skill_1, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_1);
+	if (IA_Skill_2) EnhancedInputComponent->BindAction(IA_Skill_2, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_2);
+	if (IA_Skill_3) EnhancedInputComponent->BindAction(IA_Skill_3, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_3);
+	if (IA_Skill_4) EnhancedInputComponent->BindAction(IA_Skill_4, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_4);
+	if (IA_Skill_Q) EnhancedInputComponent->BindAction(IA_Skill_Q, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_Q);
+	if (IA_Skill_E) EnhancedInputComponent->BindAction(IA_Skill_E, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_E);
 }
 
 UAbilitySystemComponent* APlayerCharacterBase::GetCharacterAbilitySystemComponent() const
@@ -272,6 +338,10 @@ UDG_AttributeSet* APlayerCharacterBase::GetPlayerDGAttributeSet() const
 void APlayerCharacterBase::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
+	
+	// 로그에 "누가" 빙의를 요청하는지 출력 (Warrior에서 GA 및 GE의 이중 적용 문제)
+	Debug::Print(FString::Printf(TEXT("PossessedBy: Controller: %s, Pawn: %s"), 
+		*NewController->GetName(), *GetName()), FColor::Red);
 
 	/**
 	 * Controller가 Pawn을 점유한 시점은
@@ -280,11 +350,18 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 	InitializePlayerAbilitySystem();
 	
 	// 2. 서버에서 기본 GameplayEffect(회복 등) 부여
+	// + 서버 단일 실행 보장
 	if (HasAuthority())
 	{
-		InitializeMovementStats();  // 물리 수치 적용
-		GrantDefaultAbilities();    // 기본 GE 적용 (Stamina 회복 등)
-		ApplyDefaultEffects();      // 어빌리티 부여
+		InitializeMovementStats();
+
+		// [수정] 중복 부여를 방지하기 위해 ASC에 이미 스킬이 있는지 확인
+		UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+		if (ASC && ASC->GetActivatableAbilities().Num() == 0)
+		{
+			GrantDefaultAbilities();
+			ApplyDefaultEffects();
+		}
 	}
 }
 
@@ -351,12 +428,6 @@ void APlayerCharacterBase::ShiftActionStarted()
 
 	// 1. 여기서 이벤트를 발생시키면, 클라이언트 GAS는 '스태미나가 깎일 것'이라고 믿고 애니메이션을 틉니다.
 	SendDodgeEvent(DesiredDir, bHasInput);
-
-	// 2. 서버에도 요청하여 실제 데이터 확정을 요청합니다.
-	// if (!HasAuthority())
-	// {
-	// 	ServerHandleShiftAction(DesiredDir, bHasInput);
-	// }
 }
 
 void APlayerCharacterBase::SendDodgeEvent(FVector Direction, bool bHasInput)
@@ -443,6 +514,62 @@ FVector APlayerCharacterBase::GetDesiredMoveDirection() const
 		return Forward.GetSafeNormal();
 	}
 	return Direction.GetSafeNormal();
+}
+
+void APlayerCharacterBase::OnSkillInput(FGameplayTag SlotTag)
+{
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC) return;
+
+	FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
+	if (SkillTag.IsValid())
+	{
+		// 태그 기반으로 스킬 활성화
+		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(SkillTag));
+		
+		// [수정된 부분] FString::Printf 결과를 FString 변수에 먼저 담아서 넘깁니다.
+		FString Msg = FString::Printf(TEXT("Slot Input: %s -> Ability: %s"), *SlotTag.ToString(), *SkillTag.ToString());
+		Debug::Print(Msg, FColor::Green);
+	}
+}
+
+FGameplayTag APlayerCharacterBase::GetSkillTagForSlot(FGameplayTag SlotTag) const
+{
+	if (SkillSlotMapping.Contains(SlotTag))
+	{
+		return SkillSlotMapping[SlotTag];
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+void APlayerCharacterBase::OnSkillInput_1()
+{
+	OnSkillInput(DGGameplayTags::Input_Slot_1);
+}
+
+void APlayerCharacterBase::OnSkillInput_2()
+{
+	OnSkillInput(DGGameplayTags::Input_Slot_2);
+}
+
+void APlayerCharacterBase::OnSkillInput_3()
+{
+	OnSkillInput(DGGameplayTags::Input_Slot_3);
+}
+
+void APlayerCharacterBase::OnSkillInput_4()
+{
+	OnSkillInput(DGGameplayTags::Input_Slot_4);
+}
+
+void APlayerCharacterBase::OnSkillInput_Q()
+{
+	OnSkillInput(DGGameplayTags::Input_Slot_Q);
+}
+
+void APlayerCharacterBase::OnSkillInput_E()
+{
+	OnSkillInput(DGGameplayTags::Input_Slot_E);
 }
 
 void APlayerCharacterBase::InitializeMovementStats()
