@@ -17,6 +17,7 @@ class UAnimMontage;
 
 
 struct FInputActionValue;
+class UAIPerceptionStimuliSourceComponent;
 
 /**
  * APlayerCharacterBase
@@ -135,7 +136,12 @@ protected:
 	
 #pragma endregion OutLook
 	
+#pragma region AI
+	// AI 인지를 위한 자극 소스 컴포넌트
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAIPerceptionStimuliSourceComponent> StimuliSourceComponent;
 	
+#pragma endregion AI
 	
 	// Input Action Assets
 #pragma region Input

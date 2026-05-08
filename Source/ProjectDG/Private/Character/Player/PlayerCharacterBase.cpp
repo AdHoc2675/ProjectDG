@@ -20,6 +20,8 @@
 #include "Animation/AnimInstance.h"
 #include "Character/Player/Data/PlayerCharacterMovementData.h"
 #include "Character/Player/Data/PlayerCharacterClassData.h"
+#include "Perception/AIPerceptionStimuliSourceComponent.h"
+#include "Perception/AISense_Sight.h"
 
 APlayerCharacterBase::APlayerCharacterBase()
 {
@@ -27,6 +29,7 @@ APlayerCharacterBase::APlayerCharacterBase()
 	bReplicates = true;
 	
 	// 컴포넌트 생성 및 할당
+	// 외형 관련 컴포넌트
 	HeadMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("HeadMesh"));
 	Hair1Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Hair1Mesh"));
 	Hair2Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Hair2Mesh"));
@@ -52,6 +55,9 @@ APlayerCharacterBase::APlayerCharacterBase()
 			MeshComp->SetupAttachment(GetMesh()); // 애니메이션 동기화를 위해 보통 메인 메쉬에 부착합니다.
 		}
 	}
+	
+	//AI관련 StimuliSourceComponent
+	StimuliSourceComponent = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>(TEXT("StimuliSourceComponent"));
 	
 	//스프링암 생성
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
