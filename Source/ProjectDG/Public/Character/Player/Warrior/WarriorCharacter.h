@@ -14,4 +14,6 @@ class PROJECTDG_API AWarriorCharacter : public APlayerCharacterBase
 {
 	GENERATED_BODY()
 	
+public:
+	AWarriorCharacter(); // 생성자 선언
 };
