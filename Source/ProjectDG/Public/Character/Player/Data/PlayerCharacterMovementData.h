@@ -18,14 +18,14 @@ class PROJECTDG_API UPlayerCharacterMovementData : public UDataAsset
 	
 public:
     /**
-     * 기본 이동 속도.
+     * 기본 이동 속도 -> 이동 속도는 스킬이나 버프/디버프의 영향을 받을 수 있으므로 추후 AttributeSet에서 관리
      * CharacterMovementComponent::MaxWalkSpeed에 적용된다.
      */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (ClampMin = "0.0"))
     float WalkSpeed = 500.f;
 
     /**
-     * 질주 중 이동 속도.
+     * 질주 중 이동 속도. -> 이동 속도는 스킬이나 버프/디버프의 영향을 받을 수 있으므로 추후 AttributeSet에서 관리
      * bIsSprinting 상태일 때 CharacterMovementComponent::MaxWalkSpeed에 적용된다.
      */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (ClampMin = "0.0"))

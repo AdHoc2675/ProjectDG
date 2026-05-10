@@ -359,13 +359,17 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 	// + 서버 단일 실행 보장
 	if (HasAuthority())
 	{
+		InitializePlayerStateFromClassData();
 		InitializeMovementStats();
+		InitializeSkillSlotsFromClassData();
 
 		// [수정] 중복 부여를 방지하기 위해 ASC에 이미 스킬이 있는지 확인
 		UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
 		if (ASC && ASC->GetActivatableAbilities().Num() == 0)
 		{
 			GrantDefaultAbilities();
+			GrantClassSkillAbilities();
+			
 			ApplyDefaultEffects();
 		}
 	}
@@ -381,9 +385,123 @@ void APlayerCharacterBase::OnRep_PlayerState()
 	 * 네트워크 환경에서 매우 중요
 	 */
 	InitializePlayerAbilitySystem();
-	
-	// 클라이언트도 에셋을 읽어 자기 자신의 물리 수치를 서버와 맞춥니다.
 	InitializeMovementStats();
+	InitializeSkillSlotsFromClassData();
+}
+
+void APlayerCharacterBase::InitializePlayerStateFromClassData()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (!CharacterClassData)
+	{
+		Debug::Print(TEXT("[PlayerCharacterBase] CharacterClassData is null."));
+		return;
+	}
+
+	ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>();
+	if (!PS)
+	{
+		Debug::Print(TEXT("[PlayerCharacterBase] DG_PlayerState is null."));
+		return;
+	}
+
+	PS->InitializePlayerDataFromClassData(CharacterClassData);
+}
+
+void APlayerCharacterBase::InitializeSkillSlotsFromClassData()
+{
+	SkillSlotMapping.Empty();
+
+	if (!CharacterClassData)
+	{
+		Debug::Print(TEXT("[PlayerCharacterBase] CharacterClassData is null. Skill slots skipped."));
+		return;
+	}
+
+	for (const FSkillSlotDefinition& SkillSlot : CharacterClassData->SkillSlots)
+	{
+		if (!SkillSlot.SlotTag.IsValid() || !SkillSlot.SkillTag.IsValid())
+		{
+			continue;
+		}
+
+		SkillSlotMapping.Add(SkillSlot.SlotTag, SkillSlot.SkillTag);
+	}
+}
+
+void APlayerCharacterBase::GrantClassSkillAbilities()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC || !CharacterClassData)
+	{
+		return;
+	}
+
+	const ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>();
+	const int32 CurrentLevel = PS ? PS->GetCharacterLevel() : 1;
+
+	for (const FSkillSlotDefinition& SkillSlot : CharacterClassData->SkillSlots)
+	{
+		if (!SkillSlot.AbilityClass)
+		{
+			continue;
+		}
+
+		if (SkillSlot.UnlockLevel > CurrentLevel)
+		{
+			continue;
+		}
+
+		ASC->GiveAbility(FGameplayAbilitySpec(SkillSlot.AbilityClass, 1));
+	}
+}
+
+void APlayerCharacterBase::GrantDefaultAbilities()
+{
+	if (!HasAuthority()) return;
+
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC || !CharacterClassData) return;
+
+	for (const auto& AbilityClass : CharacterClassData->StartupAbilities)
+	{
+		if (AbilityClass)
+		{
+			ASC->GiveAbility(FGameplayAbilitySpec(AbilityClass, 1));
+		}
+	}
+}
+
+void APlayerCharacterBase::ApplyDefaultEffects()
+{
+	if (!HasAuthority()) return;
+
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC || !CharacterClassData) return;
+
+	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+	Context.AddSourceObject(this);
+
+	for (const auto& EffectClass : CharacterClassData->StartupEffects)
+	{
+		if (EffectClass)
+		{
+			FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(EffectClass, 1.f, Context);
+			if (Spec.IsValid())
+			{
+				ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+			}
+		}
+	}
 }
 
 void APlayerCharacterBase::LookAction(const FInputActionValue& InputActionValue)
@@ -462,44 +580,6 @@ FVector APlayerCharacterBase::GetCameraForwardOnPlane() const
 	
 }
 
-void APlayerCharacterBase::GrantDefaultAbilities()
-{
-	if (!HasAuthority()) return;
-
-	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
-	if (!ASC || !CharacterClassData) return;
-
-	for (const auto& AbilityClass : CharacterClassData->StartupAbilities)
-	{
-		if (AbilityClass)
-		{
-			ASC->GiveAbility(FGameplayAbilitySpec(AbilityClass, 1));
-		}
-	}
-}
-
-void APlayerCharacterBase::ApplyDefaultEffects()
-{
-	if (!HasAuthority()) return;
-
-	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
-	if (!ASC || !CharacterClassData) return;
-
-	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-	Context.AddSourceObject(this);
-
-	for (const auto& EffectClass : CharacterClassData->StartupEffects)
-	{
-		if (EffectClass)
-		{
-			FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(EffectClass, 1.f, Context);
-			if (Spec.IsValid())
-			{
-				ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
-			}
-		}
-	}
-}
 
 FVector APlayerCharacterBase::GetCameraRightOnPlane() const
 {
