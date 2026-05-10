@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "GameplayTagContainer.h"
 #include "PlayerCharacterClassData.generated.h"
 
 class UPlayerCharacterMovementData;
@@ -24,6 +25,25 @@ struct FPlayerMovementAnimationSet
 	TObjectPtr<UAnimMontage> BackwardDodge;
 };
 
+// 직업별 플레이어가 사용할 수 있는 스킬
+USTRUCT(BlueprintType)
+struct FSkillSlotDefinition
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
+	FGameplayTag SlotTag;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
+	FGameplayTag SkillTag;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
+	int32 UnlockLevel = 1;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
+	TSubclassOf<UGameplayAbility> AbilityClass;
+};
+
 /**
  * UPlayerCharacterClassData
  * 플레이어 직업별 이동 수치, GAS, 상황별 애니메이션을 총괄하는 전용 데이터 에셋
@@ -34,6 +54,15 @@ class PROJECTDG_API UPlayerCharacterClassData : public UPrimaryDataAsset
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(EditDefaultsOnly, Category = "Class")
+	FGameplayTag CharacterClassTag;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Attribute")
+	FName AttributeRowName;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Skill")
+	TArray<FSkillSlotDefinition> SkillSlots;
+	
 	// --- 이동 데이터 (Player 전용) ---
 	UPROPERTY(EditDefaultsOnly, Category = "Movement")
 	TObjectPtr<UPlayerCharacterMovementData> MovementData;

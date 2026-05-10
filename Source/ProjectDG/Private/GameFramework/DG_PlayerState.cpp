@@ -4,10 +4,12 @@
 #include "GameFramework/DG_PlayerState.h"
 
 #include "AbilitySystemComponent.h"
+#include "Character/Player/Data/PlayerCharacterClassData.h"
 #include "Core/DG_Debug.h"
 #include "Data/DT_Attribute.h"
 #include "Engine/DataTable.h"
 #include "GAS/Attributes/DG_AttributeSet.h"
+#include "Net/UnrealNetwork.h"
 
 ADG_PlayerState::ADG_PlayerState()
 {
@@ -33,8 +35,6 @@ ADG_PlayerState::ADG_PlayerState()
 void ADG_PlayerState::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	InitializeAttributesFromDataTable();
 }
 
 
@@ -49,7 +49,7 @@ UDG_AttributeSet* ADG_PlayerState::GetDGAttributeSet() const
 }
 
 
-void ADG_PlayerState::InitializeAttributesFromDataTable()
+void ADG_PlayerState::InitializeAttributesFromDataTable() const
 {
 	/**
 	 * DataTable 유효성 검사
@@ -96,29 +96,87 @@ void ADG_PlayerState::InitializeAttributesFromDataTable()
 		return;
 	}
 
-	/**
-	 * 현재 단계에서는 GameplayEffect를 거치지 않고
-	 * AttributeSet 기본값을 직접 초기화한다.
-	 *
-	 * Row Struct 안의 변수명이 아래와 같다는 전제:
-	 * - Health
-	 * - MaxHealth
-	 * - AttackPower
-	 *
-	 * 만약 네 Struct 변수명이 다르면
-	 * InitRow->Health 부분 이름도 같이 맞춰서 바꿔야 한다.
-	 */
-	AttributeSet->InitHealth(InitRow->Health);
+	
+	AttributeSet->InitHealth(InitRow->MaxHealth);
 	AttributeSet->InitMaxHealth(InitRow->MaxHealth);
 	
-	// 스테미나 초기화
+	AttributeSet->InitMental(InitRow->MaxMental);
+	AttributeSet->InitMaxMental(InitRow->MaxMental);
+	
 	AttributeSet->InitStamina(InitRow->MaxStamina);    
 	AttributeSet->InitMaxStamina(InitRow->MaxStamina);
 	
+	AttributeSet->InitMainStat(InitRow->MainStat);
 	AttributeSet->InitAttackPower(InitRow->AttackPower);
+	AttributeSet->InitDefense(InitRow->Defense);
+	AttributeSet->InitHealthCoefficient(InitRow->HealthCoefficient);
+	AttributeSet->InitDefenseCoefficient(InitRow->DefenseCoefficient);
+	AttributeSet->InitCriticalRate(InitRow->CriticalRate);
+	AttributeSet->InitCriticalDamage(InitRow->CriticalDamage);
+	AttributeSet->InitMoveSpeed(InitRow->MoveSpeed);
+	AttributeSet->InitAttackSpeed(InitRow->AttackSpeed);
+	AttributeSet->InitGroggyDamage(InitRow->GroggyDamage);
+	AttributeSet->InitFinalDamageIncrease(InitRow->FinalDamageIncrease);
+	AttributeSet->InitDamageReduction(InitRow->DamageReduction);
+	AttributeSet->InitCooldownReduction(InitRow->CooldownReduction);
+	AttributeSet->InitMentalRecoveryIncrease(InitRow->MentalRecoveryIncrease);
+	AttributeSet->InitLifeSteal(InitRow->LifeSteal);
+	AttributeSet->InitGroggyDamageIncreaseRate(InitRow->GroggyDamageIncreaseRate);
 
 	Debug::Print(TEXT("[DG_PlayerState] Attributes initialized from DT_Attribute."));
-	Debug::PrintFloat(TEXT("Health"), InitRow->Health);
-	Debug::PrintFloat(TEXT("MaxHealth"), InitRow->MaxHealth);
-	Debug::PrintFloat(TEXT("AttackPower"), InitRow->AttackPower);
+}
+
+void ADG_PlayerState::InitializePlayerDataFromClassData(const UPlayerCharacterClassData* InClassData)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (!InClassData)
+	{
+		Debug::Print(TEXT("[DG_PlayerState] ClassData is null."));
+		return;
+	}
+
+	if (InClassData->AttributeRowName.IsNone())
+	{
+		Debug::Print(TEXT("[DG_PlayerState] AttributeRowName is none."));
+		return;
+	}
+
+	CharacterClassTag = InClassData->CharacterClassTag;
+	AttributeInitRowName = InClassData->AttributeRowName;
+
+	InitializeAttributesFromDataTable();
+
+	Debug::Print(FString::Printf(
+			TEXT("[DG_PlayerState] Player data initialized. Class=%s Row=%s"),
+			*CharacterClassTag.ToString(),
+			*AttributeInitRowName.ToString()
+	));
+}
+
+void ADG_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ADG_PlayerState, CharacterClassTag);
+	DOREPLIFETIME(ADG_PlayerState, Level);
+	DOREPLIFETIME(ADG_PlayerState, CurrentExp);
+}
+
+void ADG_PlayerState::OnRep_CharacterClassTag()
+{
+	// 클라이언트에서 직업 UI 갱신, 스킬 UI 갱신 등이 필요하면 여기서 처리
+}
+
+void ADG_PlayerState::OnRep_Level()
+{
+	// 클라이언트에서 레벨 UI 갱신
+}
+
+void ADG_PlayerState::OnRep_CurrentExp()
+{
+	// 클라이언트에서 경험치 UI 갱신
 }
