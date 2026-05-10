@@ -88,6 +88,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|GAS")
 	TArray<TSubclassOf<class UGameplayEffect>> DefaultEffects;
 
+	void InitializePlayerStateFromClassData();
+	
+	void InitializeSkillSlotsFromClassData();
+	
+	void GrantClassSkillAbilities();
+	
 	// 서버 측 어빌리티 부여 로직
 	void GrantDefaultAbilities();
 	

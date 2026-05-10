@@ -4,10 +4,12 @@
 #include "GameFramework/DG_PlayerState.h"
 
 #include "AbilitySystemComponent.h"
+#include "Character/Player/Data/PlayerCharacterClassData.h"
 #include "Core/DG_Debug.h"
 #include "Data/DT_Attribute.h"
 #include "Engine/DataTable.h"
 #include "GAS/Attributes/DG_AttributeSet.h"
+#include "Net/UnrealNetwork.h"
 
 ADG_PlayerState::ADG_PlayerState()
 {
@@ -33,11 +35,6 @@ ADG_PlayerState::ADG_PlayerState()
 void ADG_PlayerState::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	if (HasAuthority())
-	{
-		InitializeAttributesFromDataTable();
-	}
 }
 
 
@@ -127,4 +124,59 @@ void ADG_PlayerState::InitializeAttributesFromDataTable() const
 	AttributeSet->InitGroggyDamageIncreaseRate(InitRow->GroggyDamageIncreaseRate);
 
 	Debug::Print(TEXT("[DG_PlayerState] Attributes initialized from DT_Attribute."));
+}
+
+void ADG_PlayerState::InitializePlayerDataFromClassData(const UPlayerCharacterClassData* InClassData)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (!InClassData)
+	{
+		Debug::Print(TEXT("[DG_PlayerState] ClassData is null."));
+		return;
+	}
+
+	if (InClassData->AttributeRowName.IsNone())
+	{
+		Debug::Print(TEXT("[DG_PlayerState] AttributeRowName is none."));
+		return;
+	}
+
+	CharacterClassTag = InClassData->CharacterClassTag;
+	AttributeInitRowName = InClassData->AttributeRowName;
+
+	InitializeAttributesFromDataTable();
+
+	Debug::Print(FString::Printf(
+			TEXT("[DG_PlayerState] Player data initialized. Class=%s Row=%s"),
+			*CharacterClassTag.ToString(),
+			*AttributeInitRowName.ToString()
+	));
+}
+
+void ADG_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ADG_PlayerState, CharacterClassTag);
+	DOREPLIFETIME(ADG_PlayerState, Level);
+	DOREPLIFETIME(ADG_PlayerState, CurrentExp);
+}
+
+void ADG_PlayerState::OnRep_CharacterClassTag()
+{
+	// 클라이언트에서 직업 UI 갱신, 스킬 UI 갱신 등이 필요하면 여기서 처리
+}
+
+void ADG_PlayerState::OnRep_Level()
+{
+	// 클라이언트에서 레벨 UI 갱신
+}
+
+void ADG_PlayerState::OnRep_CurrentExp()
+{
+	// 클라이언트에서 경험치 UI 갱신
 }

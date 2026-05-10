@@ -5,11 +5,13 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
 #include "AbilitySystemInterface.h"
+#include "GameplayTagContainer.h"
 #include "DG_PlayerState.generated.h"
 
 class UAbilitySystemComponent;
 class UDG_AttributeSet;
 class UDataTable;
+class UPlayerCharacterClassData;
 
 /*
 ADG_PlayerState
@@ -37,6 +39,7 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
 public:
 
@@ -48,21 +51,24 @@ public:
 	//나중에 Combat/Character/UI/데미지 등에서 사용	
 	UFUNCTION(BlueprintCallable, Category="GAS")
 	UDG_AttributeSet* GetDGAttributeSet() const;
+	
+public:
+	// Getter 함수 추가
+	UFUNCTION(BlueprintCallable, Category = "Player|Growth")
+	int32 GetCharacterLevel() const { return Level; }
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Character")
+	FGameplayTag GetCharacterClassTag() const { return CharacterClassTag; }
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Growth")
+	int32 GetCurrentExp() const { return CurrentExp; }
 
 protected:
 	//Playerstate 가 직접 소유하는 ASC 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 
-	//Attributeset 지금은 깡통상태. 연결만
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS")
-	TObjectPtr<UDG_AttributeSet> AttributeSet = nullptr;
-	
-	//Attribute table 지정. BP에서 지정하면 됨
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Init")
-	TObjectPtr<UDataTable> AttributeInitDataTable = nullptr;
-
-	//ROW 이름은 Player로 
+	//ROW 이름
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Init")
 	FName AttributeInitRowName = TEXT("Player");
 
@@ -71,6 +77,38 @@ protected:
 	 * DataTable에서 초기 속성값을 읽어 AttributeSet에 적용
 	 */
 	void InitializeAttributesFromDataTable() const;
+	
+public:
+	UFUNCTION(BlueprintCallable, Category = "Player|Init")
+	void InitializePlayerDataFromClassData(const UPlayerCharacterClassData* InClassData);
+	
+#pragma region Character
+protected:
+	UPROPERTY(ReplicatedUsing = OnRep_CharacterClassTag, BlueprintReadOnly, Category = "Player|Character")
+	FGameplayTag CharacterClassTag;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Level, BlueprintReadOnly, Category = "Player|Growth")
+	int32 Level = 1;
+
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentExp, BlueprintReadOnly, Category = "Player|Growth")
+	int32 CurrentExp = 0;
+
+	UFUNCTION()
+	void OnRep_CharacterClassTag();
+
+	UFUNCTION()
+	void OnRep_Level();
+
+	UFUNCTION()
+	void OnRep_CurrentExp();
+	
+	//Attributeset 생성
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS")
+	TObjectPtr<UDG_AttributeSet> AttributeSet = nullptr;
+	
+	//Attribute table 지정
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Init")
+	TObjectPtr<UDataTable> AttributeInitDataTable = nullptr;
 	
 	
 };
