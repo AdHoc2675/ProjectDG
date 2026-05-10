@@ -34,7 +34,10 @@ void ADG_PlayerState::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	InitializeAttributesFromDataTable();
+	if (HasAuthority())
+	{
+		InitializeAttributesFromDataTable();
+	}
 }
 
 
@@ -49,7 +52,7 @@ UDG_AttributeSet* ADG_PlayerState::GetDGAttributeSet() const
 }
 
 
-void ADG_PlayerState::InitializeAttributesFromDataTable()
+void ADG_PlayerState::InitializeAttributesFromDataTable() const
 {
 	/**
 	 * DataTable 유효성 검사
@@ -96,29 +99,32 @@ void ADG_PlayerState::InitializeAttributesFromDataTable()
 		return;
 	}
 
-	/**
-	 * 현재 단계에서는 GameplayEffect를 거치지 않고
-	 * AttributeSet 기본값을 직접 초기화한다.
-	 *
-	 * Row Struct 안의 변수명이 아래와 같다는 전제:
-	 * - Health
-	 * - MaxHealth
-	 * - AttackPower
-	 *
-	 * 만약 네 Struct 변수명이 다르면
-	 * InitRow->Health 부분 이름도 같이 맞춰서 바꿔야 한다.
-	 */
-	AttributeSet->InitHealth(InitRow->Health);
+	
+	AttributeSet->InitHealth(InitRow->MaxHealth);
 	AttributeSet->InitMaxHealth(InitRow->MaxHealth);
 	
-	// 스테미나 초기화
+	AttributeSet->InitMental(InitRow->MaxMental);
+	AttributeSet->InitMaxMental(InitRow->MaxMental);
+	
 	AttributeSet->InitStamina(InitRow->MaxStamina);    
 	AttributeSet->InitMaxStamina(InitRow->MaxStamina);
 	
+	AttributeSet->InitMainStat(InitRow->MainStat);
 	AttributeSet->InitAttackPower(InitRow->AttackPower);
+	AttributeSet->InitDefense(InitRow->Defense);
+	AttributeSet->InitHealthCoefficient(InitRow->HealthCoefficient);
+	AttributeSet->InitDefenseCoefficient(InitRow->DefenseCoefficient);
+	AttributeSet->InitCriticalRate(InitRow->CriticalRate);
+	AttributeSet->InitCriticalDamage(InitRow->CriticalDamage);
+	AttributeSet->InitMoveSpeed(InitRow->MoveSpeed);
+	AttributeSet->InitAttackSpeed(InitRow->AttackSpeed);
+	AttributeSet->InitGroggyDamage(InitRow->GroggyDamage);
+	AttributeSet->InitFinalDamageIncrease(InitRow->FinalDamageIncrease);
+	AttributeSet->InitDamageReduction(InitRow->DamageReduction);
+	AttributeSet->InitCooldownReduction(InitRow->CooldownReduction);
+	AttributeSet->InitMentalRecoveryIncrease(InitRow->MentalRecoveryIncrease);
+	AttributeSet->InitLifeSteal(InitRow->LifeSteal);
+	AttributeSet->InitGroggyDamageIncreaseRate(InitRow->GroggyDamageIncreaseRate);
 
 	Debug::Print(TEXT("[DG_PlayerState] Attributes initialized from DT_Attribute."));
-	Debug::PrintFloat(TEXT("Health"), InitRow->Health);
-	Debug::PrintFloat(TEXT("MaxHealth"), InitRow->MaxHealth);
-	Debug::PrintFloat(TEXT("AttackPower"), InitRow->AttackPower);
 }

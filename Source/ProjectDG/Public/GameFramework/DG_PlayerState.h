@@ -70,7 +70,7 @@ protected:
 	/**
 	 * DataTable에서 초기 속성값을 읽어 AttributeSet에 적용
 	 */
-	void InitializeAttributesFromDataTable();
+	void InitializeAttributesFromDataTable() const;
 	
 	
 };
