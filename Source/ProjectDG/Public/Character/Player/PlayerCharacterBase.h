@@ -208,18 +208,42 @@ protected:
 	TMap<FGameplayTag, FGameplayTag> SkillSlotMapping;
 
 	/** 슬롯 입력 처리 공통 함수 */
-	void OnSkillInput(FGameplayTag SlotTag);
+	// void OnSkillInput(FGameplayTag SlotTag);
 
 	/** 특정 슬롯에 할당된 스킬 태그를 가져오는 헬퍼 함수 */
-	FGameplayTag GetSkillTagForSlot(FGameplayTag SlotTag) const;
+	// FGameplayTag GetSkillTagForSlot(FGameplayTag SlotTag) const;
+	
+	/** 슬롯 입력 처리 공통 함수 */
+	void OnSkillInputStarted(FGameplayTag SlotTag);
+
+	/** 슬롯 입력 해제 처리 공통 함수 */
+	void OnSkillInputCompleted(FGameplayTag SlotTag);
+
+public:
+	/** 특정 슬롯 키가 현재 눌려 있는지 확인 */
+	UFUNCTION(BlueprintCallable, Category = "PlayerCharacterBase|Input|Skill")
+	bool IsSkillSlotHeld(FGameplayTag SlotTag) const;
+
+	/** 특정 스킬이 할당된 슬롯 키가 현재 눌려 있는지 확인 */
+	UFUNCTION(BlueprintCallable, Category = "PlayerCharacterBase|Input|Skill")
+	bool IsSkillTagHeld(FGameplayTag SkillTag) const;
 	
 protected:
-	void OnSkillInput_1();
-	void OnSkillInput_2();
-	void OnSkillInput_3();
-	void OnSkillInput_4();
-	void OnSkillInput_Q();
-	void OnSkillInput_E();
+	/** 특정 슬롯에 할당된 스킬 태그를 가져오는 헬퍼 함수 */
+	FGameplayTag GetSkillTagForSlot(FGameplayTag SlotTag) const;
+
+	/** 슬롯 태그별 입력 유지 상태 */
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "PlayerCharacterBase|Input|Skill")
+	TMap<FGameplayTag, bool> HeldSkillSlots;
+	
+
+protected:
+	// void OnSkillInput_1();
+	// void OnSkillInput_2();
+	// void OnSkillInput_3();
+	// void OnSkillInput_4();
+	// void OnSkillInput_Q();
+	// void OnSkillInput_E();
 	
 #pragma endregion Skill
 	

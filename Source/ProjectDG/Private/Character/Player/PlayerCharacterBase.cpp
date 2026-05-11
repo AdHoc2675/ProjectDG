@@ -282,12 +282,49 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	}
 	
 	// Skill Mapping
-	if (IA_Skill_1) EnhancedInputComponent->BindAction(IA_Skill_1, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_1);
-	if (IA_Skill_2) EnhancedInputComponent->BindAction(IA_Skill_2, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_2);
-	if (IA_Skill_3) EnhancedInputComponent->BindAction(IA_Skill_3, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_3);
-	if (IA_Skill_4) EnhancedInputComponent->BindAction(IA_Skill_4, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_4);
-	if (IA_Skill_Q) EnhancedInputComponent->BindAction(IA_Skill_Q, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_Q);
-	if (IA_Skill_E) EnhancedInputComponent->BindAction(IA_Skill_E, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_E);
+	// if (IA_Skill_1) EnhancedInputComponent->BindAction(IA_Skill_1, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_1);
+	// if (IA_Skill_2) EnhancedInputComponent->BindAction(IA_Skill_2, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_2);
+	// if (IA_Skill_3) EnhancedInputComponent->BindAction(IA_Skill_3, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_3);
+	// if (IA_Skill_4) EnhancedInputComponent->BindAction(IA_Skill_4, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_4);
+	// if (IA_Skill_Q) EnhancedInputComponent->BindAction(IA_Skill_Q, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_Q);
+	// if (IA_Skill_E) EnhancedInputComponent->BindAction(IA_Skill_E, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_E);
+	
+	// Skill Mapping
+	if (IA_Skill_1)
+	{
+	    EnhancedInputComponent->BindAction(IA_Skill_1, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInputStarted, DGGameplayTags::Input_Slot_1.GetTag());
+	    EnhancedInputComponent->BindAction(IA_Skill_1, ETriggerEvent::Completed, this,&APlayerCharacterBase::OnSkillInputCompleted, DGGameplayTags::Input_Slot_1.GetTag());
+	}
+
+	if (IA_Skill_2)
+	{
+	    EnhancedInputComponent->BindAction(IA_Skill_2, ETriggerEvent::Started, this,&APlayerCharacterBase::OnSkillInputStarted, DGGameplayTags::Input_Slot_2.GetTag());
+	    EnhancedInputComponent->BindAction(IA_Skill_2, ETriggerEvent::Completed, this,&APlayerCharacterBase::OnSkillInputCompleted, DGGameplayTags::Input_Slot_2.GetTag());
+	}
+
+	if (IA_Skill_3)
+	{
+	    EnhancedInputComponent->BindAction(IA_Skill_3, ETriggerEvent::Started, this,&APlayerCharacterBase::OnSkillInputStarted, DGGameplayTags::Input_Slot_3.GetTag());
+	    EnhancedInputComponent->BindAction(IA_Skill_3, ETriggerEvent::Completed, this,&APlayerCharacterBase::OnSkillInputCompleted, DGGameplayTags::Input_Slot_3.GetTag());
+	}
+
+	if (IA_Skill_4)
+	{
+	    EnhancedInputComponent->BindAction(IA_Skill_4, ETriggerEvent::Started, this,&APlayerCharacterBase::OnSkillInputStarted, DGGameplayTags::Input_Slot_4.GetTag());
+	    EnhancedInputComponent->BindAction(IA_Skill_4, ETriggerEvent::Completed, this,&APlayerCharacterBase::OnSkillInputCompleted, DGGameplayTags::Input_Slot_4.GetTag());
+	}
+
+	if (IA_Skill_Q)
+	{
+	    EnhancedInputComponent->BindAction(IA_Skill_Q, ETriggerEvent::Started, this,&APlayerCharacterBase::OnSkillInputStarted, DGGameplayTags::Input_Slot_Q.GetTag());
+	    EnhancedInputComponent->BindAction(IA_Skill_Q, ETriggerEvent::Completed, this,&APlayerCharacterBase::OnSkillInputCompleted, DGGameplayTags::Input_Slot_Q.GetTag());
+	}
+
+	if (IA_Skill_E)
+	{
+	    EnhancedInputComponent->BindAction(IA_Skill_E, ETriggerEvent::Started, this,&APlayerCharacterBase::OnSkillInputStarted, DGGameplayTags::Input_Slot_E.GetTag());
+	    EnhancedInputComponent->BindAction(IA_Skill_E, ETriggerEvent::Completed, this,&APlayerCharacterBase::OnSkillInputCompleted, DGGameplayTags::Input_Slot_E.GetTag());
+	}
 }
 
 UAbilitySystemComponent* APlayerCharacterBase::GetCharacterAbilitySystemComponent() const
@@ -602,21 +639,74 @@ FVector APlayerCharacterBase::GetDesiredMoveDirection() const
 	return Direction.GetSafeNormal();
 }
 
-void APlayerCharacterBase::OnSkillInput(FGameplayTag SlotTag)
+// void APlayerCharacterBase::OnSkillInput(FGameplayTag SlotTag)
+// {
+// 	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+// 	if (!ASC) return;
+//
+// 	FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
+// 	if (SkillTag.IsValid())
+// 	{
+// 		// 태그 기반으로 스킬 활성화
+// 		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(SkillTag));
+// 		
+// 		// [수정된 부분] FString::Printf 결과를 FString 변수에 먼저 담아서 넘깁니다.
+// 		FString Msg = FString::Printf(TEXT("Slot Input: %s -> Ability: %s"), *SlotTag.ToString(), *SkillTag.ToString());
+// 		Debug::Print(Msg, FColor::Green);
+// 	}
+// }
+
+void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 {
+	HeldSkillSlots.FindOrAdd(SlotTag) = true;  //FindOrAdd를 쓴 이유는 해당 SlotTag 키가 TMap에 아직 없으면 새로 추가하고, 이미 있으면 기존 값을 찾아서 수정하기 위함
+
 	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
 	if (!ASC) return;
 
 	FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
 	if (SkillTag.IsValid())
 	{
-		// 태그 기반으로 스킬 활성화
 		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(SkillTag));
-		
-		// [수정된 부분] FString::Printf 결과를 FString 변수에 먼저 담아서 넘깁니다.
-		FString Msg = FString::Printf(TEXT("Slot Input: %s -> Ability: %s"), *SlotTag.ToString(), *SkillTag.ToString());
+
+		FString Msg = FString::Printf(TEXT("Skill Input Started: %s -> Ability: %s"), *SlotTag.ToString(), *SkillTag.ToString());
 		Debug::Print(Msg, FColor::Green);
 	}
+}
+
+void APlayerCharacterBase::OnSkillInputCompleted(FGameplayTag SlotTag)
+{
+	HeldSkillSlots.FindOrAdd(SlotTag) = false;
+
+	FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
+	if (SkillTag.IsValid())
+	{
+		FString Msg = FString::Printf(TEXT("Skill Input Completed: %s -> Ability: %s"), *SlotTag.ToString(), *SkillTag.ToString());
+		Debug::Print(Msg, FColor::Silver);
+	}
+}
+
+bool APlayerCharacterBase::IsSkillSlotHeld(FGameplayTag SlotTag) const
+{
+	const bool* bHeld = HeldSkillSlots.Find(SlotTag);
+	return bHeld && *bHeld;
+}
+
+bool APlayerCharacterBase::IsSkillTagHeld(FGameplayTag SkillTag) const
+{
+	if (!SkillTag.IsValid())
+	{
+		return false;
+	}
+
+	for (const TPair<FGameplayTag, FGameplayTag>& SkillSlotPair : SkillSlotMapping)
+	{
+		if (SkillSlotPair.Value == SkillTag)
+		{
+			return IsSkillSlotHeld(SkillSlotPair.Key);
+		}
+	}
+
+	return false;
 }
 
 FGameplayTag APlayerCharacterBase::GetSkillTagForSlot(FGameplayTag SlotTag) const
@@ -628,35 +718,35 @@ FGameplayTag APlayerCharacterBase::GetSkillTagForSlot(FGameplayTag SlotTag) cons
 	return FGameplayTag::EmptyTag;
 }
 
-void APlayerCharacterBase::OnSkillInput_1()
-{
-	OnSkillInput(DGGameplayTags::Input_Slot_1);
-}
-
-void APlayerCharacterBase::OnSkillInput_2()
-{
-	OnSkillInput(DGGameplayTags::Input_Slot_2);
-}
-
-void APlayerCharacterBase::OnSkillInput_3()
-{
-	OnSkillInput(DGGameplayTags::Input_Slot_3);
-}
-
-void APlayerCharacterBase::OnSkillInput_4()
-{
-	OnSkillInput(DGGameplayTags::Input_Slot_4);
-}
-
-void APlayerCharacterBase::OnSkillInput_Q()
-{
-	OnSkillInput(DGGameplayTags::Input_Slot_Q);
-}
-
-void APlayerCharacterBase::OnSkillInput_E()
-{
-	OnSkillInput(DGGameplayTags::Input_Slot_E);
-}
+// void APlayerCharacterBase::OnSkillInput_1()
+// {
+// 	OnSkillInput(DGGameplayTags::Input_Slot_1);
+// }
+//
+// void APlayerCharacterBase::OnSkillInput_2()
+// {
+// 	OnSkillInput(DGGameplayTags::Input_Slot_2);
+// }
+//
+// void APlayerCharacterBase::OnSkillInput_3()
+// {
+// 	OnSkillInput(DGGameplayTags::Input_Slot_3);
+// }
+//
+// void APlayerCharacterBase::OnSkillInput_4()
+// {
+// 	OnSkillInput(DGGameplayTags::Input_Slot_4);
+// }
+//
+// void APlayerCharacterBase::OnSkillInput_Q()
+// {
+// 	OnSkillInput(DGGameplayTags::Input_Slot_Q);
+// }
+//
+// void APlayerCharacterBase::OnSkillInput_E()
+// {
+// 	OnSkillInput(DGGameplayTags::Input_Slot_E);
+// }
 
 void APlayerCharacterBase::InitializeMovementStats()
 {
