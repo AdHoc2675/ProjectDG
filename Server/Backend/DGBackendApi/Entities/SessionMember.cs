@@ -14,6 +14,8 @@ public class SessionMember
 
     public string Status { get; set; } = "Joined";
 
+    public string JoinToken { get; set; } = string.Empty;
+
     public DateTime JoinedAtUtc { get; set; } = DateTime.UtcNow;
 
     public DateTime? LeftAtUtc { get; set; }

@@ -3,6 +3,7 @@ using System;
 using DGBackendApi.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DGBackendApi.Migrations
 {
     [DbContext(typeof(DGDbContext))]
-    partial class DGDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260508024425_AddJoinTokenToSessionMembers")]
+    partial class AddJoinTokenToSessionMembers
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -40,10 +43,6 @@ namespace DGBackendApi.Migrations
                     b.Property<DateTime?>("EndedAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("ended_at_utc");
-
-                    b.Property<DateTime?>("LastHeartbeatAtUtc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_heartbeat_at_utc");
 
                     b.Property<string>("MapPath")
                         .IsRequired()
