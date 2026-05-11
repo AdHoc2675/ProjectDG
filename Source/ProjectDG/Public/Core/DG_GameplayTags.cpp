@@ -21,6 +21,10 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_Q, "Input.Slot.Q")
 	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_E, "Input.Slot.E")
 	
+	// Event
+	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_InputWindow_Open, "Event.Combo.InputWindow.Open")
+	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_InputWindow_Close, "Event.Combo.InputWindow.Close")
+	
 	// Skill.Common
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Common_Dodge, "Skill.Common.Dodge")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Common_Sprint, "Skill.Common.Sprint")
