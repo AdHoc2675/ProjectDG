@@ -6,6 +6,7 @@
 
 /**
  * 프로젝트 기본 UserWidget 클래스
+ * UI 컨트롤러나 데이터를 넘겨받기 위한 기본적인 구조를 제공
  */
 UCLASS()
 class PROJECTDG_API UDGUserWidget : public UUserWidget

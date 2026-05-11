@@ -3,5 +3,5 @@
 void UDGUserWidget::SetWidgetController(UObject* InWidgetController)
 {
 	WidgetController = InWidgetController;
-
+	OnWidgetControllerSet();
 }
