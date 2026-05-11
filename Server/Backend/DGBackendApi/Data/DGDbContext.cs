@@ -61,6 +61,9 @@ public class DGDbContext : DbContext
             entity.Property(x => x.StartedAtUtc)
                 .HasColumnName("started_at_utc");
 
+entity.Property(x => x.LastHeartbeatAtUtc)
+    .HasColumnName("last_heartbeat_at_utc");
+
             entity.Property(x => x.EndedAtUtc)
                 .HasColumnName("ended_at_utc");
 
@@ -97,6 +100,11 @@ public class DGDbContext : DbContext
                 .HasColumnName("status")
                 .HasMaxLength(30);
 
+entity.Property(x => x.JoinToken)
+    .HasColumnName("join_token")
+    .HasMaxLength(200)
+    .HasDefaultValue("");
+
             entity.Property(x => x.JoinedAtUtc)
                 .HasColumnName("joined_at_utc");
 
@@ -106,6 +114,8 @@ public class DGDbContext : DbContext
             entity.HasIndex(x => x.SessionId);
 
             entity.HasIndex(x => x.CharacterId);
+
+entity.HasIndex(x => x.JoinToken);
         });
     }
 }
