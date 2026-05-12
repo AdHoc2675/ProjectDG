@@ -3,6 +3,7 @@
 
 #include "GAS/Attributes/DG_AttributeSet.h"
 #include "Net/UnrealNetwork.h"
+#include "Core/DG_Debug.h"
 #include "GameplayEffectExtension.h"
 
 UDG_AttributeSet::UDG_AttributeSet()
@@ -186,13 +187,24 @@ void UDG_AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbac
 
 		if (LocalDamageDone > 0.0f)
 		{
+			const float OldHealth = GetHealth();
+
 			// 현재 체력에서 데미지 차감
-			const float NewHealth = GetHealth() - LocalDamageDone;
+			const float NewHealth = OldHealth - LocalDamageDone;
 			SetHealth(FMath::Clamp(NewHealth, 0.0f, GetMaxHealth()));
+
+			Debug::Print(FString::Printf(
+				TEXT("[DG_AttributeSet] Damage Applied. Damage=%.2f Health %.2f -> %.2f / %.2f"),
+				LocalDamageDone,
+				OldHealth,
+				GetHealth(),
+				GetMaxHealth()
+			));
 
 			// 만약 체력이 0 이하가 되었다면, 사망 처리 로직 호출
 			if (GetHealth() <= 0.0f)
 			{
+				Debug::Print(TEXT("[DG_AttributeSet] Health reached zero."));
 				// 통상적으로 Target의 ASC를 통해 캐릭터의 Die() 함수 등을 호출하는 이벤트를 보냅니다.
 			}
 		}

@@ -7,7 +7,8 @@
 #include "EnemyCharacterBase.generated.h"
 
 class UAbilitySystemComponent;
-class UAttributeSet;
+class UDG_AttributeSet;
+class UDataTable;
 
 /**
  * AEnemyCharacterBase
@@ -42,11 +43,25 @@ protected:
 	
 	//Attribute도 직접 소유
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|ASC")
-	TObjectPtr<UAttributeSet> AttributeSet = nullptr;
+	TObjectPtr<UDG_AttributeSet> AttributeSet = nullptr;
+	
+	// Enemy 초기 Attribute를 읽을 DataTable.
+	// Row Struct는 FDT_Attribute를 사용한다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemyCharacterBase|ASC|Init")
+	TObjectPtr<UDataTable> AttributeInitDataTable = nullptr;
+
+	// 기본 Enemy RowName.
+	// DT_Attribute에 Enemy Row를 만들어두면 1차 테스트 가능.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemyCharacterBase|ASC|Init")
+	FName AttributeInitRowName = TEXT("Enemy");
+	
 	
 protected:
 	//ASC초기화
 	virtual void InitializeEnemyAbilitySystem();
+	
+	// DT_Attribute에서 Enemy 초기 Attribute를 적용한다.
+	virtual void InitializeEnemyAttributesFromDataTable();
 	
 public:
 	//BaseCharacter 공용 ASC getter 
