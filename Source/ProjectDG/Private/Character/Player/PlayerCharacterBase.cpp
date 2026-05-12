@@ -174,6 +174,17 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 	 */
 	ASC->InitAbilityActorInfo(PS, this);
 
+	Debug::Print(TEXT("[PlayerCharacterBase] ASC initialized from DG_PlayerState."));
+}
+
+void APlayerCharacterBase::InitializePlayerUI()
+{
+	ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>();
+	if (!PS) return;
+
+	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
+	if (!ASC) return;
+
 	// 로컬 플레이어 컨트롤러인지 확인 (화면에 UI를 띄워야 하는 유저만)
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
@@ -183,11 +194,10 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 			{
 				// HUD의 InitOverlay 함수 호출 (컨트롤러, State, ASC, 속성 데이터 전달)
 				HUD->InitOverlay(PC, PS, ASC, PS->GetDGAttributeSet());
+				UE_LOG(LogTemp, Log, TEXT("[PlayerCharacterBase] Player UI initialized on local player."));
 			}
 		}
 	}
-
-	Debug::Print(TEXT("[PlayerCharacterBase] ASC initialized from DG_PlayerState."));
 }
 
 void APlayerCharacterBase::PawnClientRestart()
@@ -392,6 +402,9 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 			ApplyDefaultEffects();
 		}
 	}
+
+	// 플레이어 UI 초기화 (로컬 플레이어만)
+	InitializePlayerUI();
 }
 
 void APlayerCharacterBase::OnRep_PlayerState()
@@ -406,6 +419,9 @@ void APlayerCharacterBase::OnRep_PlayerState()
 	InitializePlayerAbilitySystem();
 	InitializeMovementStats();
 	InitializeSkillSlotsFromClassData();
+
+	// 플레이어 UI 초기화 (로컬 플레이어만)
+	InitializePlayerUI();
 }
 
 void APlayerCharacterBase::InitializePlayerStateFromClassData()
