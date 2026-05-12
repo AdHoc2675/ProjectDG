@@ -28,32 +28,35 @@ void ADG_HUD::InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySyste
 {
 	checkf(OverlayWidgetClass, TEXT("Overlay Widget Class가 DG_HUD 블루프린트에 설정되지 않았습니다"));
 
-	// 위젯 생성 및 화면에 추가
-	OverlayWidget = CreateWidget<UDGUserWidget>(GetWorld(), OverlayWidgetClass);
-
-
-	if (OverlayWidget)
+	// 이미 오버레이 위젯이 생성되었다면 두 번 생성하지 않도록 방어
+	if (OverlayWidget == nullptr)
 	{
-		// 파라미터 구조체 포장
-		const FWidgetControllerParams WidgetControllerParams(PC, PS, ASC, AS);
+		// 위젯 생성 및 화면에 추가
+		OverlayWidget = CreateWidget<UDGUserWidget>(GetWorld(), OverlayWidgetClass);
 
-		// 컨트롤러 받아오기
-		UDGOverlayWidgetController* WidgetController = GetOverlayWidgetController(WidgetControllerParams);
-
-		// 오버레이 위젯에 컨트롤러 세팅
-		OverlayWidget->SetWidgetController(WidgetController);
-
-		// 오버레이 위젯이 데리고 있는 자식 위젯들(C++ BindWidget)에게 컨트롤러 전파
-		if (UDGOverlayWidget* DGOverlay = Cast<UDGOverlayWidget>(OverlayWidget))
+		if (OverlayWidget)
 		{
-			DGOverlay->InitializeSubWidgets();
+			// 파라미터 구조체 포장
+			const FWidgetControllerParams WidgetControllerParams(PC, PS, ASC, AS);
+
+			// 컨트롤러 받아오기
+			UDGOverlayWidgetController* WidgetController = GetOverlayWidgetController(WidgetControllerParams);
+
+			// 오버레이 위젯에 컨트롤러 세팅
+			OverlayWidget->SetWidgetController(WidgetController);
+
+			// 오버레이 위젯이 데리고 있는 자식 위젯들(C++ BindWidget)에게 컨트롤러 전파
+			if (UDGOverlayWidget* DGOverlay = Cast<UDGOverlayWidget>(OverlayWidget))
+			{
+				DGOverlay->InitializeSubWidgets();
+			}
+
+			// 이제 UI에게 현재 값을 방송
+			WidgetController->BroadcastInitialValues();
+
+			// 위젯을 화면에 추가
+			OverlayWidget->AddToViewport();
 		}
-
-		// 이제 UI에게 현재 값을 방송
-		WidgetController->BroadcastInitialValues();
-
-		// 위젯을 화면에 추가
-		OverlayWidget->AddToViewport();
 	}
 }
 
