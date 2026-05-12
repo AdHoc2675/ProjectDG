@@ -6,6 +6,8 @@
 #include "Character/Enemy/Boss/BossCharacterBase.h"
 #include "Boss_Kashapa.generated.h"
 
+class UDG_BossAttributeSet;
+
 /**
  * 
  */
@@ -14,4 +16,10 @@ class PROJECTDG_API ABoss_Kashapa : public ABossCharacterBase
 {
 	GENERATED_BODY()
 	
+public:
+	ABoss_Kashapa();
+
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS|Attributes")
+	TObjectPtr<UDG_BossAttributeSet> BossAttributeSet;
 };
