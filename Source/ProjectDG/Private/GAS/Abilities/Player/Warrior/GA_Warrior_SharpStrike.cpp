@@ -27,7 +27,7 @@ void UGA_Warrior_SharpStrike::ActivateAbility(const FGameplayAbilitySpecHandle H
                 return;
         }
 
-        if (!SharpStrikeMontage)
+        if (!SharpStrikeFullBodyMontage || !SharpStrikeUpperBodyMontage)
         {
                 Debug::Print(TEXT("[GA_Warrior_SharpStrike] SharpStrikeMontage is null."), FColor::Red);
                 EndAbility(Handle, OwnerInfo, ActivationInfo, true, true);
@@ -159,9 +159,10 @@ bool UGA_Warrior_SharpStrike::IsSharpStrikeInputHeld() const
 
 void UGA_Warrior_SharpStrike::PlaySharpStrikeMontageFromStart()
 {
-        if (!SharpStrikeMontage)
+        UAnimMontage* MontageToPlay = GetSharpStrikeMontageToPlay();
+        if (!MontageToPlay)
         {
-                Debug::Print(TEXT("[GA_Warrior_SharpStrike] SharpStrikeMontage is null."), FColor::Red);
+                Debug::Print(TEXT("[GA_Warrior_SharpStrike] MontageToPlay is null."), FColor::Red);
                 K2_EndAbility();
                 return;
         }
@@ -169,8 +170,8 @@ void UGA_Warrior_SharpStrike::PlaySharpStrikeMontageFromStart()
         MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
                 this,
                 TEXT("SharpStrikeMontageTask"),
-                SharpStrikeMontage,
-                1.f,
+                MontageToPlay,
+                SharpStrikePlayRate,
                 Combo1SectionName
         );
 
@@ -186,6 +187,18 @@ void UGA_Warrior_SharpStrike::PlaySharpStrikeMontageFromStart()
         MontageTask->OnCancelled.AddDynamic(this, &UGA_Warrior_SharpStrike::OnMontageCancelled);
 
         MontageTask->ReadyForActivation(); 
+}
+
+UAnimMontage* UGA_Warrior_SharpStrike::GetSharpStrikeMontageToPlay() const
+{
+        APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(GetAvatarActorFromActorInfo());
+        if (!PlayerCharacter)
+        {
+                return SharpStrikeFullBodyMontage;
+        }
+
+        const bool bIsMoving = PlayerCharacter->GetVelocity().Size2D() > MovingMontageThreshold;
+        return bIsMoving ? SharpStrikeUpperBodyMontage : SharpStrikeFullBodyMontage;
 }
 
 void UGA_Warrior_SharpStrike::OnComboInputWindowOpened(FGameplayEventData Payload)
