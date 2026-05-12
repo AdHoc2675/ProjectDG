@@ -2,54 +2,60 @@
 
 #include "CoreMinimal.h"
 #include "UI/Widget/DGUserWidget.h"
-#include "GameplayEffectTypes.h"
 #include "DGPlayerStatWidget.generated.h"
 
-class UAbilitySystemComponent;
-class UDG_AttributeSet;
 class UProgressBar;
-class UTextBlock;
-
-/**
- * 플레이어 본인의 체력/정신력 바 및
- * 하단에 위치한 스킬, 소비 아이템 퀵슬롯을 관리하는 위젯 클래스
- */
 
 UCLASS()
 class PROJECTDG_API UDGPlayerStatWidget : public UDGUserWidget
 {
-
 	GENERATED_BODY()
 
-
 public:
-	virtual void NativeConstruct() override;
-
-	// 위젯이 생성되고 데이터가 들어올 때 호출할 초기화/바인딩 함수
-	virtual void BindAttributes(UAbilitySystemComponent* ASC, UDG_AttributeSet* AttributeSet);
+	// ASC 직접 참조 방식 대신, 컨트롤러를 받아 바인딩
+	void BindToController(class UDGOverlayWidgetController* Controller);
 
 protected:
-
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UProgressBar> PB_HealthBar;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UProgressBar> PB_StaminaBar;
 
-private:
-	/* --- GAS에서 값이 변할 때 호출되는 C++ 내부 콜백 함수 --- */
-	void HealthChanged(const FOnAttributeChangeData& Data);
-	void MaxHealthChanged(const FOnAttributeChangeData& Data);
-	void StaminaChanged(const FOnAttributeChangeData& Data);
-	void MaxStaminaChanged(const FOnAttributeChangeData& Data);
+	// 정신력(Mental) 바 추가
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UProgressBar> PB_MentalBar;
 
-	/* 실제 UI(프로그레스 바)를 업데이트 하는 내부 함수 */
+private:
+	/* --- 위젯 컨트롤러 이벤트와 연결될 UFUNCTION들 --- */
+	UFUNCTION()
+	void HealthChanged(float NewHealth);
+
+	UFUNCTION()
+	void MaxHealthChanged(float NewMaxHealth);
+
+	UFUNCTION()
+	void StaminaChanged(float NewStamina);
+
+	UFUNCTION()
+	void MaxStaminaChanged(float NewMaxStamina);
+
+	UFUNCTION()
+	void MentalChanged(float NewMental);
+
+	UFUNCTION()
+	void MaxMentalChanged(float NewMaxMental);
+
+	/* 실제 프로그레스 바를 업데이트 하는 함수 */
 	void UpdateHealthBar();
 	void UpdateStaminaBar();
+	void UpdateMentalBar();
 
-	// 현재 상태 캐싱 변수 (퍼센티지 계산 시 사용)
+	// 퍼센티지 계산 시 사용
 	float CurrentHealth = 0.f;
 	float CurrentMaxHealth = 1.f;
 	float CurrentStamina = 0.f;
 	float CurrentMaxStamina = 1.f;
+	float CurrentMental = 0.f;
+	float CurrentMaxMental = 1.f;
 };

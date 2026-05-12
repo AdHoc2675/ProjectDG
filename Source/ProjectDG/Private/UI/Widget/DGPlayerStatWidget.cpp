@@ -1,69 +1,63 @@
 ﻿#include "UI/Widget/DGPlayerStatWidget.h"
-#include "AbilitySystemComponent.h"
-#include "GAS/Attributes/DG_AttributeSet.h"
+#include "UI/WidgetController/DGOverlayWidgetController.h"
 #include "Components/ProgressBar.h"
 
-void UDGPlayerStatWidget::NativeConstruct()
-{
-	Super::NativeConstruct();
+#include "Core/DG_Debug.h"
 
-	// 필요 시 위젯 초기화 로직
+void UDGPlayerStatWidget::BindToController(UDGOverlayWidgetController* Controller)
+{
+	if (!Controller) return;
+
+	// 상속받은 DGUserWidget의 캐싱 변수에 저장 (혹시 블루프린트에서 필요할 수 있으므로)
+	SetWidgetController(Controller);
+
+	// 컨트롤러의 이벤트에 Dynamic 바인딩
+	Controller->OnHealthChanged.AddDynamic(this, &UDGPlayerStatWidget::HealthChanged);
+	Controller->OnMaxHealthChanged.AddDynamic(this, &UDGPlayerStatWidget::MaxHealthChanged);
+	Controller->OnStaminaChanged.AddDynamic(this, &UDGPlayerStatWidget::StaminaChanged);
+	Controller->OnMaxStaminaChanged.AddDynamic(this, &UDGPlayerStatWidget::MaxStaminaChanged);
+
+	// Mental 이벤트 바인딩 (OverlayController에도 Mental 델리게이트가 추가되어야 합니다)
+	// Controller->OnMentalChanged.AddDynamic(this, &UDGPlayerStatWidget::MentalChanged);
+	// Controller->OnMaxMentalChanged.AddDynamic(this, &UDGPlayerStatWidget::MaxMentalChanged);
+
+	Debug::Print(FString::Printf(TEXT("[DGPlayerStatWidget] successfully bound to controller: %s"), *Controller->GetName()));
 }
 
-void UDGPlayerStatWidget::BindAttributes(UAbilitySystemComponent* ASC, UDG_AttributeSet* AttributeSet)
+void UDGPlayerStatWidget::HealthChanged(float NewHealth)
 {
-	if (!ASC || !AttributeSet) {
-		
-		UE_LOG(LogTemp, Warning, TEXT("[DGPlayerStatWidget] BindAttributes: Invalid ASC or AttributeSet"));
-		return;
-	}
-
-	UE_LOG(LogTemp, Log, TEXT("[DGPlayerStatWidget] BindAttributes: Binding to ASC %s and AttributeSet %s"), *ASC->GetName(), *AttributeSet->GetName());
-
-	// 초기 값 세팅
-	CurrentHealth = AttributeSet->GetHealth();
-	CurrentMaxHealth = AttributeSet->GetMaxHealth();
-	CurrentStamina = AttributeSet->GetStamina();
-	CurrentMaxStamina = AttributeSet->GetMaxStamina();
-
-
-
-	// --- 델리게이트 바인딩 (값이 변경될 때마다 자동 호출됨) ---
-	ASC->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetHealthAttribute())
-		.AddUObject(this, &UDGPlayerStatWidget::HealthChanged);
-
-	ASC->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetMaxHealthAttribute())
-		.AddUObject(this, &UDGPlayerStatWidget::MaxHealthChanged);
-
-	ASC->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetStaminaAttribute())
-		.AddUObject(this, &UDGPlayerStatWidget::StaminaChanged);
-
-	ASC->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetMaxStaminaAttribute())
-		.AddUObject(this, &UDGPlayerStatWidget::MaxStaminaChanged);
-}
-
-void UDGPlayerStatWidget::HealthChanged(const FOnAttributeChangeData& Data)
-{
-	CurrentHealth = Data.NewValue;
+	CurrentHealth = NewHealth;
 	UpdateHealthBar();
 }
 
-void UDGPlayerStatWidget::MaxHealthChanged(const FOnAttributeChangeData& Data)
+void UDGPlayerStatWidget::MaxHealthChanged(float NewMaxHealth)
 {
-	CurrentMaxHealth = Data.NewValue;
+	CurrentMaxHealth = NewMaxHealth;
 	UpdateHealthBar();
 }
 
-void UDGPlayerStatWidget::StaminaChanged(const FOnAttributeChangeData& Data)
+void UDGPlayerStatWidget::StaminaChanged(float NewStamina)
 {
-	CurrentStamina = Data.NewValue;
+	CurrentStamina = NewStamina;
 	UpdateStaminaBar();
 }
 
-void UDGPlayerStatWidget::MaxStaminaChanged(const FOnAttributeChangeData& Data)
+void UDGPlayerStatWidget::MaxStaminaChanged(float NewMaxStamina)
 {
-	CurrentMaxStamina = Data.NewValue;
+	CurrentMaxStamina = NewMaxStamina;
 	UpdateStaminaBar();
+}
+
+void UDGPlayerStatWidget::MentalChanged(float NewMental)
+{
+	CurrentMental = NewMental;
+	UpdateMentalBar();
+}
+
+void UDGPlayerStatWidget::MaxMentalChanged(float NewMaxMental)
+{
+	CurrentMaxMental = NewMaxMental;
+	UpdateMentalBar();
 }
 
 void UDGPlayerStatWidget::UpdateHealthBar()
@@ -71,6 +65,7 @@ void UDGPlayerStatWidget::UpdateHealthBar()
 	if (PB_HealthBar && CurrentMaxHealth > 0.f)
 	{
 		float HealthPercent = CurrentHealth / CurrentMaxHealth;
+		UE_LOG(LogTemp, Log, TEXT("[DGPlayerStatWidget] Updating Health Bar: CurrentHealth = %f, CurrentMaxHealth = %f, HealthPercent = %f"), CurrentHealth, CurrentMaxHealth, HealthPercent);
 		PB_HealthBar->SetPercent(HealthPercent);
 	}
 }
@@ -81,5 +76,14 @@ void UDGPlayerStatWidget::UpdateStaminaBar()
 	{
 		float StaminaPercent = CurrentStamina / CurrentMaxStamina;
 		PB_StaminaBar->SetPercent(StaminaPercent);
+	}
+}
+
+void UDGPlayerStatWidget::UpdateMentalBar()
+{
+	if (PB_MentalBar && CurrentMaxMental > 0.f)
+	{
+		float MentalPercent = CurrentMental / CurrentMaxMental;
+		PB_MentalBar->SetPercent(MentalPercent);
 	}
 }

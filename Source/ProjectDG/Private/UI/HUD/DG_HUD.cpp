@@ -1,5 +1,6 @@
 ﻿#include "UI/HUD/DG_HUD.h"
 #include "UI/Widget/DGUserWidget.h"
+#include "UI/Widget/DGOverlayWidget.h"
 #include "UI/WidgetController/DGOverlayWidgetController.h"
 
 #include "Blueprint/UserWidget.h"
@@ -39,12 +40,19 @@ void ADG_HUD::InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySyste
 		// 컨트롤러 받아오기
 		UDGOverlayWidgetController* WidgetController = GetOverlayWidgetController(WidgetControllerParams);
 
-		// 위젯에 컨트롤러 세팅
+		// 오버레이 위젯에 컨트롤러 세팅
 		OverlayWidget->SetWidgetController(WidgetController);
+
+		// 오버레이 위젯이 데리고 있는 자식 위젯들(C++ BindWidget)에게 컨트롤러 전파
+		if (UDGOverlayWidget* DGOverlay = Cast<UDGOverlayWidget>(OverlayWidget))
+		{
+			DGOverlay->InitializeSubWidgets();
+		}
 
 		// 이제 UI에게 현재 값을 방송
 		WidgetController->BroadcastInitialValues();
 
+		// 위젯을 화면에 추가
 		OverlayWidget->AddToViewport();
 	}
 }
