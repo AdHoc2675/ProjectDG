@@ -59,6 +59,7 @@ private:
 	bool IsSharpStrikeInputHeld() const;
 	void TryBufferComboInputFromHeldState();
 	void TryJumpToNextComboSection();
+	void PlaySharpStrikeMontageFromStart();
 
 	UFUNCTION()
 	void OnComboInputWindowOpened(FGameplayEventData Payload);

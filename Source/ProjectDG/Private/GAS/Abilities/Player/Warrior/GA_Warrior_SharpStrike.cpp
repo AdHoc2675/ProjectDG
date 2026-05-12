@@ -46,8 +46,7 @@ void UGA_Warrior_SharpStrike::ActivateAbility(const FGameplayAbilitySpecHandle H
 
         if (ComboInputWindowOpenTask)
         {
-                ComboInputWindowOpenTask->EventReceived.AddDynamic(this,
-  &UGA_Warrior_SharpStrike::OnComboInputWindowOpened);
+                ComboInputWindowOpenTask->EventReceived.AddDynamic(this, &UGA_Warrior_SharpStrike::OnComboInputWindowOpened);
                 ComboInputWindowOpenTask->ReadyForActivation();
         }
 
@@ -61,8 +60,7 @@ void UGA_Warrior_SharpStrike::ActivateAbility(const FGameplayAbilitySpecHandle H
 
         if (ComboInputWindowCloseTask)
         {
-                ComboInputWindowCloseTask->EventReceived.AddDynamic(this,
-  &UGA_Warrior_SharpStrike::OnComboInputWindowClosed);
+                ComboInputWindowCloseTask->EventReceived.AddDynamic(this,&UGA_Warrior_SharpStrike::OnComboInputWindowClosed);
                 ComboInputWindowCloseTask->ReadyForActivation();
         }
 
@@ -79,29 +77,11 @@ void UGA_Warrior_SharpStrike::ActivateAbility(const FGameplayAbilitySpecHandle H
                 ComboBranchTask->EventReceived.AddDynamic(this, &UGA_Warrior_SharpStrike::OnComboBranch);
                 ComboBranchTask->ReadyForActivation();
         }
-
-        MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-                this,
-                TEXT("SharpStrikeMontageTask"),
-                SharpStrikeMontage,
-                1.f,
-                Combo1SectionName
-        );
-
-        if (!MontageTask)
-        {
-                EndAbility(Handle, OwnerInfo, ActivationInfo, true, true);
-                return;
-        }
-
-        MontageTask->OnCompleted.AddDynamic(this, &UGA_Warrior_SharpStrike::OnMontageCompleted);
-        MontageTask->OnInterrupted.AddDynamic(this, &UGA_Warrior_SharpStrike::OnMontageInterrupted);
-        MontageTask->OnBlendOut.AddDynamic(this, &UGA_Warrior_SharpStrike::OnMontageBlendOut);
-        MontageTask->OnCancelled.AddDynamic(this, &UGA_Warrior_SharpStrike::OnMontageCancelled);
-
+        
+        
         Debug::Print(TEXT("[GA_Warrior_SharpStrike] SharpStrike activated."), FColor::Green);
 
-        MontageTask->ReadyForActivation();
+        PlaySharpStrikeMontageFromStart();
 }
 
 void UGA_Warrior_SharpStrike::EndAbility(
@@ -177,7 +157,38 @@ bool UGA_Warrior_SharpStrike::IsSharpStrikeInputHeld() const
         Debug::Print(TEXT("[GA_Warrior_SharpStrike] ComboBranch ignored. Already at final combo."),FColor::Silver);
   }
 
-  void UGA_Warrior_SharpStrike::OnComboInputWindowOpened(FGameplayEventData Payload)
+void UGA_Warrior_SharpStrike::PlaySharpStrikeMontageFromStart()
+{
+        if (!SharpStrikeMontage)
+        {
+                Debug::Print(TEXT("[GA_Warrior_SharpStrike] SharpStrikeMontage is null."), FColor::Red);
+                K2_EndAbility();
+                return;
+        }
+
+        MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+                this,
+                TEXT("SharpStrikeMontageTask"),
+                SharpStrikeMontage,
+                1.f,
+                Combo1SectionName
+        );
+
+        if (!MontageTask)
+        {
+                K2_EndAbility();
+                return;
+        }
+
+        MontageTask->OnCompleted.AddDynamic(this, &UGA_Warrior_SharpStrike::OnMontageCompleted);
+        MontageTask->OnInterrupted.AddDynamic(this, &UGA_Warrior_SharpStrike::OnMontageInterrupted);
+        MontageTask->OnBlendOut.AddDynamic(this, &UGA_Warrior_SharpStrike::OnMontageBlendOut);
+        MontageTask->OnCancelled.AddDynamic(this, &UGA_Warrior_SharpStrike::OnMontageCancelled);
+
+        MontageTask->ReadyForActivation(); 
+}
+
+void UGA_Warrior_SharpStrike::OnComboInputWindowOpened(FGameplayEventData Payload)
   {
         bComboInputWindowOpen = true;
 
@@ -202,6 +213,13 @@ bool UGA_Warrior_SharpStrike::IsSharpStrikeInputHeld() const
 
   void UGA_Warrior_SharpStrike::OnMontageCompleted()
   {
+        if (IsSharpStrikeInputHeld())
+        {
+                ResetComboState();
+                PlaySharpStrikeMontageFromStart();
+                return;
+        }
+        
         K2_EndAbility();
   }
 
@@ -212,7 +230,8 @@ bool UGA_Warrior_SharpStrike::IsSharpStrikeInputHeld() const
 
   void UGA_Warrior_SharpStrike::OnMontageBlendOut()
   {
-        K2_EndAbility();
+        // Normal montage completion can trigger BlendOut before Completed.
+        // Do not end the ability here because SharpStrike may restart while the key is held.
   }
 
   void UGA_Warrior_SharpStrike::OnMontageCancelled()
