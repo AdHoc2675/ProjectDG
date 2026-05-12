@@ -9,6 +9,10 @@
 #include "Core/DG_GameplayTags.h"
 #include "Core/DG_Debug.h"
 
+#include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystemComponent.h"
+#include "GameplayEffect.h"
+
 UGA_Warrior_SharpStrike::UGA_Warrior_SharpStrike()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
@@ -78,6 +82,19 @@ void UGA_Warrior_SharpStrike::ActivateAbility(const FGameplayAbilitySpecHandle H
                 ComboBranchTask->ReadyForActivation();
         }
         
+        AttackHitTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+                this,
+                DGGameplayTags::Event_Attack_Hit.GetTag(),
+                nullptr,
+                false,
+                true
+        );
+
+        if (AttackHitTask)
+        {
+                AttackHitTask->EventReceived.AddDynamic(this, &UGA_Warrior_SharpStrike::OnAttackHit);
+                AttackHitTask->ReadyForActivation();
+        }
         
         Debug::Print(TEXT("[GA_Warrior_SharpStrike] SharpStrike activated."), FColor::Green);
 
@@ -251,3 +268,52 @@ void UGA_Warrior_SharpStrike::OnComboInputWindowOpened(FGameplayEventData Payloa
   {
         K2_EndAbility();
   }
+
+float UGA_Warrior_SharpStrike::GetCurrentComboDamage() const
+{
+        return ComboDamage;
+}
+
+void UGA_Warrior_SharpStrike::OnAttackHit(FGameplayEventData Payload)
+{
+        AActor* AvatarActor = GetAvatarActorFromActorInfo();
+        if (!AvatarActor || !AvatarActor->HasAuthority())
+        {
+                return;
+        }
+
+        AActor* TargetActor = const_cast<AActor*>(Payload.Target.Get());
+        if (!TargetActor || TargetActor == AvatarActor)
+        {
+                return;
+        }
+
+        if (!DamageEffectClass)
+        {
+                return;
+        }
+
+        UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
+        UAbilitySystemComponent* TargetASC =
+  UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
+
+        if (!SourceASC || !TargetASC)
+        {
+                return;
+        }
+
+        const FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(DamageEffectClass,
+  GetAbilityLevel());
+        if (!SpecHandle.IsValid())
+        {
+                return;
+        }
+
+        UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(
+                SpecHandle,
+                DGGameplayTags::Data_Damage.GetTag(),
+                GetCurrentComboDamage()
+        );
+
+        SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+}

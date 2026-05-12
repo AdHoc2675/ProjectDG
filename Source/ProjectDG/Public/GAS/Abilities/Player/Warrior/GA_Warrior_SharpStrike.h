@@ -6,6 +6,8 @@
 #include "GAS/Abilities/Base/GameplayAbilityBase.h"
 #include "GA_Warrior_SharpStrike.generated.h"
 
+class UGameplayEffect;
+
 /**
  * 
  */
@@ -94,4 +96,20 @@ private:
 
 	UFUNCTION()
 	void OnMontageCancelled();
+	
+// 데미지 관련 로직
+private:
+	UPROPERTY()
+	TObjectPtr<class UAbilityTask_WaitGameplayEvent> AttackHitTask;
+
+	UPROPERTY(EditDefaultsOnly, Category = "SharpStrike|Damage")
+	TSubclassOf<UGameplayEffect> DamageEffectClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "SharpStrike|Damage")
+	float ComboDamage = 20.f;
+	
+	float GetCurrentComboDamage() const;
+
+	UFUNCTION()
+	void OnAttackHit(FGameplayEventData Payload);
 };
