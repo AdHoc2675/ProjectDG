@@ -5,9 +5,9 @@ echo ========================================
 echo ProjectDG Run Cooked Client
 echo ========================================
 
-set "PROJECT_ROOT=C:\Users\KGA\Desktop\ProjectDG"
+set "PROJECT_ROOT=D:\ProjectDG"
 set "ARCHIVE_DIR=%PROJECT_ROOT%\BuildOutput\Client"
-set "SERVER_ADDR=127.0.0.1:7777"
+set "SERVER_ADDR=61.80.6.36:7777"
 set "LOG_FILE=%PROJECT_ROOT%\Saved\Logs\Cooked_Client.log"
 
 set "CLIENT_EXE="

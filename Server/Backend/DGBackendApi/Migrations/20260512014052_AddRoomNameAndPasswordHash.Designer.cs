@@ -3,6 +3,7 @@ using System;
 using DGBackendApi.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DGBackendApi.Migrations
 {
     [DbContext(typeof(DGDbContext))]
-    partial class DGDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260512014052_AddRoomNameAndPasswordHash")]
+    partial class AddRoomNameAndPasswordHash
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -65,18 +68,6 @@ namespace DGBackendApi.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("region_id");
 
-                    b.Property<string>("RoomName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("room_name");
-
-                    b.Property<string>("RoomPasswordHash")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)")
-                        .HasColumnName("room_password_hash");
-
                     b.Property<string>("ServerIp")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -98,8 +89,6 @@ namespace DGBackendApi.Migrations
                         .HasColumnName("status");
 
                     b.HasKey("SessionId");
-
-                    b.HasIndex("RoomName");
 
                     b.ToTable("sessions", (string)null);
                 });

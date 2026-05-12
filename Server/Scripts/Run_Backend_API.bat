@@ -5,11 +5,13 @@ echo ========================================
 echo ProjectDG Backend API Server
 echo ========================================
 
-set "PROJECT_ROOT=C:\Users\KGA\Desktop\ProjectDG"
+set "PROJECT_ROOT=D:\ProjectDG"
 set "BACKEND_DIR=%PROJECT_ROOT%\Server\Backend\DGBackendApi"
+set "PUBLIC_IP=61.80.6.36"
 
 echo Project Root: %PROJECT_ROOT%
 echo Backend Dir: %BACKEND_DIR%
+echo Public IP: %PUBLIC_IP%
 echo.
 
 if not exist "%BACKEND_DIR%\DGBackendApi.csproj" (
@@ -26,14 +28,20 @@ cd /d "%BACKEND_DIR%"
 
 echo Starting Backend API...
 echo.
-echo URL:
+echo Local URL:
 echo http://localhost:8080
 echo.
-echo Health Check:
+echo Public URL:
+echo http://%PUBLIC_IP%:8080
+echo.
+echo Health Check Local:
 echo http://localhost:8080/health
 echo.
+echo Health Check Public:
+echo http://%PUBLIC_IP%:8080/health
+echo.
 
-dotnet run
+dotnet run --no-launch-profile
 
 echo.
 echo ========================================

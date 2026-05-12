@@ -5,8 +5,8 @@ echo ========================================
 echo ProjectDG Cook Dedicated Server
 echo ========================================
 
-set "PROJECT_ROOT=C:\Users\KGA\Desktop\ProjectDG"
-set "ENGINE_ROOT=C:\Users\KGA\Desktop\UnrealEngine-release"
+set "PROJECT_ROOT=D:\ProjectDG"
+set "ENGINE_ROOT=D:\UnrealEngine-release"
 set "UPROJECT=%PROJECT_ROOT%\ProjectDG.uproject"
 set "UAT=%ENGINE_ROOT%\Engine\Build\BatchFiles\RunUAT.bat"
 set "MAP_NAME=/Game/Personal/DOHEE/Level/ServerTestWorld"
