@@ -5,6 +5,7 @@
 void UDGOverlayWidgetController::BroadcastInitialValues()
 {
 	UDG_AttributeSet* DGAS = GetDGAttributeSet();
+
 	if (DGAS)
 	{
 		// 처음 UI가 생성될 때 현재 스탯을 한번 뿌려줌
@@ -12,6 +13,9 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 		OnMaxHealthChanged.Broadcast(DGAS->GetMaxHealth());
 		OnStaminaChanged.Broadcast(DGAS->GetStamina());
 		OnMaxStaminaChanged.Broadcast(DGAS->GetMaxStamina());
+
+		UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] BroadcastInitialValues called. Health: %f, MaxHealth: %f, Stamina: %f, MaxStamina: %f"),
+			DGAS->GetHealth(), DGAS->GetMaxHealth(), DGAS->GetStamina(), DGAS->GetMaxStamina());
 	}
 }
 
