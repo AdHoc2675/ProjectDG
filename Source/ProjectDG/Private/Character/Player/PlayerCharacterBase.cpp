@@ -777,7 +777,7 @@ void APlayerCharacterBase::Server_TestApplyDamage_Implementation()
 		}
 
 		const float DistanceSq = FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation());
-		constexpr float MaxTestDamageRange = 500.f;
+		constexpr float MaxTestDamageRange = 3000.f;
 
 		if (DistanceSq > FMath::Square(MaxTestDamageRange))
 		{

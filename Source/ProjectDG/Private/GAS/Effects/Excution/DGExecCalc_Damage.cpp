@@ -4,6 +4,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "Core/DG_GameplayTags.h"
+#include "Core/DG_Debug.h"
 #include "GAS/Attributes/DG_AttributeSet.h"
 
 struct FDGDamageExecutionStatics
@@ -110,6 +111,16 @@ void UDGExecCalc_Damage::Execute_Implementation(
 	const float FinalDamageTaken = DamageDivisor > 0.0f
 		? IncomingDamage / DamageDivisor
 		: IncomingDamage;
+	
+	Debug::Print(FString::Printf(
+	TEXT("[DGExecCalc_Damage] Incoming=%.2f Defense=%.2f DefenseCoeff=%.2f EffectiveArmor=%.2f FinalDamage=%.2f"),
+	IncomingDamage,
+	TargetDefense,
+	TargetDefenseCoefficient,
+	EffectiveArmor,
+	FinalDamageTaken
+));
+
 
 	if (FinalDamageTaken <= 0.0f)
 	{
