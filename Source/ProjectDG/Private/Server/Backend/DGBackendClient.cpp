@@ -18,21 +18,31 @@ void UDGBackendClient::Initialize(const FString& InBaseUrl)
 	}
 }
 
-void UDGBackendClient::CreateSession(const FDGCreateSessionRequest& RequestData, FDGSessionApiResultCallback Callback)
+void UDGBackendClient::CreateSession(
+	const FDGCreateSessionRequest& RequestData,
+	FDGSessionApiResultCallback Callback
+)
 {
 	const FString BodyJson = BuildCreateSessionJson(RequestData);
+
 	SendPostRequest(TEXT("/api/sessions/create"), BodyJson, Callback);
 }
 
-void UDGBackendClient::JoinSession(const FDGJoinSessionRequest& RequestData, FDGSessionApiResultCallback Callback)
-
+void UDGBackendClient::JoinSession(
+	const FDGJoinSessionRequest& RequestData,
+	FDGSessionApiResultCallback Callback
+)
 {
 	const FString BodyJson = BuildJoinSessionJson(RequestData);
+
 	SendPostRequest(TEXT("/api/sessions/join"), BodyJson, Callback);
 }
 
-void UDGBackendClient::SendPostRequest(const FString& EndPoint, const FString& BodyJson,
-                                       FDGSessionApiResultCallback Callback)
+void UDGBackendClient::SendPostRequest(
+	const FString& EndPoint,
+	const FString& BodyJson,
+	FDGSessionApiResultCallback Callback
+)
 {
 	const FString Url = BaseUrl + EndPoint;
 
@@ -40,8 +50,8 @@ void UDGBackendClient::SendPostRequest(const FString& EndPoint, const FString& B
 
 	HttpRequest->SetURL(Url);
 	HttpRequest->SetVerb(TEXT("POST"));
-	HttpRequest->SetHeader(TEXT("Content-Type"),TEXT("application/json"));
-	HttpRequest->SetHeader(TEXT("Accept"),TEXT("application/json"));
+	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	HttpRequest->SetHeader(TEXT("Accept"), TEXT("application/json"));
 	HttpRequest->SetContentAsString(BodyJson);
 
 	HttpRequest->OnProcessRequestComplete().BindLambda(
@@ -57,7 +67,10 @@ void UDGBackendClient::SendPostRequest(const FString& EndPoint, const FString& B
 			}
 
 			const FDGSessionConnectionInfo Result = ParseSessionConnectionInfo(
-				bWasSuccessful, ResponseCode, ResponseBody);
+				bWasSuccessful,
+				ResponseCode,
+				ResponseBody
+			);
 
 			Callback.ExecuteIfBound(Result.bSuccess, Result);
 		}
@@ -75,13 +88,17 @@ void UDGBackendClient::SendPostRequest(const FString& EndPoint, const FString& B
 	}
 }
 
-FString UDGBackendClient::BuildCreateSessionJson(const FDGCreateSessionRequest& RequestData)
+FString UDGBackendClient::BuildCreateSessionJson(
+	const FDGCreateSessionRequest& RequestData
+)
 {
 	TSharedRef<FJsonObject> JsonObject = MakeShared<FJsonObject>();
 
 	JsonObject->SetNumberField(TEXT("accountId"), static_cast<double>(RequestData.AccountId));
 	JsonObject->SetNumberField(TEXT("characterId"), static_cast<double>(RequestData.CharacterId));
 	JsonObject->SetStringField(TEXT("regionId"), RequestData.RegionId);
+	JsonObject->SetStringField(TEXT("roomName"), RequestData.RoomName);
+	JsonObject->SetStringField(TEXT("roomPassword"), RequestData.RoomPassword);
 
 	FString OutputString;
 	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
@@ -90,11 +107,14 @@ FString UDGBackendClient::BuildCreateSessionJson(const FDGCreateSessionRequest& 
 	return OutputString;
 }
 
-FString UDGBackendClient::BuildJoinSessionJson(const FDGJoinSessionRequest& RequestData)
+FString UDGBackendClient::BuildJoinSessionJson(
+	const FDGJoinSessionRequest& RequestData
+)
 {
 	TSharedRef<FJsonObject> JsonObject = MakeShared<FJsonObject>();
 
-	JsonObject->SetStringField(TEXT("sessionId"), RequestData.SessionId);
+	JsonObject->SetStringField(TEXT("roomName"), RequestData.RoomName);
+	JsonObject->SetStringField(TEXT("roomPassword"), RequestData.RoomPassword);
 	JsonObject->SetNumberField(TEXT("accountId"), static_cast<double>(RequestData.AccountId));
 	JsonObject->SetNumberField(TEXT("characterId"), static_cast<double>(RequestData.CharacterId));
 
@@ -105,8 +125,11 @@ FString UDGBackendClient::BuildJoinSessionJson(const FDGJoinSessionRequest& Requ
 	return OutputString;
 }
 
-FDGSessionConnectionInfo UDGBackendClient::ParseSessionConnectionInfo(bool bRequestSucceeded, int32 ResponseCode,
-                                                                      const FString& ResponseBody)
+FDGSessionConnectionInfo UDGBackendClient::ParseSessionConnectionInfo(
+	bool bRequestSucceeded,
+	int32 ResponseCode,
+	const FString& ResponseBody
+)
 {
 	FDGSessionConnectionInfo Result;
 

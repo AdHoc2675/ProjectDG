@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using DGBackendApi.Data;
 using DGBackendApi.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -34,10 +36,14 @@ app.MapGet("/health", () =>
 /**
  * 세션 생성 API
  *
- * DB 저장 흐름:
- * - sessions 테이블에 세션 저장
- * - session_members 테이블에 Leader 멤버 저장
- * - 생성한 JoinToken을 DB와 응답에 동일하게 사용
+ * 유저 입력:
+ * - RoomName
+ * - RoomPassword
+ *
+ * 내부 처리:
+ * - SessionId 생성
+ * - JoinToken 생성
+ * - RoomPassword는 Hash로만 저장
  */
 app.MapPost("/api/sessions/create", async (
     CreateSessionRequest request,
@@ -71,6 +77,41 @@ app.MapPost("/api/sessions/create", async (
         });
     }
 
+    var roomName = NormalizeRoomName(request.RoomName);
+
+    if (string.IsNullOrWhiteSpace(roomName))
+    {
+        return Results.BadRequest(new
+        {
+            success = false,
+            message = "RoomName is required."
+        });
+    }
+
+    if (string.IsNullOrWhiteSpace(request.RoomPassword))
+    {
+        return Results.BadRequest(new
+        {
+            success = false,
+            message = "RoomPassword is required."
+        });
+    }
+
+    var existingRoom = await db.Sessions
+        .FirstOrDefaultAsync(x =>
+            x.RoomName == roomName &&
+            x.Status != "Ended"
+        );
+
+    if (existingRoom != null)
+    {
+        return Results.BadRequest(new
+        {
+            success = false,
+            message = "Room name already exists."
+        });
+    }
+
     var sessionId = $"local-session-{Guid.NewGuid():N}";
     var joinToken = $"local-token-{Guid.NewGuid():N}";
 
@@ -80,8 +121,10 @@ app.MapPost("/api/sessions/create", async (
         OwnerAccountId = request.AccountId,
         CurrentLeaderAccountId = request.AccountId,
         RegionId = request.RegionId,
+        RoomName = roomName,
+        RoomPasswordHash = HashRoomPassword(request.RoomPassword),
         MapPath = "/Game/Personal/DOHEE/Level/ServerTest",
-        ServerIp = "127.0.0.1",
+        ServerIp = "61.80.6.36",
         ServerPort = 7777,
         Status = "Open",
         MaxPlayers = 4,
@@ -118,22 +161,37 @@ app.MapPost("/api/sessions/create", async (
 /**
  * 세션 합류 API
  *
- * DB 저장 흐름:
- * - sessions 테이블에서 세션 조회
- * - session_members 테이블에 Member 저장 또는 기존 멤버 갱신
- * - 생성한 JoinToken을 DB와 응답에 동일하게 사용
+ * 유저 입력:
+ * - RoomName
+ * - RoomPassword
+ *
+ * 내부 처리:
+ * - RoomName으로 Open/Playing 세션 조회
+ * - RoomPassword Hash 검증
+ * - 참가자용 JoinToken 새로 발급
  */
 app.MapPost("/api/sessions/join", async (
     JoinSessionRequest request,
     DGDbContext db
 ) =>
 {
-    if (string.IsNullOrWhiteSpace(request.SessionId))
+    var roomName = NormalizeRoomName(request.RoomName);
+
+    if (string.IsNullOrWhiteSpace(roomName))
     {
         return Results.BadRequest(new
         {
             success = false,
-            message = "SessionId is required."
+            message = "RoomName is required."
+        });
+    }
+
+    if (string.IsNullOrWhiteSpace(request.RoomPassword))
+    {
+        return Results.BadRequest(new
+        {
+            success = false,
+            message = "RoomPassword is required."
         });
     }
 
@@ -157,14 +215,17 @@ app.MapPost("/api/sessions/join", async (
 
     var session = await db.Sessions
         .Include(x => x.Members)
-        .FirstOrDefaultAsync(x => x.SessionId == request.SessionId);
+        .FirstOrDefaultAsync(x =>
+            x.RoomName == roomName &&
+            x.Status != "Ended"
+        );
 
     if (session == null)
     {
         return Results.NotFound(new
         {
             success = false,
-            message = "Session not found."
+            message = "Room not found."
         });
     }
 
@@ -174,6 +235,17 @@ app.MapPost("/api/sessions/join", async (
         {
             success = false,
             message = $"Session is not joinable. Current status: {session.Status}"
+        });
+    }
+
+    var requestPasswordHash = HashRoomPassword(request.RoomPassword);
+
+    if (session.RoomPasswordHash != requestPasswordHash)
+    {
+        return Results.BadRequest(new
+        {
+            success = false,
+            message = "Invalid room password."
         });
     }
 
@@ -233,10 +305,6 @@ app.MapPost("/api/sessions/join", async (
 
 /**
  * 세션 조회 API
- *
- * DB 조회 흐름:
- * - sessions 테이블에서 세션 조회
- * - session_members 테이블까지 Include
  */
 app.MapGet("/api/sessions/{sessionId}", async (
     string sessionId,
@@ -284,6 +352,7 @@ app.MapGet("/api/sessions/{sessionId}", async (
         OwnerAccountId: session.OwnerAccountId,
         CurrentLeaderAccountId: session.CurrentLeaderAccountId,
         RegionId: session.RegionId,
+        RoomName: session.RoomName,
         MapPath: session.MapPath,
         ServerIp: session.ServerIp,
         ServerPort: session.ServerPort,
@@ -386,9 +455,6 @@ app.MapPost("/api/sessions/validate-join", async (
 
 /**
  * 세션 시작 보고 API
- *
- * Dedicated Server가 정상 JoinToken 검증 성공 후 호출한다.
- * sessions.status를 Playing으로 변경하고 started_at_utc를 기록한다.
  */
 app.MapPost("/api/sessions/session-started", async (
     SessionStartedRequest request,
@@ -430,14 +496,14 @@ app.MapPost("/api/sessions/session-started", async (
 
     var now = DateTime.UtcNow;
 
-session.Status = "Playing";
+    session.Status = "Playing";
 
-if (session.StartedAtUtc == null)
-{
-    session.StartedAtUtc = now;
-}
+    if (session.StartedAtUtc == null)
+    {
+        session.StartedAtUtc = now;
+    }
 
-session.LastHeartbeatAtUtc = now;
+    session.LastHeartbeatAtUtc = now;
 
     await db.SaveChangesAsync();
 
@@ -451,9 +517,6 @@ session.LastHeartbeatAtUtc = now;
 
 /**
  * 세션 Heartbeat API
- *
- * Dedicated Server가 주기적으로 호출한다.
- * sessions.last_heartbeat_at_utc를 갱신한다.
  */
 app.MapPost("/api/sessions/heartbeat", async (
     SessionHeartbeatRequest request,
@@ -516,9 +579,6 @@ app.MapPost("/api/sessions/heartbeat", async (
 
 /**
  * 세션 종료 보고 API
- *
- * Dedicated Server가 종료될 때 호출한다.
- * sessions.status를 Ended로 변경하고 ended_at_utc를 기록한다.
  */
 app.MapPost("/api/sessions/session-ended", async (
     SessionEndedRequest request,
@@ -572,12 +632,29 @@ app.MapPost("/api/sessions/session-ended", async (
     ));
 });
 
-app.Run("http://localhost:8080");
+static string NormalizeRoomName(string? roomName)
+{
+    return string.IsNullOrWhiteSpace(roomName)
+        ? ""
+        : roomName.Trim();
+}
+
+static string HashRoomPassword(string roomPassword)
+{
+    var bytes = Encoding.UTF8.GetBytes(roomPassword);
+    var hashBytes = SHA256.HashData(bytes);
+
+    return Convert.ToHexString(hashBytes);
+}
+
+app.Run("http://0.0.0.0:8080");
 
 public record CreateSessionRequest(
     long AccountId,
     long CharacterId,
-    string RegionId
+    string RegionId,
+    string RoomName,
+    string RoomPassword
 );
 
 public record CreateSessionResponse(
@@ -590,7 +667,8 @@ public record CreateSessionResponse(
 );
 
 public record JoinSessionRequest(
-    string SessionId,
+    string RoomName,
+    string RoomPassword,
     long AccountId,
     long CharacterId
 );
@@ -610,6 +688,7 @@ public record SessionDetailResponse(
     long OwnerAccountId,
     long CurrentLeaderAccountId,
     string RegionId,
+    string RoomName,
     string MapPath,
     string ServerIp,
     int ServerPort,

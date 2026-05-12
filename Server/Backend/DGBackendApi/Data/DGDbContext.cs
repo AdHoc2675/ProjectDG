@@ -37,6 +37,14 @@ public class DGDbContext : DbContext
                 .HasColumnName("region_id")
                 .HasMaxLength(100);
 
+entity.Property(x => x.RoomName)
+    .HasColumnName("room_name")
+    .HasMaxLength(100);
+
+entity.Property(x => x.RoomPasswordHash)
+    .HasColumnName("room_password_hash")
+    .HasMaxLength(128);
+
             entity.Property(x => x.MapPath)
                 .HasColumnName("map_path")
                 .HasMaxLength(300);
@@ -71,6 +79,9 @@ entity.Property(x => x.LastHeartbeatAtUtc)
                 .WithOne(x => x.Session)
                 .HasForeignKey(x => x.SessionId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+entity.HasIndex(x => x.RoomName);
+
         });
 
         modelBuilder.Entity<SessionMember>(entity =>
