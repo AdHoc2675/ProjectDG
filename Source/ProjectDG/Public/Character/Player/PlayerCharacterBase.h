@@ -221,6 +221,12 @@ protected:
 	void OnSkillInput_Q();
 	void OnSkillInput_E();
 	
+protected:
+	// 서버 권한 데미지 파이프라인 테스트용.
+	// 임시 진입점이며, 나중에 실제 GA/Skill 구조로 이전 예정.
+	UFUNCTION(Server, Reliable)
+	void Server_TestApplyDamage();
+	
 #pragma endregion Skill
 	
 #pragma region Movement
