@@ -12,7 +12,13 @@ void UDGPlayerStatWidget::NativeConstruct()
 
 void UDGPlayerStatWidget::BindAttributes(UAbilitySystemComponent* ASC, UDG_AttributeSet* AttributeSet)
 {
-	if (!ASC || !AttributeSet) return;
+	if (!ASC || !AttributeSet) {
+		
+		UE_LOG(LogTemp, Warning, TEXT("[DGPlayerStatWidget] BindAttributes: Invalid ASC or AttributeSet"));
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[DGPlayerStatWidget] BindAttributes: Binding to ASC %s and AttributeSet %s"), *ASC->GetName(), *AttributeSet->GetName());
 
 	// 초기 값 세팅
 	CurrentHealth = AttributeSet->GetHealth();

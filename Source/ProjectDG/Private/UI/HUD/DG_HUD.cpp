@@ -24,3 +24,4 @@ void ADG_HUD::InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySyste
 void ADG_HUD::BeginPlay()
 {
 }
+
