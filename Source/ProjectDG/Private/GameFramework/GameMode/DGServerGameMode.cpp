@@ -2,6 +2,8 @@
 
 #include "Core/DG_Debug.h"
 #include "Dom/JsonObject.h"
+#include "Engine/World.h"
+#include "GameFramework/Controller.h"
 #include "GameFramework/GameSession.h"
 #include "GameFramework/PlayerController.h"
 #include "HttpModule.h"
@@ -131,6 +133,60 @@ void ADGServerGameMode::PostLogin(APlayerController* NewPlayer)
 		TEXT("[DGServerGameMode] PostLogin Success. Player=%s"),
 		*NewPlayer->GetName()
 	));
+
+	if (GetNetMode() == NM_DedicatedServer)
+	{
+		ConnectedPlayerCount++;
+
+		Debug::Print(FString::Printf(
+			TEXT("[DGServerGameMode] ConnectedPlayerCount increased. Count=%d"),
+			ConnectedPlayerCount
+		));
+	}
+}
+
+void ADGServerGameMode::Logout(AController* Exiting)
+{
+	const FString ExitingName = IsValid(Exiting)
+		? Exiting->GetName()
+		: TEXT("None");
+
+	Super::Logout(Exiting);
+
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		return;
+	}
+
+	ConnectedPlayerCount = FMath::Max(0, ConnectedPlayerCount - 1);
+
+	Debug::Print(FString::Printf(
+		TEXT("[DGServerGameMode] Logout. Player=%s ConnectedPlayerCount=%d"),
+		*ExitingName,
+		ConnectedPlayerCount
+	));
+
+	TryReportSessionEndedIfNoPlayers();
+}
+
+void ADGServerGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (GetNetMode() == NM_DedicatedServer && !ActiveSessionId.IsEmpty() && !bSessionEndReported)
+	{
+		const FString SessionIdToEnd = ActiveSessionId;
+
+		bSessionEndReported = true;
+
+		StopSessionHeartbeat();
+
+		ReportSessionEndedAsync(SessionIdToEnd);
+	}
+	else
+	{
+		StopSessionHeartbeat();
+	}
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void ADGServerGameMode::ValidateJoinTokenAsync(
@@ -172,7 +228,11 @@ void ADGServerGameMode::ValidateJoinTokenAsync(
 	));
 
 	Request->OnProcessRequestComplete().BindLambda(
-		[this, WeakPlayerController](FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bWasSuccessful)
+		[this, WeakPlayerController, SessionId](
+			FHttpRequestPtr HttpRequest,
+			FHttpResponsePtr HttpResponse,
+			bool bWasSuccessful
+		)
 		{
 			if (!WeakPlayerController.IsValid())
 			{
@@ -190,6 +250,12 @@ void ADGServerGameMode::ValidateJoinTokenAsync(
 
 			const int32 ResponseCode = HttpResponse->GetResponseCode();
 			const FString ResponseBody = HttpResponse->GetContentAsString();
+
+			Debug::Print(FString::Printf(
+				TEXT("[DGServerGameMode] Validate Join Response. Code=%d Body=%s"),
+				ResponseCode,
+				*ResponseBody
+			));
 
 			FString ResponseMessage;
 			const bool bValidJoin = ParseValidateJoinResponse(ResponseBody, ResponseMessage);
@@ -221,6 +287,8 @@ void ADGServerGameMode::ValidateJoinTokenAsync(
 				*PlayerController->GetName(),
 				*ResponseMessage
 			));
+
+			ReportSessionStartedAsync(SessionId);
 		}
 	);
 
@@ -230,6 +298,342 @@ void ADGServerGameMode::ValidateJoinTokenAsync(
 	{
 		KickPlayerWithReason(PlayerController, TEXT("Failed to start backend validate request."));
 	}
+}
+
+void ADGServerGameMode::ReportSessionStartedAsync(
+	const FString& SessionId
+)
+{
+	if (SessionId.IsEmpty())
+	{
+		Debug::Print(TEXT("[DGServerGameMode] ReportSessionStartedAsync failed. SessionId is empty."));
+		return;
+	}
+
+	FString RequestUrl = BackendBaseUrl;
+
+	if (RequestUrl.EndsWith(TEXT("/")))
+	{
+		RequestUrl.LeftChopInline(1);
+	}
+
+	RequestUrl += TEXT("/api/sessions/session-started");
+
+	const FString BodyJson = BuildSessionStartedJson(SessionId);
+
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+	Request->SetURL(RequestUrl);
+	Request->SetVerb(TEXT("POST"));
+	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	Request->SetHeader(TEXT("Accept"), TEXT("application/json"));
+	Request->SetContentAsString(BodyJson);
+
+	Debug::Print(FString::Printf(
+		TEXT("[DGServerGameMode] Session Started Request. Url=%s SessionId=%s"),
+		*RequestUrl,
+		*SessionId
+	));
+
+	Request->OnProcessRequestComplete().BindLambda(
+		[this, SessionId](
+			FHttpRequestPtr HttpRequest,
+			FHttpResponsePtr HttpResponse,
+			bool bWasSuccessful
+		)
+		{
+			if (!bWasSuccessful || !HttpResponse.IsValid())
+			{
+				Debug::Print(TEXT("[DGServerGameMode] Session Started Request Failed."));
+				return;
+			}
+
+			const int32 ResponseCode = HttpResponse->GetResponseCode();
+			const FString ResponseBody = HttpResponse->GetContentAsString();
+
+			if (ResponseCode < 200 || ResponseCode >= 300)
+			{
+				Debug::Print(FString::Printf(
+					TEXT("[DGServerGameMode] Session Started Failed. Code=%d Body=%s"),
+					ResponseCode,
+					*ResponseBody
+				));
+				return;
+			}
+
+			Debug::Print(FString::Printf(
+				TEXT("[DGServerGameMode] Session Started Success. Body=%s"),
+				*ResponseBody
+			));
+
+			StartSessionHeartbeat(SessionId);
+		}
+	);
+
+	const bool bRequestStarted = Request->ProcessRequest();
+
+	if (!bRequestStarted)
+	{
+		Debug::Print(TEXT("[DGServerGameMode] Failed to start session-started request."));
+	}
+}
+
+void ADGServerGameMode::ReportSessionEndedAsync(
+	const FString& SessionId
+)
+{
+	if (SessionId.IsEmpty())
+	{
+		Debug::Print(TEXT("[DGServerGameMode] ReportSessionEndedAsync failed. SessionId is empty."));
+		return;
+	}
+
+	FString RequestUrl = BackendBaseUrl;
+
+	if (RequestUrl.EndsWith(TEXT("/")))
+	{
+		RequestUrl.LeftChopInline(1);
+	}
+
+	RequestUrl += TEXT("/api/sessions/session-ended");
+
+	const FString BodyJson = BuildSessionEndedJson(SessionId);
+
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+	Request->SetURL(RequestUrl);
+	Request->SetVerb(TEXT("POST"));
+	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	Request->SetHeader(TEXT("Accept"), TEXT("application/json"));
+	Request->SetContentAsString(BodyJson);
+
+	Debug::Print(FString::Printf(
+		TEXT("[DGServerGameMode] Session Ended Request. Url=%s SessionId=%s"),
+		*RequestUrl,
+		*SessionId
+	));
+
+	Request->OnProcessRequestComplete().BindLambda(
+		[](FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bWasSuccessful)
+		{
+			if (!bWasSuccessful || !HttpResponse.IsValid())
+			{
+				Debug::Print(TEXT("[DGServerGameMode] Session Ended Request Failed."));
+				return;
+			}
+
+			const int32 ResponseCode = HttpResponse->GetResponseCode();
+			const FString ResponseBody = HttpResponse->GetContentAsString();
+
+			if (ResponseCode < 200 || ResponseCode >= 300)
+			{
+				Debug::Print(FString::Printf(
+					TEXT("[DGServerGameMode] Session Ended Failed. Code=%d Body=%s"),
+					ResponseCode,
+					*ResponseBody
+				));
+				return;
+			}
+
+			Debug::Print(FString::Printf(
+				TEXT("[DGServerGameMode] Session Ended Success. Body=%s"),
+				*ResponseBody
+			));
+		}
+	);
+
+	const bool bRequestStarted = Request->ProcessRequest();
+
+	if (!bRequestStarted)
+	{
+		Debug::Print(TEXT("[DGServerGameMode] Failed to start session-ended request."));
+	}
+}
+
+void ADGServerGameMode::StartSessionHeartbeat(
+	const FString& SessionId
+)
+{
+	if (SessionId.IsEmpty())
+	{
+		Debug::Print(TEXT("[DGServerGameMode] StartSessionHeartbeat failed. SessionId is empty."));
+		return;
+	}
+
+	UWorld* World = GetWorld();
+
+	if (!World)
+	{
+		Debug::Print(TEXT("[DGServerGameMode] StartSessionHeartbeat failed. World is null."));
+		return;
+	}
+
+	if (ActiveSessionId == SessionId && World->GetTimerManager().IsTimerActive(SessionHeartbeatTimerHandle))
+	{
+		Debug::Print(FString::Printf(
+			TEXT("[DGServerGameMode] Session heartbeat already running. SessionId=%s"),
+			*SessionId
+		));
+		return;
+	}
+
+	ActiveSessionId = SessionId;
+	bSessionEndReported = false;
+
+	World->GetTimerManager().ClearTimer(SessionHeartbeatTimerHandle);
+
+	SendSessionHeartbeatAsync(ActiveSessionId);
+
+	World->GetTimerManager().SetTimer(
+		SessionHeartbeatTimerHandle,
+		this,
+		&ADGServerGameMode::SendActiveSessionHeartbeat,
+		HeartbeatIntervalSeconds,
+		true
+	);
+
+	Debug::Print(FString::Printf(
+		TEXT("[DGServerGameMode] Session heartbeat started. SessionId=%s Interval=%.1f"),
+		*ActiveSessionId,
+		HeartbeatIntervalSeconds
+	));
+}
+
+void ADGServerGameMode::StopSessionHeartbeat()
+{
+	UWorld* World = GetWorld();
+
+	if (World)
+	{
+		World->GetTimerManager().ClearTimer(SessionHeartbeatTimerHandle);
+	}
+
+	if (!ActiveSessionId.IsEmpty())
+	{
+		Debug::Print(FString::Printf(
+			TEXT("[DGServerGameMode] Session heartbeat stopped. SessionId=%s"),
+			*ActiveSessionId
+		));
+	}
+}
+
+void ADGServerGameMode::SendActiveSessionHeartbeat()
+{
+	if (ActiveSessionId.IsEmpty())
+	{
+		Debug::Print(TEXT("[DGServerGameMode] SendActiveSessionHeartbeat skipped. ActiveSessionId is empty."));
+		return;
+	}
+
+	SendSessionHeartbeatAsync(ActiveSessionId);
+}
+
+void ADGServerGameMode::SendSessionHeartbeatAsync(
+	const FString& SessionId
+)
+{
+	if (SessionId.IsEmpty())
+	{
+		Debug::Print(TEXT("[DGServerGameMode] SendSessionHeartbeatAsync failed. SessionId is empty."));
+		return;
+	}
+
+	FString RequestUrl = BackendBaseUrl;
+
+	if (RequestUrl.EndsWith(TEXT("/")))
+	{
+		RequestUrl.LeftChopInline(1);
+	}
+
+	RequestUrl += TEXT("/api/sessions/heartbeat");
+
+	const FString BodyJson = BuildSessionHeartbeatJson(SessionId);
+
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+	Request->SetURL(RequestUrl);
+	Request->SetVerb(TEXT("POST"));
+	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	Request->SetHeader(TEXT("Accept"), TEXT("application/json"));
+	Request->SetContentAsString(BodyJson);
+
+	Debug::Print(FString::Printf(
+		TEXT("[DGServerGameMode] Session Heartbeat Request. Url=%s SessionId=%s"),
+		*RequestUrl,
+		*SessionId
+	));
+
+	Request->OnProcessRequestComplete().BindLambda(
+		[](
+			FHttpRequestPtr HttpRequest,
+			FHttpResponsePtr HttpResponse,
+			bool bWasSuccessful
+		)
+		{
+			if (!bWasSuccessful || !HttpResponse.IsValid())
+			{
+				Debug::Print(TEXT("[DGServerGameMode] Session Heartbeat Request Failed."));
+				return;
+			}
+
+			const int32 ResponseCode = HttpResponse->GetResponseCode();
+			const FString ResponseBody = HttpResponse->GetContentAsString();
+
+			if (ResponseCode < 200 || ResponseCode >= 300)
+			{
+				Debug::Print(FString::Printf(
+					TEXT("[DGServerGameMode] Session Heartbeat Failed. Code=%d Body=%s"),
+					ResponseCode,
+					*ResponseBody
+				));
+				return;
+			}
+
+			Debug::Print(FString::Printf(
+				TEXT("[DGServerGameMode] Session Heartbeat Success. Body=%s"),
+				*ResponseBody
+			));
+		}
+	);
+
+	const bool bRequestStarted = Request->ProcessRequest();
+
+	if (!bRequestStarted)
+	{
+		Debug::Print(TEXT("[DGServerGameMode] Failed to start heartbeat request."));
+	}
+}
+
+void ADGServerGameMode::TryReportSessionEndedIfNoPlayers()
+{
+	if (ConnectedPlayerCount > 0)
+	{
+		Debug::Print(FString::Printf(
+			TEXT("[DGServerGameMode] Session end skipped. Players still connected. Count=%d"),
+			ConnectedPlayerCount
+		));
+		return;
+	}
+
+	if (ActiveSessionId.IsEmpty())
+	{
+		Debug::Print(TEXT("[DGServerGameMode] Session end skipped. ActiveSessionId is empty."));
+		return;
+	}
+
+	if (bSessionEndReported)
+	{
+		Debug::Print(FString::Printf(
+			TEXT("[DGServerGameMode] Session end skipped. Already reported. SessionId=%s"),
+			*ActiveSessionId
+		));
+		return;
+	}
+
+	const FString SessionIdToEnd = ActiveSessionId;
+
+	bSessionEndReported = true;
+
+	StopSessionHeartbeat();
+
+	ReportSessionEndedAsync(SessionIdToEnd);
 }
 
 void ADGServerGameMode::KickPlayerWithReason(
@@ -266,6 +670,51 @@ FString ADGServerGameMode::BuildValidateJoinJson(
 
 	JsonObject->SetStringField(TEXT("sessionId"), SessionId);
 	JsonObject->SetStringField(TEXT("joinToken"), JoinToken);
+
+	FString OutputString;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
+	FJsonSerializer::Serialize(JsonObject, Writer);
+
+	return OutputString;
+}
+
+FString ADGServerGameMode::BuildSessionStartedJson(
+	const FString& SessionId
+)
+{
+	TSharedRef<FJsonObject> JsonObject = MakeShared<FJsonObject>();
+
+	JsonObject->SetStringField(TEXT("sessionId"), SessionId);
+
+	FString OutputString;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
+	FJsonSerializer::Serialize(JsonObject, Writer);
+
+	return OutputString;
+}
+
+FString ADGServerGameMode::BuildSessionEndedJson(
+	const FString& SessionId
+)
+{
+	TSharedRef<FJsonObject> JsonObject = MakeShared<FJsonObject>();
+
+	JsonObject->SetStringField(TEXT("sessionId"), SessionId);
+
+	FString OutputString;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
+	FJsonSerializer::Serialize(JsonObject, Writer);
+
+	return OutputString;
+}
+
+FString ADGServerGameMode::BuildSessionHeartbeatJson(
+	const FString& SessionId
+)
+{
+	TSharedRef<FJsonObject> JsonObject = MakeShared<FJsonObject>();
+
+	JsonObject->SetStringField(TEXT("sessionId"), SessionId);
 
 	FString OutputString;
 	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);

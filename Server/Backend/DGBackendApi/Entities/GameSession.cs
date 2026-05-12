@@ -24,6 +24,8 @@ public class GameSession
 
     public DateTime? StartedAtUtc { get; set; }
 
+    public DateTime? LastHeartbeatAtUtc { get; set; }
+
     public DateTime? EndedAtUtc { get; set; }
 
     public List<SessionMember> Members { get; set; } = new();

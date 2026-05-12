@@ -37,6 +37,7 @@ app.MapGet("/health", () =>
  * DB 저장 흐름:
  * - sessions 테이블에 세션 저장
  * - session_members 테이블에 Leader 멤버 저장
+ * - 생성한 JoinToken을 DB와 응답에 동일하게 사용
  */
 app.MapPost("/api/sessions/create", async (
     CreateSessionRequest request,
@@ -71,6 +72,7 @@ app.MapPost("/api/sessions/create", async (
     }
 
     var sessionId = $"local-session-{Guid.NewGuid():N}";
+    var joinToken = $"local-token-{Guid.NewGuid():N}";
 
     var session = new GameSession
     {
@@ -93,6 +95,7 @@ app.MapPost("/api/sessions/create", async (
         CharacterId = request.CharacterId,
         Role = "Leader",
         Status = "Joined",
+        JoinToken = joinToken,
         JoinedAtUtc = DateTime.UtcNow
     };
 
@@ -108,7 +111,7 @@ app.MapPost("/api/sessions/create", async (
         ServerIp: session.ServerIp,
         ServerPort: session.ServerPort,
         MapPath: session.MapPath,
-        JoinToken: $"local-token-{Guid.NewGuid():N}"
+        JoinToken: joinToken
     ));
 });
 
@@ -117,7 +120,8 @@ app.MapPost("/api/sessions/create", async (
  *
  * DB 저장 흐름:
  * - sessions 테이블에서 세션 조회
- * - session_members 테이블에 Member 저장
+ * - session_members 테이블에 Member 저장 또는 기존 멤버 갱신
+ * - 생성한 JoinToken을 DB와 응답에 동일하게 사용
  */
 app.MapPost("/api/sessions/join", async (
     JoinSessionRequest request,
@@ -175,6 +179,7 @@ app.MapPost("/api/sessions/join", async (
 
     var joinedMemberCount = session.Members.Count(x => x.Status == "Joined");
     var existingMember = session.Members.FirstOrDefault(x => x.CharacterId == request.CharacterId);
+    var joinToken = $"local-token-{Guid.NewGuid():N}";
 
     if (existingMember == null && joinedMemberCount >= session.MaxPlayers)
     {
@@ -189,6 +194,7 @@ app.MapPost("/api/sessions/join", async (
     {
         existingMember.AccountId = request.AccountId;
         existingMember.Status = "Joined";
+        existingMember.JoinToken = joinToken;
         existingMember.JoinedAtUtc = DateTime.UtcNow;
         existingMember.LeftAtUtc = null;
 
@@ -206,6 +212,7 @@ app.MapPost("/api/sessions/join", async (
             CharacterId = request.CharacterId,
             Role = "Member",
             Status = "Joined",
+            JoinToken = joinToken,
             JoinedAtUtc = DateTime.UtcNow
         };
 
@@ -220,7 +227,7 @@ app.MapPost("/api/sessions/join", async (
         ServerIp: session.ServerIp,
         ServerPort: session.ServerPort,
         MapPath: session.MapPath,
-        JoinToken: $"local-token-{Guid.NewGuid():N}"
+        JoinToken: joinToken
     ));
 });
 
@@ -287,6 +294,284 @@ app.MapGet("/api/sessions/{sessionId}", async (
     ));
 });
 
+/**
+ * 세션 접속 토큰 검증 API
+ *
+ * Dedicated Server가 클라이언트 접속 시 전달받은
+ * SessionId / JoinToken을 Backend에 검증 요청할 때 사용한다.
+ */
+app.MapPost("/api/sessions/validate-join", async (
+    ValidateJoinRequest request,
+    DGDbContext db
+) =>
+{
+    if (string.IsNullOrWhiteSpace(request.SessionId))
+    {
+        return Results.BadRequest(new ValidateJoinResponse(
+            Success: false,
+            SessionId: "",
+            AccountId: 0,
+            CharacterId: 0,
+            Role: "",
+            Message: "SessionId is required."
+        ));
+    }
+
+    if (string.IsNullOrWhiteSpace(request.JoinToken))
+    {
+        return Results.BadRequest(new ValidateJoinResponse(
+            Success: false,
+            SessionId: request.SessionId,
+            AccountId: 0,
+            CharacterId: 0,
+            Role: "",
+            Message: "JoinToken is required."
+        ));
+    }
+
+    var session = await db.Sessions
+        .Include(x => x.Members)
+        .FirstOrDefaultAsync(x => x.SessionId == request.SessionId);
+
+    if (session == null)
+    {
+        return Results.NotFound(new ValidateJoinResponse(
+            Success: false,
+            SessionId: request.SessionId,
+            AccountId: 0,
+            CharacterId: 0,
+            Role: "",
+            Message: "Session not found."
+        ));
+    }
+
+    if (session.Status != "Open" && session.Status != "Playing")
+    {
+        return Results.BadRequest(new ValidateJoinResponse(
+            Success: false,
+            SessionId: request.SessionId,
+            AccountId: 0,
+            CharacterId: 0,
+            Role: "",
+            Message: $"Session is not joinable. Current status: {session.Status}"
+        ));
+    }
+
+    var member = session.Members.FirstOrDefault(x =>
+        x.JoinToken == request.JoinToken &&
+        x.Status == "Joined"
+    );
+
+    if (member == null)
+    {
+        return Results.BadRequest(new ValidateJoinResponse(
+            Success: false,
+            SessionId: request.SessionId,
+            AccountId: 0,
+            CharacterId: 0,
+            Role: "",
+            Message: "Invalid join token."
+        ));
+    }
+
+    return Results.Ok(new ValidateJoinResponse(
+        Success: true,
+        SessionId: session.SessionId,
+        AccountId: member.AccountId,
+        CharacterId: member.CharacterId,
+        Role: member.Role,
+        Message: "Join token is valid."
+    ));
+});
+
+/**
+ * 세션 시작 보고 API
+ *
+ * Dedicated Server가 정상 JoinToken 검증 성공 후 호출한다.
+ * sessions.status를 Playing으로 변경하고 started_at_utc를 기록한다.
+ */
+app.MapPost("/api/sessions/session-started", async (
+    SessionStartedRequest request,
+    DGDbContext db
+) =>
+{
+    if (string.IsNullOrWhiteSpace(request.SessionId))
+    {
+        return Results.BadRequest(new SessionStartedResponse(
+            Success: false,
+            SessionId: "",
+            Status: "",
+            Message: "SessionId is required."
+        ));
+    }
+
+    var session = await db.Sessions
+        .FirstOrDefaultAsync(x => x.SessionId == request.SessionId);
+
+    if (session == null)
+    {
+        return Results.NotFound(new SessionStartedResponse(
+            Success: false,
+            SessionId: request.SessionId,
+            Status: "",
+            Message: "Session not found."
+        ));
+    }
+
+    if (session.Status == "Ended")
+    {
+        return Results.BadRequest(new SessionStartedResponse(
+            Success: false,
+            SessionId: session.SessionId,
+            Status: session.Status,
+            Message: "Session is already ended."
+        ));
+    }
+
+    var now = DateTime.UtcNow;
+
+session.Status = "Playing";
+
+if (session.StartedAtUtc == null)
+{
+    session.StartedAtUtc = now;
+}
+
+session.LastHeartbeatAtUtc = now;
+
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new SessionStartedResponse(
+        Success: true,
+        SessionId: session.SessionId,
+        Status: session.Status,
+        Message: "Session started."
+    ));
+});
+
+/**
+ * 세션 Heartbeat API
+ *
+ * Dedicated Server가 주기적으로 호출한다.
+ * sessions.last_heartbeat_at_utc를 갱신한다.
+ */
+app.MapPost("/api/sessions/heartbeat", async (
+    SessionHeartbeatRequest request,
+    DGDbContext db
+) =>
+{
+    if (string.IsNullOrWhiteSpace(request.SessionId))
+    {
+        return Results.BadRequest(new SessionHeartbeatResponse(
+            Success: false,
+            SessionId: "",
+            Status: "",
+            LastHeartbeatAtUtc: null,
+            Message: "SessionId is required."
+        ));
+    }
+
+    var session = await db.Sessions
+        .FirstOrDefaultAsync(x => x.SessionId == request.SessionId);
+
+    if (session == null)
+    {
+        return Results.NotFound(new SessionHeartbeatResponse(
+            Success: false,
+            SessionId: request.SessionId,
+            Status: "",
+            LastHeartbeatAtUtc: null,
+            Message: "Session not found."
+        ));
+    }
+
+    if (session.Status == "Ended")
+    {
+        return Results.BadRequest(new SessionHeartbeatResponse(
+            Success: false,
+            SessionId: session.SessionId,
+            Status: session.Status,
+            LastHeartbeatAtUtc: session.LastHeartbeatAtUtc,
+            Message: "Session is already ended."
+        ));
+    }
+
+    if (session.Status == "Open")
+    {
+        session.Status = "Playing";
+    }
+
+    session.LastHeartbeatAtUtc = DateTime.UtcNow;
+
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new SessionHeartbeatResponse(
+        Success: true,
+        SessionId: session.SessionId,
+        Status: session.Status,
+        LastHeartbeatAtUtc: session.LastHeartbeatAtUtc,
+        Message: "Heartbeat updated."
+    ));
+});
+
+/**
+ * 세션 종료 보고 API
+ *
+ * Dedicated Server가 종료될 때 호출한다.
+ * sessions.status를 Ended로 변경하고 ended_at_utc를 기록한다.
+ */
+app.MapPost("/api/sessions/session-ended", async (
+    SessionEndedRequest request,
+    DGDbContext db
+) =>
+{
+    if (string.IsNullOrWhiteSpace(request.SessionId))
+    {
+        return Results.BadRequest(new SessionEndedResponse(
+            Success: false,
+            SessionId: "",
+            Status: "",
+            EndedAtUtc: null,
+            Message: "SessionId is required."
+        ));
+    }
+
+    var session = await db.Sessions
+        .FirstOrDefaultAsync(x => x.SessionId == request.SessionId);
+
+    if (session == null)
+    {
+        return Results.NotFound(new SessionEndedResponse(
+            Success: false,
+            SessionId: request.SessionId,
+            Status: "",
+            EndedAtUtc: null,
+            Message: "Session not found."
+        ));
+    }
+
+    var now = DateTime.UtcNow;
+
+    session.Status = "Ended";
+
+    if (session.EndedAtUtc == null)
+    {
+        session.EndedAtUtc = now;
+    }
+
+    session.LastHeartbeatAtUtc = now;
+
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new SessionEndedResponse(
+        Success: true,
+        SessionId: session.SessionId,
+        Status: session.Status,
+        EndedAtUtc: session.EndedAtUtc,
+        Message: "Session ended."
+    ));
+});
+
 app.Run("http://localhost:8080");
 
 public record CreateSessionRequest(
@@ -342,4 +627,53 @@ public record SessionMemberResponse(
     string Status,
     DateTime JoinedAtUtc,
     DateTime? LeftAtUtc
+);
+
+public record ValidateJoinRequest(
+    string SessionId,
+    string JoinToken
+);
+
+public record ValidateJoinResponse(
+    bool Success,
+    string SessionId,
+    long AccountId,
+    long CharacterId,
+    string Role,
+    string Message
+);
+
+public record SessionStartedRequest(
+    string SessionId
+);
+
+public record SessionStartedResponse(
+    bool Success,
+    string SessionId,
+    string Status,
+    string Message
+);
+
+public record SessionHeartbeatRequest(
+    string SessionId
+);
+
+public record SessionHeartbeatResponse(
+    bool Success,
+    string SessionId,
+    string Status,
+    DateTime? LastHeartbeatAtUtc,
+    string Message
+);
+
+public record SessionEndedRequest(
+    string SessionId
+);
+
+public record SessionEndedResponse(
+    bool Success,
+    string SessionId,
+    string Status,
+    DateTime? EndedAtUtc,
+    string Message
 );
