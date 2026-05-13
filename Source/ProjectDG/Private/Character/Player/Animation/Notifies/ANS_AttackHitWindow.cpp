@@ -68,9 +68,16 @@ UANS_AttackHitWindow::UANS_AttackHitWindow()
   {
         Super::NotifyTick(MeshComp, Animation, FrameDeltaTime, EventReference);
 
+        AActor* OwnerActor = MeshComp ? MeshComp->GetOwner() : nullptr;
+        if (!OwnerActor || !OwnerActor->HasAuthority())
+        {
+                return;
+        }
+
         USkeletalMeshComponent* WeaponMesh = ResolveWeaponMesh(MeshComp);
         if (!MeshComp || !WeaponMesh)
         {
+                Debug::Print(TEXT("[ANS_AttackHitWindow] NotifyTick: WeaponMesh is null."), FColor::Red);
                 return;
         }
 
@@ -165,6 +172,14 @@ UANS_AttackHitWindow::UANS_AttackHitWindow()
         {
                 if (!WeaponMesh->DoesSocketExist(SocketName))
                 {
+                        if (bLogTraceSweeps)
+                        {
+                                const FString Msg = FString::Printf(
+                                        TEXT("[ANS_AttackHitWindow] Missing socket on weapon mesh: %s"),
+                                        *SocketName.ToString()
+                                );
+                                Debug::Print(Msg, FColor::Red);
+                        }
                         continue;
                 }
 
@@ -174,14 +189,29 @@ UANS_AttackHitWindow::UANS_AttackHitWindow()
                 if (!PreviousLocationPtr)
                 {
                         RuntimeData.PreviousSocketLocations.Add(SocketName, CurrentLocation);
+
+                        if (bEnableDebugDraw)
+                        {
+                                DrawDebugSphere(World, CurrentLocation, TraceRadius, 12, FColor::Blue, false, DebugDrawDuration);
+                        }
+
+                        if (bLogTraceSweeps)
+                        {
+                                const FString Msg = FString::Printf(
+                                        TEXT("[ANS_AttackHitWindow] First frame socket init: %s"),
+                                        *SocketName.ToString()
+                                );
+                                Debug::Print(Msg, FColor::Blue);
+                        }
+
                         continue;
                 }
 
                 const FVector Start = *PreviousLocationPtr;
                 const FVector End = CurrentLocation;
-
-                TArray<FHitResult> HitResults;
-                World->SweepMultiByChannel(
+                
+                 TArray<FHitResult> HitResults;
+                 World->SweepMultiByChannel(
                         HitResults,
                         Start,
                         End,
@@ -189,27 +219,13 @@ UANS_AttackHitWindow::UANS_AttackHitWindow()
                         TraceChannel,
                         FCollisionShape::MakeSphere(TraceRadius),
                         QueryParams
-                );
+                  );
 
-                // for (const FHitResult& HitResult : HitResults)
-                // {
-                //         AActor* HitActor = HitResult.GetActor();
-                //         if (!IsValid(HitActor) || HitActor == OwnerActor)
-                //         {
-                //                 continue;
-                //         }
-                //
-                //         if (RuntimeData.HitActors.Contains(HitActor))
-                //         {
-                //                 continue;
-                //         }
-                //
-                //         RuntimeData.HitActors.Add(HitActor);
-                //         SendHitEvent(OwnerActor, HitActor);
-                // }
-                
-                for (const FHitResult& HitResult : HitResults)
-                {
+                  bool bAcceptedAnyHit = false;
+                  bool bIgnoredAnyHit = false;
+
+                  for (const FHitResult& HitResult : HitResults)
+                  {
                         AActor* HitActor = HitResult.GetActor();
                         if (!IsValid(HitActor) || HitActor == OwnerActor)
                         {
@@ -218,10 +234,7 @@ UANS_AttackHitWindow::UANS_AttackHitWindow()
 
                         if (ShouldIgnoreHitActor(OwnerActor, HitActor))
                         {
-                                if (bEnableDebugDraw)
-                                {
-                                        DrawTraceDebug(World, Start, End, FColor::Yellow);
-                                }
+                                bIgnoredAnyHit = true;
 
                                 if (bLogAcceptedHits)
                                 {
@@ -241,11 +254,7 @@ UANS_AttackHitWindow::UANS_AttackHitWindow()
                         }
 
                         RuntimeData.HitActors.Add(HitActor);
-
-                        if (bEnableDebugDraw)
-                        {
-                                DrawTraceDebug(World, Start, End, FColor::Green);
-                        }
+                        bAcceptedAnyHit = true;
 
                         if (bLogAcceptedHits)
                         {
@@ -257,7 +266,36 @@ UANS_AttackHitWindow::UANS_AttackHitWindow()
                         }
 
                         SendHitEvent(OwnerActor, HitActor);
-                }
+                  }
+
+                  if (bLogTraceSweeps)
+                  {
+                        const FString Msg = FString::Printf(
+                                TEXT("[ANS_AttackHitWindow] PostSweep %s : rawHitCount=%d accepted=%d ignored=%d"),
+                                *SocketName.ToString(),
+                                HitResults.Num(),
+                                bAcceptedAnyHit ? 1 : 0,
+                                bIgnoredAnyHit ? 1 : 0
+                        );
+                        Debug::Print(Msg, FColor::Silver);
+                  }
+
+                  if (bEnableDebugDraw)
+                  {
+                        if (bAcceptedAnyHit)
+                        {
+                                DrawTraceDebug(World, Start, End, FColor::Green);
+                        }
+                        else if (bIgnoredAnyHit)
+                        {
+                                DrawTraceDebug(World, Start, End, FColor::Yellow);
+                        }
+                        else
+                        {
+                                DrawTraceDebug(World, Start, End, FColor::Red);
+                        }
+                  }
+                
 
                 *PreviousLocationPtr = CurrentLocation;
         }
@@ -290,7 +328,20 @@ bool UANS_AttackHitWindow::ShouldIgnoreHitActor(AActor* OwnerActor, AActor* HitA
                 return true;
         }
 
+        UAbilitySystemComponent* HitASC =
+  UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
+        if (!HitASC)
+        {
+                return true;
+        }
+
         if (bIgnoreSameTeam && AreActorsOnSameTeam(OwnerActor, HitActor))
+        {
+                return true;
+        }
+
+        // 현재 단계에서는 적 팀만 유효 타겟으로 간주
+        if (!HitASC->HasMatchingGameplayTag(DGGameplayTags::Team_Enemy.GetTag()))
         {
                 return true;
         }
