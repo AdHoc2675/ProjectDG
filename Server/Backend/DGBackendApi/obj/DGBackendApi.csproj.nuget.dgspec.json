@@ -1,24 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\KGA\\Desktop\\ProjectDG\\Server\\Backend\\DGBackendApi\\DGBackendApi.csproj": {}
+    "D:\\ProjectDG\\Server\\Backend\\DGBackendApi\\DGBackendApi.csproj": {}
   },
   "projects": {
-    "C:\\Users\\KGA\\Desktop\\ProjectDG\\Server\\Backend\\DGBackendApi\\DGBackendApi.csproj": {
+    "D:\\ProjectDG\\Server\\Backend\\DGBackendApi\\DGBackendApi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\KGA\\Desktop\\ProjectDG\\Server\\Backend\\DGBackendApi\\DGBackendApi.csproj",
+        "projectUniqueName": "D:\\ProjectDG\\Server\\Backend\\DGBackendApi\\DGBackendApi.csproj",
         "projectName": "DGBackendApi",
-        "projectPath": "C:\\Users\\KGA\\Desktop\\ProjectDG\\Server\\Backend\\DGBackendApi\\DGBackendApi.csproj",
-        "packagesPath": "C:\\Users\\KGA\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\KGA\\Desktop\\ProjectDG\\Server\\Backend\\DGBackendApi\\obj\\",
+        "projectPath": "D:\\ProjectDG\\Server\\Backend\\DGBackendApi\\DGBackendApi.csproj",
+        "packagesPath": "C:\\Users\\dy761\\.nuget\\packages\\",
+        "outputPath": "D:\\ProjectDG\\Server\\Backend\\DGBackendApi\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\KGA\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Users\\dy761\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -49,6 +45,28 @@
       "frameworks": {
         "net9.0": {
           "targetAlias": "net9.0",
+          "dependencies": {
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[9.*, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.*, )"
+            },
+            "Microsoft.EntityFrameworkCore.Tools": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.*, )"
+            },
+            "Npgsql.EntityFrameworkCore.PostgreSQL": {
+              "target": "Package",
+              "version": "[9.*, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",

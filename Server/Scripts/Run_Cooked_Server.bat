@@ -5,7 +5,7 @@ echo ========================================
 echo ProjectDG Run Cooked Dedicated Server
 echo ========================================
 
-set "PROJECT_ROOT=C:\Users\KGA\Desktop\ProjectDG"
+set "PROJECT_ROOT=D:\ProjectDG"
 set "SERVER_EXE=%PROJECT_ROOT%\BuildOutput\Server\WindowsServer\ProjectDG\Binaries\Win64\ProjectDGServer.exe"
 set "MAP_NAME=/Game/Personal/DOHEE/Level/ServerTest"
 set "LOG_FILE=%PROJECT_ROOT%\Saved\Logs\Cooked_DedicatedServer.log"

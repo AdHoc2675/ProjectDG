@@ -7,13 +7,19 @@
 
 DECLARE_DELEGATE_TwoParams(FDGSessionApiResultCallback, bool /*bSuccess*/, const FDGSessionConnectionInfo& /*Result*/);
 
-//백앤드 API-HTTP 통신 전담하는 클래스
-
-//API/Session/Create 호출
-//API/Session/Join 호출
-//JSON 생성
-//JSON 응답
-
+/**
+ * Backend API HTTP 통신 전담 클래스
+ *
+ * 역할:
+ * - /api/sessions/create 호출
+ * - /api/sessions/join 호출
+ * - JSON 요청 생성
+ * - JSON 응답 파싱
+ *
+ * 주의:
+ * - RoomName / RoomPassword는 Backend로만 보낸다.
+ * - Dedicated Server 접속에는 Backend가 반환한 SessionId / JoinToken을 사용한다.
+ */
 UCLASS()
 class PROJECTDG_API UDGBackendClient : public UObject
 {
@@ -35,6 +41,9 @@ private:
 
 	static FString BuildJoinSessionJson(const FDGJoinSessionRequest& RequestData);
 
-	static FDGSessionConnectionInfo ParseSessionConnectionInfo(bool bRequestSucceeded, int32 ResponseCode,
-	                                                           const FString& ResponseBody);
+	static FDGSessionConnectionInfo ParseSessionConnectionInfo(
+		bool bRequestSucceeded,
+		int32 ResponseCode,
+		const FString& ResponseBody
+	);
 };

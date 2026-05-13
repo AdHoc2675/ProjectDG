@@ -5,20 +5,27 @@
 #include "Server/Backend/DGBackendTypes.h"
 #include "DGSessionSubsystem.generated.h"
 
-
 class UDGBackendClient;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDGOnSessionCreated, const FString&, SessionId);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDGOnSessionRequestFailed, const FString&, ErrorMessage);
 
-
-//게임 세션 흐름당담 system
-
-//역할 
-//-세션 생성요청
-//-세션 합류요청
-//백엔드에서 응답 받아서 Dedicated Server 로 넘겨줌
-
+/**
+ * 게임 세션 흐름 담당 Subsystem
+ *
+ * 역할:
+ * - 방 생성 요청
+ * - 방 참가 요청
+ * - Backend 응답으로 받은 SessionId / JoinToken을 이용해 Dedicated Server 접속
+ *
+ * 유저 입력:
+ * - RoomName
+ * - RoomPassword
+ *
+ * 내부 처리:
+ * - Backend가 SessionId / JoinToken 발급
+ * - Dedicated Server는 기존처럼 SessionId / JoinToken만 검증
+ */
 UCLASS()
 class PROJECTDG_API UDGSessionSubsystem : public UGameInstanceSubsystem
 {
@@ -28,27 +35,50 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-	//개발용 세션 생성 + 데디서버 접속
-	//현재는 127.0.0.1:7777 로 반환
-
-	UFUNCTION(BlueprintCallable, Category="DG|Session")
-	void CreateLocalSessionAndTravel(int64 AccountId = 1, int64 CharacterId = 1,
-	                                 const FString& RegionId = TEXT("Region_Test"));
-	
-	// 개발용 세션 생성만 수행.
-	// 성공 시 바로 Dedicated Server로 이동하지 않고 SessionId만 UI에 표시할 수 있게 한다.
+	/**
+	 * 방 생성 후 즉시 Dedicated Server 접속
+	 *
+	 * Blueprint UI에서는:
+	 * - RoomName 입력값
+	 * - RoomPassword 입력값
+	 * 을 넘기면 된다.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "DG|Session")
-	void CreateLocalSessionOnly(
+	void CreateRoomAndTravel(
+		const FString& RoomName,
+		const FString& RoomPassword,
 		int64 AccountId = 1,
 		int64 CharacterId = 1,
 		const FString& RegionId = TEXT("Region_Test")
 	);
 
-	// 마지막으로 생성/합류한 세션 접속 정보로 Dedicated Server 접속
+	/**
+	 * 기존 방에 참가 후 즉시 Dedicated Server 접속
+	 *
+	 * Blueprint UI에서는:
+	 * - RoomName 입력값
+	 * - RoomPassword 입력값
+	 * 을 넘기면 된다.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DG|Session")
+	void JoinRoomAndTravel(
+		const FString& RoomName,
+		const FString& RoomPassword,
+		int64 AccountId = 2,
+		int64 CharacterId = 2
+	);
+
+	/**
+	 * 마지막으로 생성/합류한 세션 접속 정보로 Dedicated Server 접속
+	 * 디버그용으로 유지.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "DG|Session")
 	void TravelToLastSession();
 
-	// 마지막으로 받은 SessionId 반환
+	/**
+	 * 마지막으로 받은 SessionId 반환
+	 * 디버그/표시용.
+	 */
 	UFUNCTION(BlueprintPure, Category = "DG|Session")
 	FString GetLastSessionId() const;
 
@@ -58,16 +88,24 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "DG|Session")
 	FDGOnSessionRequestFailed OnSessionRequestFailed;
 
-	//개발용 세션 합류 + 데디서버 접속
-	UFUNCTION(BlueprintCallable, Category="DG|Session")
-	void JoinSessionAndTravel(const FString& SessionId, int64 AccountId = 2, int64 CharacterId = 2);
-
 private:
 	UPROPERTY()
 	TObjectPtr<UDGBackendClient> BackendClient;
 
+	/**
+	 * 참가 PC / 서버 PC 모두 Backend는 공인 IP로 접근한다.
+	 *
+	 * 서버 PC에서 Backend 실행:
+	 * http://0.0.0.0:8080
+	 *
+	 * 외부 접근 주소:
+	 * http://61.80.6.36:8080
+	 */
 	UPROPERTY()
-	FString BackendBaseUrl = TEXT("http://localhost:8080");
+	FString BackendBaseUrl = TEXT("http://61.80.6.36:8080");
+
+	UPROPERTY()
+	FDGSessionConnectionInfo LastSessionConnectionInfo;
 
 	void HandleCreateSessionCompleted(
 		bool bSuccess,
@@ -82,10 +120,9 @@ private:
 	void TravelToDedicatedServer(
 		const FDGSessionConnectionInfo& ConnectionInfo
 	);
-	
-	UPROPERTY()
-	FDGSessionConnectionInfo LastSessionConnectionInfo;
 
-	UPROPERTY()
-	bool bTravelAfterCreateSession = true;
+	bool ValidateRoomInput(
+		const FString& RoomName,
+		const FString& RoomPassword
+	) const;
 };

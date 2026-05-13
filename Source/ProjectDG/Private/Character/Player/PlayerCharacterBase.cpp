@@ -6,6 +6,7 @@
 #include "Camera/CameraComponent.h"
 #include "Core/DG_Debug.h"
 #include "Core/DG_GameplayTags.h"
+#include "Core/DG_Struct.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/DG_PlayerState.h"
 #include "GameFramework/PlayerController.h"
@@ -16,6 +17,9 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "Net/UnrealNetwork.h"
+
+#include "Components/Combat/CombatComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 #include "Animation/AnimInstance.h"
 #include "Character/Player/Data/PlayerCharacterMovementData.h"
@@ -170,6 +174,17 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 	 */
 	ASC->InitAbilityActorInfo(PS, this);
 
+	Debug::Print(TEXT("[PlayerCharacterBase] ASC initialized from DG_PlayerState."));
+}
+
+void APlayerCharacterBase::InitializePlayerUI()
+{
+	ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>();
+	if (!PS) return;
+
+	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
+	if (!ASC) return;
+
 	// 로컬 플레이어 컨트롤러인지 확인 (화면에 UI를 띄워야 하는 유저만)
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
@@ -179,11 +194,10 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 			{
 				// HUD의 InitOverlay 함수 호출 (컨트롤러, State, ASC, 속성 데이터 전달)
 				HUD->InitOverlay(PC, PS, ASC, PS->GetDGAttributeSet());
+				UE_LOG(LogTemp, Log, TEXT("[PlayerCharacterBase] Player UI initialized on local player."));
 			}
 		}
 	}
-
-	Debug::Print(TEXT("[PlayerCharacterBase] ASC initialized from DG_PlayerState."));
 }
 
 void APlayerCharacterBase::PawnClientRestart()
@@ -425,6 +439,9 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 			ApplyDefaultEffects();
 		}
 	}
+
+	// 플레이어 UI 초기화 (로컬 플레이어만)
+	InitializePlayerUI();
 }
 
 void APlayerCharacterBase::OnRep_PlayerState()
@@ -439,6 +456,9 @@ void APlayerCharacterBase::OnRep_PlayerState()
 	InitializePlayerAbilitySystem();
 	InitializeMovementStats();
 	InitializeSkillSlotsFromClassData();
+
+	// 플레이어 UI 초기화 (로컬 플레이어만)
+	InitializePlayerUI();
 }
 
 void APlayerCharacterBase::InitializePlayerStateFromClassData()
@@ -704,6 +724,12 @@ bool APlayerCharacterBase::IsSkillSlotHeld(FGameplayTag SlotTag) const
 {
 	const bool* bHeld = HeldSkillSlots.Find(SlotTag);
 	return bHeld && *bHeld;
+	// 임시 서버 전투 파이프라인 테스트.
+	// 나중에 실제 스킬 GA 연결 후 제거 예정.
+	// Server_TestApplyDamage();
+
+	// 기존 스킬 입력 흐름은 잠시 유지하거나 주석 처리 선택 가능.
+	// OnSkillInput(DGGameplayTags::Input_Slot_1);
 }
 
 bool APlayerCharacterBase::IsSkillTagHeld(FGameplayTag SkillTag) const
@@ -808,4 +834,90 @@ void APlayerCharacterBase::ServerHandleShiftAction_Implementation(FVector_NetQua
 
 	// 이 호출이 성공하면 서버 로그에 어빌리티 시작 메시지가 떠야 합니다.
 	ASC->HandleGameplayEvent(Payload.EventTag, &Payload);
+}
+
+void APlayerCharacterBase::Server_TestApplyDamage_Implementation()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	UCombatComponent* SourceCombatComponent = GetCombatComponent();
+	if (!SourceCombatComponent)
+	{
+		Debug::Print(TEXT("[PlayerCharacterBase] TestDamage failed. CombatComponent is null."));
+		return;
+	}
+
+	ABaseCharacter* BestTarget = nullptr;
+	float BestDistanceSq = TNumericLimits<float>::Max();
+
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(
+		GetWorld(),
+		ABaseCharacter::StaticClass(),
+		FoundActors
+	);
+
+	for (AActor* Actor : FoundActors)
+	{
+		ABaseCharacter* Candidate = Cast<ABaseCharacter>(Actor);
+		if (!Candidate)
+		{
+			continue;
+		}
+
+		if (Candidate == this)
+		{
+			continue;
+		}
+
+		if (Candidate->IsDead())
+		{
+			continue;
+		}
+
+		if (IsFriendlyTo(Candidate))
+		{
+			continue;
+		}
+
+		const float DistanceSq = FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation());
+		constexpr float MaxTestDamageRange = 3000.f;
+
+		if (DistanceSq > FMath::Square(MaxTestDamageRange))
+		{
+			continue;
+		}
+
+		if (DistanceSq < BestDistanceSq)
+		{
+			BestDistanceSq = DistanceSq;
+			BestTarget = Candidate;
+		}
+	}
+
+	if (!BestTarget)
+	{
+		Debug::Print(TEXT("[PlayerCharacterBase] TestDamage failed. No valid target in range."));
+		return;
+	}
+
+	FDGDamageRequest DamageRequest;
+	DamageRequest.SourceActor = this;
+	DamageRequest.TargetActor = BestTarget;
+	DamageRequest.BaseDamage = 100.f;
+	DamageRequest.SourceTag = DGGameplayTags::Input_Slot_1;
+	DamageRequest.HitLocation = BestTarget->GetActorLocation();
+	DamageRequest.bHasHitLocation = true;
+
+	const FDGDamageResult DamageResult = SourceCombatComponent->ApplyDamageRequest(DamageRequest);
+
+	Debug::Print(FString::Printf(
+		TEXT("[PlayerCharacterBase] Server_TestApplyDamage. Target=%s Success=%s Message=%s"),
+		*GetNameSafe(BestTarget),
+		DamageResult.bSuccess ? TEXT("true") : TEXT("false"),
+		*DamageResult.Message
+	));
 }
