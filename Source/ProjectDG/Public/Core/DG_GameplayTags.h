@@ -60,9 +60,6 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_AnkleSlash_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_ShockWave_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_DoomStrike_Active)
-
-	// Data
-	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Damage)
 	
 	// Block
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Block_Movement_Dodge)
