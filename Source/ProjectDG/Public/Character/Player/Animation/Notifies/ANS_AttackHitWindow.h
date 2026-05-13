@@ -79,7 +79,7 @@ protected:
 	float DebugDrawDuration = 5.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|Filter")
-	bool bIgnoreSameTeam = true;
+	bool bIgnoreSameTeam = false;
 
 private:
 	TMap<TWeakObjectPtr<USkeletalMeshComponent>, FAttackHitWindowRuntimeData> RuntimeDataMap;

@@ -341,10 +341,10 @@ bool UANS_AttackHitWindow::ShouldIgnoreHitActor(AActor* OwnerActor, AActor* HitA
         }
 
         // 현재 단계에서는 적 팀만 유효 타겟으로 간주
-        if (!HitASC->HasMatchingGameplayTag(DGGameplayTags::Team_Enemy.GetTag()))
-        {
-                return true;
-        }
+        // if (!HitASC->HasMatchingGameplayTag(DGGameplayTags::Team_Enemy.GetTag()))
+        // {
+        //         return true;
+        // }
 
         return false;
 }
