@@ -4,6 +4,8 @@
 #include "Character/Player/Animation/PlayerCharacterAnimInstance.h"
 #include "Character/Player/PlayerCharacterBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "AbilitySystemComponent.h"
+#include "Core/DG_GameplayTags.h"
 
 void UPlayerCharacterAnimInstance::NativeInitializeAnimation()
 {
@@ -42,11 +44,62 @@ void UPlayerCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	// 공중 상태 업데이트
 	bIsFalling = PlayerMovement->IsFalling();
 
-	// 캐릭터 상태 변수 동기화
-	// PlayerCharacterBase에 추가한 Getter를 통해 값을 가져옵니다.
-	// bIsSprinting = PlayerCharacter->IsSprinting();
-	// bIsDodging = PlayerCharacter->IsDodging();
-	// bIsParkouring = PlayerCharacter->IsParkouring();
+	// blendspace 달리기 변수 업데이트
+	const FVector WorldVelocity = PlayerCharacter->GetVelocity();
+	const FVector LocalVelocity =
+	PlayerCharacter->GetActorTransform().InverseTransformVectorNoScale(WorldVelocity);
+
+	const float MaxReferenceSpeed = FMath::Max(PlayerMovement->GetMaxSpeed(), 1.f);
+
+	MoveForward = FMath::Clamp(LocalVelocity.X / MaxReferenceSpeed, -1.f, 1.f);
+	MoveRight = FMath::Clamp(LocalVelocity.Y / MaxReferenceSpeed, -1.f, 1.f);
 	
-	// DodgeType = PlayerCharacter->GetCurrentDodgeType();
+	MeleeTwist = GetCurveValue(TEXT("meleetwist"));
+
+	const float SafeAngleForFullBias = FMath::Max(MeleeTwistAngleForFullBias, 1.f);
+	NormalizedMeleeTwist = FMath::Clamp(MeleeTwist / SafeAngleForFullBias, -1.f, 1.f);
+
+	SmoothedMeleeTwist = FMath::FInterpTo(
+			SmoothedMeleeTwist,
+			NormalizedMeleeTwist,
+			DeltaSeconds,
+			MeleeTwistInterpSpeed
+	);
+
+	FinalMoveForward = MoveForward;
+	FinalMoveRight = FMath::Clamp(
+			MoveRight + (SmoothedMeleeTwist * MeleeTwistScale),
+			-1.f,
+			1.f
+	);
+	
+	float TargetRunBlendSpacePlayRate = 1.f;
+
+	if (UAbilitySystemComponent* ASC = PlayerCharacter->GetCharacterAbilitySystemComponent())
+	{
+		const bool bIsSharpStrikeActive =
+				ASC->HasMatchingGameplayTag(DGGameplayTags::State_Skill_Warrior_SharpStrike_Active.GetTag());
+
+		if (bIsSharpStrikeActive)
+		{
+			TargetRunBlendSpacePlayRate = SharpStrikeRunBlendSpacePlayRate;
+		}
+	}
+
+	CurrentRunBlendSpacePlayRate = FMath::FInterpTo(
+			CurrentRunBlendSpacePlayRate,
+			TargetRunBlendSpacePlayRate,
+			DeltaSeconds,
+			RunBlendSpacePlayRateInterpSpeed
+	);
+
+	RunBlendSpacePlayRate = CurrentRunBlendSpacePlayRate;
+	
+	if (FMath::Abs(MeleeTwist) > KINDA_SMALL_NUMBER)
+	{
+		UE_LOG(LogTemp, Log, TEXT("MeleeTwist=%.2f Normalized=%.2f FinalMoveRight=%.2f"),
+				MeleeTwist,
+				NormalizedMeleeTwist,
+				FinalMoveRight);
+	}
 }

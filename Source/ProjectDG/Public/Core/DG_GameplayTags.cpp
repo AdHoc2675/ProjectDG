@@ -20,6 +20,18 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_4, "Input.Slot.4")
 	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_Q, "Input.Slot.Q")
 	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_E, "Input.Slot.E")
+	
+	// Event
+	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_InputWindow_Open, "Event.Combo.InputWindow.Open")
+	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_InputWindow_Close, "Event.Combo.InputWindow.Close")
+	
+	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_Branch, "Event.Combo.Branch")
+	
+	UE_DEFINE_GAMEPLAY_TAG(Event_Attack_Hit, "Event.Attack.Hit")
+
+	// Data
+	UE_DEFINE_GAMEPLAY_TAG(Data_Damage, "Data.Damage")
+	
 
 	// Skill.Common
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Common_Dodge, "Skill.Common.Dodge")
