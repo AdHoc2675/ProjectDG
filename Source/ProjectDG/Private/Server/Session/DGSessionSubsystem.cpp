@@ -12,7 +12,10 @@ void UDGSessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	BackendClient = NewObject<UDGBackendClient>(this);
 	BackendClient->Initialize(BackendBaseUrl);
 
-	Debug::Print(TEXT("[DGSessionSubsystem] Initialized."));
+	Debug::Print(FString::Printf(
+		TEXT("[DGSessionSubsystem] Initialized. BackendBaseUrl=%s"),
+		*BackendBaseUrl
+	));
 }
 
 void UDGSessionSubsystem::Deinitialize()
@@ -24,7 +27,9 @@ void UDGSessionSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
-void UDGSessionSubsystem::CreateLocalSessionAndTravel(
+void UDGSessionSubsystem::CreateRoomAndTravel(
+	const FString& RoomName,
+	const FString& RoomPassword,
 	int64 AccountId,
 	int64 CharacterId,
 	const FString& RegionId
@@ -32,18 +37,29 @@ void UDGSessionSubsystem::CreateLocalSessionAndTravel(
 {
 	if (!BackendClient)
 	{
-		Debug::Print(TEXT("[DGSessionSubsystem] BackendClient is null."));
+		const FString ErrorMessage = TEXT("[DGSessionSubsystem] BackendClient is null.");
+
+		Debug::Print(ErrorMessage);
+		OnSessionRequestFailed.Broadcast(ErrorMessage);
 		return;
 	}
 
-	bTravelAfterCreateSession = true;
-	
+	if (!ValidateRoomInput(RoomName, RoomPassword))
+	{
+		return;
+	}
+
 	FDGCreateSessionRequest RequestData;
 	RequestData.AccountId = AccountId;
 	RequestData.CharacterId = CharacterId;
 	RequestData.RegionId = RegionId;
+	RequestData.RoomName = RoomName;
+	RequestData.RoomPassword = RoomPassword;
 
-	Debug::Print(TEXT("[DGSessionSubsystem] Request Create Session."));
+	Debug::Print(FString::Printf(
+		TEXT("[DGSessionSubsystem] Request Create Room. RoomName=%s"),
+		*RoomName
+	));
 
 	BackendClient->CreateSession(
 		RequestData,
@@ -54,63 +70,36 @@ void UDGSessionSubsystem::CreateLocalSessionAndTravel(
 	);
 }
 
-void UDGSessionSubsystem::CreateLocalSessionOnly(
-	int64 AccountId,
-	int64 CharacterId,
-	const FString& RegionId
-)
-{
-	if (!BackendClient)
-	{
-		Debug::Print(TEXT("[DGSessionSubsystem] BackendClient is null."));
-		return;
-	}
-
-	bTravelAfterCreateSession = false;
-
-	FDGCreateSessionRequest RequestData;
-	RequestData.AccountId = AccountId;
-	RequestData.CharacterId = CharacterId;
-	RequestData.RegionId = RegionId;
-
-	Debug::Print(TEXT("[DGSessionSubsystem] Request Create Session Only."));
-
-	BackendClient->CreateSession(
-		RequestData,
-		FDGSessionApiResultCallback::CreateUObject(
-			this,
-			&UDGSessionSubsystem::HandleCreateSessionCompleted
-		)
-	);
-}
-
-
-void UDGSessionSubsystem::JoinSessionAndTravel(
-	const FString& SessionId,
+void UDGSessionSubsystem::JoinRoomAndTravel(
+	const FString& RoomName,
+	const FString& RoomPassword,
 	int64 AccountId,
 	int64 CharacterId
 )
 {
 	if (!BackendClient)
 	{
-		Debug::Print(TEXT("[DGSessionSubsystem] BackendClient is null."));
+		const FString ErrorMessage = TEXT("[DGSessionSubsystem] BackendClient is null.");
+
+		Debug::Print(ErrorMessage);
+		OnSessionRequestFailed.Broadcast(ErrorMessage);
 		return;
 	}
 
-	if (SessionId.IsEmpty())
+	if (!ValidateRoomInput(RoomName, RoomPassword))
 	{
-		Debug::Print(TEXT("[DGSessionSubsystem] SessionId is empty."));
 		return;
 	}
 
 	FDGJoinSessionRequest RequestData;
-	RequestData.SessionId = SessionId;
+	RequestData.RoomName = RoomName;
+	RequestData.RoomPassword = RoomPassword;
 	RequestData.AccountId = AccountId;
 	RequestData.CharacterId = CharacterId;
 
 	Debug::Print(FString::Printf(
-		TEXT("[DGSessionSubsystem] Request Join Session. SessionId=%s"),
-		*SessionId
+		TEXT("[DGSessionSubsystem] Request Join Room. RoomName=%s"),
+		*RoomName
 	));
 
 	BackendClient->JoinSession(
@@ -144,7 +133,6 @@ FString UDGSessionSubsystem::GetLastSessionId() const
 	return LastSessionConnectionInfo.SessionId;
 }
 
-
 void UDGSessionSubsystem::HandleCreateSessionCompleted(
 	bool bSuccess,
 	const FDGSessionConnectionInfo& Result
@@ -153,7 +141,7 @@ void UDGSessionSubsystem::HandleCreateSessionCompleted(
 	if (!bSuccess)
 	{
 		Debug::Print(FString::Printf(
-			TEXT("[DGSessionSubsystem] Create Session Failed. Error=%s"),
+			TEXT("[DGSessionSubsystem] Create Room Failed. Error=%s"),
 			*Result.ErrorMessage
 		));
 
@@ -164,7 +152,7 @@ void UDGSessionSubsystem::HandleCreateSessionCompleted(
 	LastSessionConnectionInfo = Result;
 
 	Debug::Print(FString::Printf(
-		TEXT("[DGSessionSubsystem] Create Session Success. SessionId=%s Server=%s:%d"),
+		TEXT("[DGSessionSubsystem] Create Room Success. SessionId=%s Server=%s:%d"),
 		*Result.SessionId,
 		*Result.ServerIP,
 		Result.ServerPort
@@ -172,12 +160,7 @@ void UDGSessionSubsystem::HandleCreateSessionCompleted(
 
 	OnSessionCreated.Broadcast(Result.SessionId);
 
-	if (bTravelAfterCreateSession)
-	{
-		TravelToDedicatedServer(Result);
-	}
-
-	bTravelAfterCreateSession = true;
+	TravelToDedicatedServer(Result);
 }
 
 void UDGSessionSubsystem::HandleJoinSessionCompleted(
@@ -188,7 +171,7 @@ void UDGSessionSubsystem::HandleJoinSessionCompleted(
 	if (!bSuccess)
 	{
 		Debug::Print(FString::Printf(
-			TEXT("[DGSessionSubsystem] Join Session Failed. Error=%s"),
+			TEXT("[DGSessionSubsystem] Join Room Failed. Error=%s"),
 			*Result.ErrorMessage
 		));
 
@@ -199,7 +182,7 @@ void UDGSessionSubsystem::HandleJoinSessionCompleted(
 	LastSessionConnectionInfo = Result;
 
 	Debug::Print(FString::Printf(
-		TEXT("[DGSessionSubsystem] Join Session Success. SessionId=%s Server=%s:%d"),
+		TEXT("[DGSessionSubsystem] Join Room Success. SessionId=%s Server=%s:%d"),
 		*Result.SessionId,
 		*Result.ServerIP,
 		Result.ServerPort
@@ -260,4 +243,38 @@ void UDGSessionSubsystem::TravelToDedicatedServer(
 	));
 
 	PlayerController->ClientTravel(TravelUrl, TRAVEL_Absolute);
+}
+
+bool UDGSessionSubsystem::ValidateRoomInput(
+	const FString& RoomName,
+	const FString& RoomPassword
+) const
+{
+	if (RoomName.TrimStartAndEnd().IsEmpty())
+	{
+		const FString ErrorMessage = TEXT("RoomName is empty.");
+
+		Debug::Print(FString::Printf(
+			TEXT("[DGSessionSubsystem] %s"),
+			*ErrorMessage
+		));
+
+		OnSessionRequestFailed.Broadcast(ErrorMessage);
+		return false;
+	}
+
+	if (RoomPassword.IsEmpty())
+	{
+		const FString ErrorMessage = TEXT("RoomPassword is empty.");
+
+		Debug::Print(FString::Printf(
+			TEXT("[DGSessionSubsystem] %s"),
+			*ErrorMessage
+		));
+
+		OnSessionRequestFailed.Broadcast(ErrorMessage);
+		return false;
+	}
+
+	return true;
 }

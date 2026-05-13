@@ -10,6 +10,10 @@ public class GameSession
 
     public string RegionId { get; set; } = string.Empty;
 
+    public string RoomName { get; set; } = "";
+
+    public string RoomPasswordHash { get; set; } = "";
+
     public string MapPath { get; set; } = string.Empty;
 
     public string ServerIp { get; set; } = string.Empty;

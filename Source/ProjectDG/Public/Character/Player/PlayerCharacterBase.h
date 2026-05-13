@@ -55,6 +55,9 @@ protected:
 	//별도 함수로 처리해서 Beginplay/PossessedBy 등에서 사용할때마다 호출
 	virtual void InitializePlayerAbilitySystem();	
 	
+	// UI 초기화 함수
+	virtual void InitializePlayerUI();
+
 	//클라이언트 재시작시 호출되는 함수 오버라이드
 	//Enhanced Input Mapping 재등록에 사용
 	virtual void PawnClientRestart() override;
@@ -220,6 +223,12 @@ protected:
 	void OnSkillInput_4();
 	void OnSkillInput_Q();
 	void OnSkillInput_E();
+	
+protected:
+	// 서버 권한 데미지 파이프라인 테스트용.
+	// 임시 진입점이며, 나중에 실제 GA/Skill 구조로 이전 예정.
+	UFUNCTION(Server, Reliable)
+	void Server_TestApplyDamage();
 	
 #pragma endregion Skill
 	

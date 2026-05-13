@@ -9,6 +9,9 @@
 class UUserWidget;
 class UAbilitySystemComponent;
 class UAttributeSet;
+class UDGOverlayWidgetController;
+struct FWidgetControllerParams;
+class UDGUserWidget;
 
 /*
 설명
@@ -28,15 +31,30 @@ public:
 	// HUD 초기화 함수 (PlayerController, PlayerState, AbilitySystemComponent 연동)
 	void InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS);
 
+	// 캐릭터 쪽에서 ASC 초기화가 끝난 후 호출할 함수
+	void SetupPlayerUI(class UAbilitySystemComponent* ASC, class UDG_AttributeSet* AttributeSet);
+
+	// 여러 번 호출해도 한 번 만들어진 컨트롤러를 리턴 (싱글턴 느낌)
+	UDGOverlayWidgetController* GetOverlayWidgetController(const FWidgetControllerParams& WCParams);
+
+
 protected:
 	virtual void BeginPlay() override;
 
 private:
 	// 메인 HUD 위젯 클래스 (블루프린트에서 할당)
 	UPROPERTY(EditDefaultsOnly, Category = "DG|UI")
-	TSubclassOf<UUserWidget> OverlayWidgetClass;
+	TSubclassOf<UDGUserWidget> OverlayWidgetClass;
 
 	// 화면에 띄워질 메인 위젯 인스턴스
 	UPROPERTY()
-	TObjectPtr<UUserWidget> OverlayWidget;
+	TObjectPtr<UDGUserWidget> OverlayWidget;
+
+	// 컨트롤러 클래스 및 인스턴스
+	UPROPERTY(EditDefaultsOnly, Category = "DG|UI")
+	TSubclassOf<UDGOverlayWidgetController> OverlayWidgetControllerClass;
+
+	UPROPERTY()
+	TObjectPtr<UDGOverlayWidgetController> OverlayWidgetController;
+
 };

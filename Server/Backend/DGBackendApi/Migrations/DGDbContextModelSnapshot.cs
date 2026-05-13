@@ -65,6 +65,18 @@ namespace DGBackendApi.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("region_id");
 
+                    b.Property<string>("RoomName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("room_name");
+
+                    b.Property<string>("RoomPasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("room_password_hash");
+
                     b.Property<string>("ServerIp")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -86,6 +98,8 @@ namespace DGBackendApi.Migrations
                         .HasColumnName("status");
 
                     b.HasKey("SessionId");
+
+                    b.HasIndex("RoomName");
 
                     b.ToTable("sessions", (string)null);
                 });
