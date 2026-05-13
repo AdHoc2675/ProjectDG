@@ -250,10 +250,36 @@ app.MapPost("/api/sessions/join", async (
     }
 
     var joinedMemberCount = session.Members.Count(x => x.Status == "Joined");
-    var existingMember = session.Members.FirstOrDefault(x => x.CharacterId == request.CharacterId);
-    var joinToken = $"local-token-{Guid.NewGuid():N}";
 
-    if (existingMember == null && joinedMemberCount >= session.MaxPlayers)
+    var joinedSameAccount = session.Members.FirstOrDefault(x =>
+        x.AccountId == request.AccountId &&
+        x.Status == "Joined"
+    );
+
+    if (joinedSameAccount != null)
+    {
+        return Results.BadRequest(new
+        {
+            success = false,
+            message = "Account is already joined in this session."
+        });
+    }
+
+    var joinedSameCharacter = session.Members.FirstOrDefault(x =>
+        x.CharacterId == request.CharacterId &&
+        x.Status == "Joined"
+    );
+
+    if (joinedSameCharacter != null)
+    {
+        return Results.BadRequest(new
+        {
+            success = false,
+            message = "Character is already joined in this session."
+        });
+    }
+
+    if (joinedMemberCount >= session.MaxPlayers)
     {
         return Results.BadRequest(new
         {
@@ -262,34 +288,20 @@ app.MapPost("/api/sessions/join", async (
         });
     }
 
-    if (existingMember != null)
-    {
-        existingMember.AccountId = request.AccountId;
-        existingMember.Status = "Joined";
-        existingMember.JoinToken = joinToken;
-        existingMember.JoinedAtUtc = DateTime.UtcNow;
-        existingMember.LeftAtUtc = null;
+    var joinToken = $"local-token-{Guid.NewGuid():N}";
 
-        if (existingMember.Role != "Leader")
-        {
-            existingMember.Role = "Member";
-        }
-    }
-    else
+    var member = new SessionMember
     {
-        var member = new SessionMember
-        {
-            SessionId = session.SessionId,
-            AccountId = request.AccountId,
-            CharacterId = request.CharacterId,
-            Role = "Member",
-            Status = "Joined",
-            JoinToken = joinToken,
-            JoinedAtUtc = DateTime.UtcNow
-        };
+        SessionId = session.SessionId,
+        AccountId = request.AccountId,
+        CharacterId = request.CharacterId,
+        Role = "Member",
+        Status = "Joined",
+        JoinToken = joinToken,
+        JoinedAtUtc = DateTime.UtcNow
+    };
 
-        db.SessionMembers.Add(member);
-    }
+    db.SessionMembers.Add(member);
 
     await db.SaveChangesAsync();
 
