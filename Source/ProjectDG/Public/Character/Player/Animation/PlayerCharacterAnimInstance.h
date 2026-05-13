@@ -47,11 +47,48 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bIsSprinting;
 
-	// UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
-	// bool bIsDodging;
+	// BlendSpace 핵심변수
+	UPROPERTY(BlueprintReadOnly, Category = "Movement")
+	float MoveForward = 0.f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Movement")
+	float MoveRight = 0.f;
 	
-	/** ABP에서 Dodge Type이 Forward인지 Backward인지 구분하기 위한 변수 */
-	// UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
-	// EDodgeType DodgeType;
+	// Montage에서의 회전을 하체에 동기화하기 위한 변수들
+	UPROPERTY(BlueprintReadOnly, Category = "Movement")
+	float MeleeTwist = 0.f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Movement")
+	float NormalizedMeleeTwist = 0.f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Movement")
+	float FinalMoveForward = 0.f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Movement")
+	float FinalMoveRight = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	float MeleeTwistAngleForFullBias = 90.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	float MeleeTwistScale = 1.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	float MeleeTwistInterpSpeed = 8.f;
+	
+	// 달리기의 blendspace 속도 조정
+	UPROPERTY(BlueprintReadOnly, Category = "Movement")
+	float RunBlendSpacePlayRate = 1.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	float SharpStrikeRunBlendSpacePlayRate = 0.6f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	float RunBlendSpacePlayRateInterpSpeed = 8.f;
+	
+private:
+	float SmoothedMeleeTwist = 0.f;
+	
+	float CurrentRunBlendSpacePlayRate = 1.f;
 	
 };
