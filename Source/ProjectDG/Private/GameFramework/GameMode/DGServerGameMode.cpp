@@ -5,8 +5,9 @@
 #include "Engine/World.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/GameSession.h"
-#include "GameFramework/PlayerController.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/PlayerState.h"
 #include "HttpModule.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Interfaces/IHttpResponse.h"
@@ -135,6 +136,19 @@ void ADGServerGameMode::PostLogin(APlayerController* NewPlayer)
 		*NewPlayer->GetName()
 	));
 
+	APawn* ControlledPawn = NewPlayer->GetPawn();
+
+	const FString PlayerName = GetNameSafe(NewPlayer);
+	const FString PawnName = GetNameSafe(ControlledPawn);
+	const FString PlayerStateName = GetNameSafe(NewPlayer->PlayerState.Get());
+
+	Debug::Print(FString::Printf(
+		TEXT("[DGServerGameMode] PostLogin Pawn Check. Player=%s Pawn=%s PlayerState=%s"),
+		*PlayerName,
+		*PawnName,
+		*PlayerStateName
+	));
+
 	if (GetNetMode() == NM_DedicatedServer)
 	{
 		ConnectedPlayerCount++;
@@ -149,19 +163,21 @@ void ADGServerGameMode::PostLogin(APlayerController* NewPlayer)
 void ADGServerGameMode::Logout(AController* Exiting)
 {
 	const FString ExitingName = IsValid(Exiting)
-		? Exiting->GetName()
-		: TEXT("None");
+		                            ? Exiting->GetName()
+		                            : TEXT("None");
 
 	APawn* ExitingPawn = IsValid(Exiting)
-		? Exiting->GetPawn()
-		: nullptr;
+		                     ? Exiting->GetPawn()
+		                     : nullptr;
 
 	if (GetNetMode() == NM_DedicatedServer && IsValid(ExitingPawn))
 	{
+		const FString ExitingPawnName = GetNameSafe(ExitingPawn);
+
 		Debug::Print(FString::Printf(
 			TEXT("[DGServerGameMode] Logout. Destroy exiting pawn. Player=%s Pawn=%s"),
 			*ExitingName,
-			*ExitingPawn->GetName()
+			*ExitingPawnName
 		));
 
 		ExitingPawn->Destroy();
@@ -185,6 +201,28 @@ void ADGServerGameMode::Logout(AController* Exiting)
 	TryReportSessionEndedIfNoPlayers();
 }
 
+void ADGServerGameMode::RestartPlayer(AController* NewPlayer)
+{
+	const FString ControllerName = GetNameSafe(NewPlayer);
+	const FString PawnBeforeName = GetNameSafe(NewPlayer ? NewPlayer->GetPawn() : nullptr);
+
+	Debug::Print(FString::Printf(
+		TEXT("[DGServerGameMode] RestartPlayer Begin. Controller=%s PawnBefore=%s"),
+		*ControllerName,
+		*PawnBeforeName
+	));
+
+	Super::RestartPlayer(NewPlayer);
+
+	const FString PawnAfterName = GetNameSafe(NewPlayer ? NewPlayer->GetPawn() : nullptr);
+
+	Debug::Print(FString::Printf(
+		TEXT("[DGServerGameMode] RestartPlayer End. Controller=%s PawnAfter=%s"),
+		*ControllerName,
+		*PawnAfterName
+	));
+}
+
 void ADGServerGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (GetNetMode() == NM_DedicatedServer && !ActiveSessionId.IsEmpty() && !bSessionEndReported)
@@ -194,7 +232,7 @@ void ADGServerGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		bSessionEndReported = true;
 
 		StopSessionHeartbeat();
-		
+
 		ActiveSessionId.Empty();
 
 		ReportSessionEndedAsync(SessionIdToEnd);
@@ -247,10 +285,10 @@ void ADGServerGameMode::ValidateJoinTokenAsync(
 
 	Request->OnProcessRequestComplete().BindLambda(
 		[this, WeakPlayerController, SessionId](
-			FHttpRequestPtr HttpRequest,
-			FHttpResponsePtr HttpResponse,
-			bool bWasSuccessful
-		)
+		FHttpRequestPtr HttpRequest,
+		FHttpResponsePtr HttpResponse,
+		bool bWasSuccessful
+	)
 		{
 			if (!WeakPlayerController.IsValid())
 			{
@@ -354,10 +392,10 @@ void ADGServerGameMode::ReportSessionStartedAsync(
 
 	Request->OnProcessRequestComplete().BindLambda(
 		[this, SessionId](
-			FHttpRequestPtr HttpRequest,
-			FHttpResponsePtr HttpResponse,
-			bool bWasSuccessful
-		)
+		FHttpRequestPtr HttpRequest,
+		FHttpResponsePtr HttpResponse,
+		bool bWasSuccessful
+	)
 		{
 			if (!bWasSuccessful || !HttpResponse.IsValid())
 			{
@@ -580,10 +618,10 @@ void ADGServerGameMode::SendSessionHeartbeatAsync(
 
 	Request->OnProcessRequestComplete().BindLambda(
 		[](
-			FHttpRequestPtr HttpRequest,
-			FHttpResponsePtr HttpResponse,
-			bool bWasSuccessful
-		)
+		FHttpRequestPtr HttpRequest,
+		FHttpResponsePtr HttpResponse,
+		bool bWasSuccessful
+	)
 		{
 			if (!bWasSuccessful || !HttpResponse.IsValid())
 			{
@@ -650,7 +688,7 @@ void ADGServerGameMode::TryReportSessionEndedIfNoPlayers()
 	bSessionEndReported = true;
 
 	StopSessionHeartbeat();
-	
+
 	ActiveSessionId.Empty();
 
 	ReportSessionEndedAsync(SessionIdToEnd);
@@ -671,6 +709,18 @@ void ADGServerGameMode::KickPlayerWithReason(
 		*PlayerController->GetName(),
 		*Reason
 	));
+
+	APawn* PawnToDestroy = PlayerController->GetPawn();
+
+	if (IsValid(PawnToDestroy))
+	{
+		Debug::Print(FString::Printf(
+			TEXT("[DGServerGameMode] Kick Player. Destroy pawn. Pawn=%s"),
+			*PawnToDestroy->GetName()
+		));
+
+		PawnToDestroy->Destroy();
+	}
 
 	if (GameSession)
 	{
