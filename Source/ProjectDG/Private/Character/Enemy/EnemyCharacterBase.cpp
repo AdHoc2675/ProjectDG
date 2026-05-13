@@ -3,26 +3,16 @@
 
 #include "AbilitySystemComponent.h"
 #include "AttributeSet.h"
+#include "GAS/Attributes/DG_AttributeSet.h"
 #include "Core/DG_Debug.h"
 #include "Core/DG_GameplayTags.h"
-#include "Data/DT_Attribute.h"
-#include "Engine/DataTable.h"
-#include "GAS/Attributes/DG_AttributeSet.h"
 
 
 AEnemyCharacterBase::AEnemyCharacterBase()
 {
-    // Enemy는 Character에서 직접 ASC를 소유한다.
     AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
-    AbilitySystemComponent->SetIsReplicated(true);
-    AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
-
-    // Enemy도 공통 전투 AttributeSet을 가진다.
-    // Health / Defense / Damage 메타 Attribute는 여기서 처리된다.
+    
     AttributeSet = CreateDefaultSubobject<UDG_AttributeSet>(TEXT("AttributeSet"));
-
-    // Enemy 기본 팀 태그.
-    TeamTag = DGGameplayTags::Team_Enemy;
 }
 
 void AEnemyCharacterBase::BeginPlay()
@@ -30,7 +20,6 @@ void AEnemyCharacterBase::BeginPlay()
     ABaseCharacter::BeginPlay();
     
     InitializeEnemyAbilitySystem();
-    InitializeEnemyAttributesFromDataTable();
 }
 
 void AEnemyCharacterBase::PossessedBy(AController* NewController)
@@ -38,7 +27,13 @@ void AEnemyCharacterBase::PossessedBy(AController* NewController)
     ABaseCharacter::PossessedBy(NewController);
     
     InitializeEnemyAbilitySystem();
-    InitializeEnemyAttributesFromDataTable();
+
+    // 서버에서 기본 어빌리티와 초기 스탯(GE) 부여
+    if (HasAuthority())
+    {
+        GrantDefaultAbilities();
+        ApplyDefaultEffects();
+    }
 }
 
 void AEnemyCharacterBase::InitializeEnemyAbilitySystem()
@@ -55,81 +50,6 @@ void AEnemyCharacterBase::InitializeEnemyAbilitySystem()
 
 }
 
-void AEnemyCharacterBase::InitializeEnemyAttributesFromDataTable()
-{
-    if (!HasAuthority())
-    {
-        return;
-    }
-
-    if (!AttributeInitDataTable)
-    {
-        Debug::Print(TEXT("[EnemyCharacterBase] AttributeInitDataTable is null."));
-        return;
-    }
-
-    if (!AttributeSet)
-    {
-        Debug::Print(TEXT("[EnemyCharacterBase] AttributeSet is null."));
-        return;
-    }
-
-    if (AttributeInitRowName.IsNone())
-    {
-        Debug::Print(TEXT("[EnemyCharacterBase] AttributeInitRowName is none."));
-        return;
-    }
-
-    const FDT_Attribute* InitRow =
-        AttributeInitDataTable->FindRow<FDT_Attribute>(
-            AttributeInitRowName,
-            TEXT("EnemyCharacterBase::InitializeEnemyAttributesFromDataTable")
-        );
-
-    if (!InitRow)
-    {
-        Debug::Print(FString::Printf(
-            TEXT("[EnemyCharacterBase] Failed to find Attribute row. RowName=%s"),
-            *AttributeInitRowName.ToString()
-        ));
-        return;
-    }
-
-    AttributeSet->InitHealth(InitRow->MaxHealth);
-    AttributeSet->InitMaxHealth(InitRow->MaxHealth);
-
-    AttributeSet->InitMental(InitRow->MaxMental);
-    AttributeSet->InitMaxMental(InitRow->MaxMental);
-
-    AttributeSet->InitStamina(InitRow->MaxStamina);
-    AttributeSet->InitMaxStamina(InitRow->MaxStamina);
-
-    AttributeSet->InitMainStat(InitRow->MainStat);
-    AttributeSet->InitAttackPower(InitRow->AttackPower);
-    AttributeSet->InitDefense(InitRow->Defense);
-    AttributeSet->InitHealthCoefficient(InitRow->HealthCoefficient);
-    AttributeSet->InitDefenseCoefficient(InitRow->DefenseCoefficient);
-    AttributeSet->InitCriticalRate(InitRow->CriticalRate);
-    AttributeSet->InitCriticalDamage(InitRow->CriticalDamage);
-    AttributeSet->InitMoveSpeed(InitRow->MoveSpeed);
-    AttributeSet->InitAttackSpeed(InitRow->AttackSpeed);
-    AttributeSet->InitGroggyDamage(InitRow->GroggyDamage);
-    AttributeSet->InitFinalDamageIncrease(InitRow->FinalDamageIncrease);
-    AttributeSet->InitDamageReduction(InitRow->DamageReduction);
-    AttributeSet->InitCooldownReduction(InitRow->CooldownReduction);
-    AttributeSet->InitMentalRecoveryIncrease(InitRow->MentalRecoveryIncrease);
-    AttributeSet->InitLifeSteal(InitRow->LifeSteal);
-    AttributeSet->InitGroggyDamageIncreaseRate(InitRow->GroggyDamageIncreaseRate);
-
-    Debug::Print(FString::Printf(
-        TEXT("[EnemyCharacterBase] Attributes initialized. Row=%s Health=%.1f Defense=%.1f DefenseCoeff=%.2f"),
-        *AttributeInitRowName.ToString(),
-        AttributeSet->GetHealth(),
-        AttributeSet->GetDefense(),
-        AttributeSet->GetDefenseCoefficient()
-    ));
-}
-
 UAbilitySystemComponent* AEnemyCharacterBase::GetCharacterAbilitySystemComponent() const
 {
     return  AbilitySystemComponent;
@@ -138,5 +58,38 @@ UAbilitySystemComponent* AEnemyCharacterBase::GetCharacterAbilitySystemComponent
 const UAttributeSet* AEnemyCharacterBase::GetCharacterAttributeSet() const
 {
     return AttributeSet;
+}
+
+void AEnemyCharacterBase::GrantDefaultAbilities()
+{
+    if (!HasAuthority() || !AbilitySystemComponent) return;
+
+    for (const auto& AbilityClass : DefaultAbilities)
+    {
+        if (AbilityClass)
+        {
+            AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilityClass, 1));
+        }
+    }
+}
+
+void AEnemyCharacterBase::ApplyDefaultEffects()
+{
+    if (!HasAuthority() || !AbilitySystemComponent) return;
+
+    FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
+    Context.AddSourceObject(this);
+
+    for (const auto& EffectClass : DefaultEffects)
+    {
+        if (EffectClass)
+        {
+            FGameplayEffectSpecHandle Spec = AbilitySystemComponent->MakeOutgoingSpec(EffectClass, 1.f, Context);
+            if (Spec.IsValid())
+            {
+                AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+            }
+        }
+    }
 }
 

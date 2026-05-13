@@ -7,8 +7,10 @@
 #include "EnemyCharacterBase.generated.h"
 
 class UAbilitySystemComponent;
+class UAttributeSet;
 class UDG_AttributeSet;
-class UDataTable;
+class UGameplayAbility;
+class UGameplayEffect;
 
 /**
  * AEnemyCharacterBase
@@ -45,23 +47,23 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|ASC")
 	TObjectPtr<UDG_AttributeSet> AttributeSet = nullptr;
 	
-	// Enemy 초기 Attribute를 읽을 DataTable.
-	// Row Struct는 FDT_Attribute를 사용한다.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemyCharacterBase|ASC|Init")
-	TObjectPtr<UDataTable> AttributeInitDataTable = nullptr;
-
-	// 기본 Enemy RowName.
-	// DT_Attribute에 Enemy Row를 만들어두면 1차 테스트 가능.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemyCharacterBase|ASC|Init")
-	FName AttributeInitRowName = TEXT("Enemy");
-	
-	
 protected:
 	//ASC초기화
 	virtual void InitializeEnemyAbilitySystem();
 	
-	// DT_Attribute에서 Enemy 초기 Attribute를 적용한다.
-	virtual void InitializeEnemyAttributesFromDataTable();
+	// 서버 측 기본 어빌리티 부여 로직
+	virtual void GrantDefaultAbilities();
+	
+	// 서버 측 기본 이펙트 부여 로직 (초기 스탯 등)
+	virtual void ApplyDefaultEffects();
+
+	/** 서버에서 부여할 기본 어빌리티 목록 */
+	UPROPERTY(EditDefaultsOnly, Category = "EnemyCharacterBase|GAS")
+	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
+
+	/** 서버에서 부여할 기본 지속 효과 목록 (초기 스탯 등) */
+	UPROPERTY(EditDefaultsOnly, Category = "EnemyCharacterBase|GAS")
+	TArray<TSubclassOf<UGameplayEffect>> DefaultEffects;
 	
 public:
 	//BaseCharacter 공용 ASC getter 
