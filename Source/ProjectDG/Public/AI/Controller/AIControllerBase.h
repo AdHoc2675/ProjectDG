@@ -9,7 +9,6 @@
 class UAIPerceptionComponent;
 class UAISenseConfig_Sight;
 class UAISenseConfig_Touch;
-class UAISenseConfig_Prediction;
 class UAISenseConfig_Damage;
 
 /**
@@ -35,10 +34,6 @@ protected:
 	// 촉각/접촉 (Touch)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Perception")
 	TObjectPtr<UAISenseConfig_Touch> TouchConfig;
-
-	// 예측 (Prediction)
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Perception")
-	TObjectPtr<UAISenseConfig_Prediction> PredictionConfig;
 
 	// 피해 (Damage)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Perception")

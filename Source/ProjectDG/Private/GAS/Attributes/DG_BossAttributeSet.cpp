@@ -1,9 +1,10 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "GAS/Attributes/Enemy/Boss/DG_BossAttributeSet.h"
+#include "GAS/Attributes/DG_BossAttributeSet.h"
 #include "Net/UnrealNetwork.h"
 #include "GameplayEffectExtension.h"
+
 
 UDG_BossAttributeSet::UDG_BossAttributeSet()
 {

@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "GAS/Attributes/Enemy/DG_EnemyAttributeSet.h"
+#include "GAS/Attributes/DG_EnemyAttributeSet.h"
 #include "Net/UnrealNetwork.h"
 #include "GameplayEffectExtension.h"
 
@@ -17,8 +17,6 @@ void UDG_EnemyAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 
 	DOREPLIFETIME_CONDITION_NOTIFY(UDG_EnemyAttributeSet, StaggerGauge, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UDG_EnemyAttributeSet, MaxStaggerGauge, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UDG_EnemyAttributeSet, AttackSpeed, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UDG_EnemyAttributeSet, MovementSpeed, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UDG_EnemyAttributeSet, DetectionRadius, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UDG_EnemyAttributeSet, ProvideExp, COND_None, REPNOTIFY_Always);
 }
@@ -68,16 +66,6 @@ void UDG_EnemyAttributeSet::OnRep_StaggerGauge(const FGameplayAttributeData& Old
 void UDG_EnemyAttributeSet::OnRep_MaxStaggerGauge(const FGameplayAttributeData& OldMaxStaggerGauge)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UDG_EnemyAttributeSet, MaxStaggerGauge, OldMaxStaggerGauge);
-}
-
-void UDG_EnemyAttributeSet::OnRep_AttackSpeed(const FGameplayAttributeData& OldAttackSpeed)
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UDG_EnemyAttributeSet, AttackSpeed, OldAttackSpeed);
-}
-
-void UDG_EnemyAttributeSet::OnRep_MovementSpeed(const FGameplayAttributeData& OldMovementSpeed)
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UDG_EnemyAttributeSet, MovementSpeed, OldMovementSpeed);
 }
 
 void UDG_EnemyAttributeSet::OnRep_DetectionRadius(const FGameplayAttributeData& OldDetectionRadius)

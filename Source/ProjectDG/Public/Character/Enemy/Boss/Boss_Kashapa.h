@@ -6,7 +6,9 @@
 #include "Character/Enemy/Boss/BossCharacterBase.h"
 #include "Boss_Kashapa.generated.h"
 
+class UAnimMontage;
 class UDG_BossAttributeSet;
+class UGameplayAbility;
 
 /**
  * 
@@ -22,4 +24,16 @@ public:
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS|Attributes")
 	TObjectPtr<UDG_BossAttributeSet> BossAttributeSet;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Kashapa|Combat")
+	TArray<TObjectPtr<UAnimMontage>> AttackMontages;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Kashapa|Combat")
+	TArray<TSubclassOf<UGameplayAbility>> AttackAbilities;
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "Kashapa|Combat")
+	TSubclassOf<UGameplayAbility> GetRandomAttackAbilityClass() const;
+
+	const TArray<TObjectPtr<UAnimMontage>>& GetAttackMontages() const;
 };

@@ -39,15 +39,6 @@ public:
 	FGameplayAttributeData MaxStaggerGauge;
 	ATTRIBUTE_ACCESSORS(UDG_EnemyAttributeSet, MaxStaggerGauge)
 
-	// 전투 관련 추가 스탯
-	UPROPERTY(BlueprintReadOnly, Category = "Attributes|Combat", ReplicatedUsing = OnRep_AttackSpeed)
-	FGameplayAttributeData AttackSpeed;
-	ATTRIBUTE_ACCESSORS(UDG_EnemyAttributeSet, AttackSpeed)
-
-	UPROPERTY(BlueprintReadOnly, Category = "Attributes|Movement", ReplicatedUsing = OnRep_MovementSpeed)
-	FGameplayAttributeData MovementSpeed;
-	ATTRIBUTE_ACCESSORS(UDG_EnemyAttributeSet, MovementSpeed)
-
 	// AI 및 시스템 스탯
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes|AI", ReplicatedUsing = OnRep_DetectionRadius)
 	FGameplayAttributeData DetectionRadius;
@@ -60,8 +51,6 @@ public:
 protected:
 	UFUNCTION() virtual void OnRep_StaggerGauge(const FGameplayAttributeData& OldStaggerGauge);
 	UFUNCTION() virtual void OnRep_MaxStaggerGauge(const FGameplayAttributeData& OldMaxStaggerGauge);
-	UFUNCTION() virtual void OnRep_AttackSpeed(const FGameplayAttributeData& OldAttackSpeed);
-	UFUNCTION() virtual void OnRep_MovementSpeed(const FGameplayAttributeData& OldMovementSpeed);
 	UFUNCTION() virtual void OnRep_DetectionRadius(const FGameplayAttributeData& OldDetectionRadius);
 	UFUNCTION() virtual void OnRep_ProvideExp(const FGameplayAttributeData& OldProvideExp);
 };
