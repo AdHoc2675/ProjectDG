@@ -6,6 +6,7 @@
 #include "GameFramework/Controller.h"
 #include "GameFramework/GameSession.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/Pawn.h"
 #include "HttpModule.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Interfaces/IHttpResponse.h"
@@ -151,6 +152,21 @@ void ADGServerGameMode::Logout(AController* Exiting)
 		? Exiting->GetName()
 		: TEXT("None");
 
+	APawn* ExitingPawn = IsValid(Exiting)
+		? Exiting->GetPawn()
+		: nullptr;
+
+	if (GetNetMode() == NM_DedicatedServer && IsValid(ExitingPawn))
+	{
+		Debug::Print(FString::Printf(
+			TEXT("[DGServerGameMode] Logout. Destroy exiting pawn. Player=%s Pawn=%s"),
+			*ExitingName,
+			*ExitingPawn->GetName()
+		));
+
+		ExitingPawn->Destroy();
+	}
+
 	Super::Logout(Exiting);
 
 	if (GetNetMode() != NM_DedicatedServer)
@@ -178,6 +194,8 @@ void ADGServerGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		bSessionEndReported = true;
 
 		StopSessionHeartbeat();
+		
+		ActiveSessionId.Empty();
 
 		ReportSessionEndedAsync(SessionIdToEnd);
 	}
@@ -632,6 +650,8 @@ void ADGServerGameMode::TryReportSessionEndedIfNoPlayers()
 	bSessionEndReported = true;
 
 	StopSessionHeartbeat();
+	
+	ActiveSessionId.Empty();
 
 	ReportSessionEndedAsync(SessionIdToEnd);
 }
