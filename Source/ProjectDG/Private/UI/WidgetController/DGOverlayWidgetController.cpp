@@ -59,3 +59,41 @@ UDG_AttributeSet* UDGOverlayWidgetController::GetDGAttributeSet()
 {
 	return Cast<UDG_AttributeSet>(AttributeSet);
 }
+
+
+void UDGOverlayWidgetController::SetEnemyTarget(UAbilitySystemComponent* InEnemyASC, UAttributeSet* InEnemyAS, const FString& EnemyName)
+{
+	if (!InEnemyASC || !InEnemyAS) return;
+
+	UDG_AttributeSet* EnemyDGAS = Cast<UDG_AttributeSet>(InEnemyAS);
+	if (!EnemyDGAS) return;
+
+	// 기존에 타겟팅하던 적이 있다면 델리게이트 해제 (메모리 누수 및 오작동 방지)
+	if (CurrentEnemyASC && CurrentEnemyAS)
+	{
+		CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(CurrentEnemyAS->GetHealthAttribute()).Remove(EnemyHealthChangedDelegateHandle);
+		CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(CurrentEnemyAS->GetMaxHealthAttribute()).Remove(EnemyMaxHealthChangedDelegateHandle);
+	}
+
+	// 새 타겟 설정
+	CurrentEnemyASC = InEnemyASC;
+	CurrentEnemyAS = EnemyDGAS;
+
+	// 새 타겟의 이벤트 바인딩
+	EnemyHealthChangedDelegateHandle = CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(CurrentEnemyAS->GetHealthAttribute()).AddLambda(
+		[this, EnemyDGAS](const FOnAttributeChangeData& Data)
+		{
+			OnEnemyHealthChanged.Broadcast(Data.NewValue, EnemyDGAS->GetMaxHealth());
+		}
+	);
+
+	EnemyMaxHealthChangedDelegateHandle = CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(CurrentEnemyAS->GetMaxHealthAttribute()).AddLambda(
+		[this, EnemyDGAS](const FOnAttributeChangeData& Data)
+		{
+			OnEnemyHealthChanged.Broadcast(EnemyDGAS->GetHealth(), Data.NewValue);
+		}
+	);
+
+	// 즉시 초기값 방송하여 UI를 띄움
+	OnEnemyHealthChanged.Broadcast(CurrentEnemyAS->GetHealth(), CurrentEnemyAS->GetMaxHealth());
+}
