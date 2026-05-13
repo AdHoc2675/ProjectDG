@@ -23,6 +23,8 @@
 #include "Perception/AIPerceptionStimuliSourceComponent.h"
 #include "Perception/AISense_Sight.h"
 
+#include "UI/HUD/DG_HUD.h"
+
 APlayerCharacterBase::APlayerCharacterBase()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -167,6 +169,19 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 	 * - 실제 월드에서 움직이고 스킬을 사용하는 존재는 Character
 	 */
 	ASC->InitAbilityActorInfo(PS, this);
+
+	// 로컬 플레이어 컨트롤러인지 확인 (화면에 UI를 띄워야 하는 유저만)
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (PC->IsLocalPlayerController())
+		{
+			if (ADG_HUD* HUD = Cast<ADG_HUD>(PC->GetHUD()))
+			{
+				// HUD의 InitOverlay 함수 호출 (컨트롤러, State, ASC, 속성 데이터 전달)
+				HUD->InitOverlay(PC, PS, ASC, PS->GetDGAttributeSet());
+			}
+		}
+	}
 
 	Debug::Print(TEXT("[PlayerCharacterBase] ASC initialized from DG_PlayerState."));
 }
