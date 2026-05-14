@@ -17,6 +17,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "Net/UnrealNetwork.h"
+#include "DrawDebugHelpers.h"
 
 #include "Components/Combat/CombatComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -145,7 +146,7 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 	ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>();
 	if (!PS)
 	{
-		Debug::Print(TEXT("[PlayerCharacterBase] DG_PlayerState is null."));
+		//Debug::Print(TEXT("[PlayerCharacterBase] DG_PlayerState is null."));
 		return;
 	}
 
@@ -155,7 +156,7 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
 	if (!ASC)
 	{
-		Debug::Print(TEXT("[PlayerCharacterBase] ASC is null on DG_PlayerState."));
+		//Debug::Print(TEXT("[PlayerCharacterBase] ASC is null on DG_PlayerState."));
 		return;
 	}
 
@@ -174,7 +175,7 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 	 */
 	ASC->InitAbilityActorInfo(PS, this);
 
-	Debug::Print(TEXT("[PlayerCharacterBase] ASC initialized from DG_PlayerState."));
+	// Debug::Print(TEXT("[PlayerCharacterBase] ASC initialized from DG_PlayerState."));
 }
 
 void APlayerCharacterBase::InitializePlayerUI()
@@ -276,7 +277,7 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
 	if (!EnhancedInputComponent)
 	{
-		Debug::Print(TEXT("[PlayerCharacterBase] EnhancedInputComponent cast failed."));
+		// Debug::Print(TEXT("[PlayerCharacterBase] EnhancedInputComponent cast failed."));
 		return;
 	}
 
@@ -412,8 +413,7 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 	Super::PossessedBy(NewController);
 	
 	// 로그에 "누가" 빙의를 요청하는지 출력 (Warrior에서 GA 및 GE의 이중 적용 문제)
-	Debug::Print(FString::Printf(TEXT("PossessedBy: Controller: %s, Pawn: %s"), 
-		*NewController->GetName(), *GetName()), FColor::Red);
+	// Debug::Print(FString::Printf(TEXT("PossessedBy: Controller: %s, Pawn: %s"), *NewController->GetName(), *GetName()), FColor::Red);
 
 	/**
 	 * Controller가 Pawn을 점유한 시점은
@@ -470,14 +470,14 @@ void APlayerCharacterBase::InitializePlayerStateFromClassData()
 
 	if (!CharacterClassData)
 	{
-		Debug::Print(TEXT("[PlayerCharacterBase] CharacterClassData is null."));
+		// Debug::Print(TEXT("[PlayerCharacterBase] CharacterClassData is null."));
 		return;
 	}
 
 	ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>();
 	if (!PS)
 	{
-		Debug::Print(TEXT("[PlayerCharacterBase] DG_PlayerState is null."));
+		// Debug::Print(TEXT("[PlayerCharacterBase] DG_PlayerState is null."));
 		return;
 	}
 
@@ -490,7 +490,7 @@ void APlayerCharacterBase::InitializeSkillSlotsFromClassData()
 
 	if (!CharacterClassData)
 	{
-		Debug::Print(TEXT("[PlayerCharacterBase] CharacterClassData is null. Skill slots skipped."));
+		// Debug::Print(TEXT("[PlayerCharacterBase] CharacterClassData is null. Skill slots skipped."));
 		return;
 	}
 
@@ -693,7 +693,12 @@ FVector APlayerCharacterBase::GetDesiredMoveDirection() const
 
 void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 {
-	HeldSkillSlots.FindOrAdd(SlotTag) = true;  //FindOrAdd를 쓴 이유는 해당 SlotTag 키가 TMap에 아직 없으면 새로 추가하고, 이미 있으면 기존 값을 찾아서 수정하기 위함
+	HeldSkillSlots.FindOrAdd(SlotTag) = true;
+
+	if (!HasAuthority())
+	{
+		ServerSetSkillInputHeld(SlotTag, true);
+	}
 
 	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
 	if (!ASC) return;
@@ -704,7 +709,7 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(SkillTag));
 
 		FString Msg = FString::Printf(TEXT("Skill Input Started: %s -> Ability: %s"), *SlotTag.ToString(), *SkillTag.ToString());
-		Debug::Print(Msg, FColor::Green);
+		// Debug::Print(Msg, FColor::Green);
 	}
 }
 
@@ -712,12 +717,22 @@ void APlayerCharacterBase::OnSkillInputCompleted(FGameplayTag SlotTag)
 {
 	HeldSkillSlots.FindOrAdd(SlotTag) = false;
 
+	if (!HasAuthority())
+	{
+		ServerSetSkillInputHeld(SlotTag, false);
+	}
+
 	FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
 	if (SkillTag.IsValid())
 	{
-		FString Msg = FString::Printf(TEXT("Skill Input Completed: %s -> Ability: %s"), *SlotTag.ToString(), *SkillTag.ToString());
-		Debug::Print(Msg, FColor::Silver);
+		FString Msg = FString::Printf(TEXT("Skill Input Completed: %s -> Ability: %s"), *SlotTag.ToString(),*SkillTag.ToString());
+		// Debug::Print(Msg, FColor::Silver);
 	}
+}
+
+void APlayerCharacterBase::ServerSetSkillInputHeld_Implementation(FGameplayTag SlotTag, bool bHeld)
+{
+	HeldSkillSlots.FindOrAdd(SlotTag) = bHeld;
 }
 
 bool APlayerCharacterBase::IsSkillSlotHeld(FGameplayTag SlotTag) const
@@ -789,6 +804,19 @@ FGameplayTag APlayerCharacterBase::GetSkillTagForSlot(FGameplayTag SlotTag) cons
 // 	OnSkillInput(DGGameplayTags::Input_Slot_E);
 // }
 
+void APlayerCharacterBase::ClientDrawAttackTraceDebug_Implementation(FVector_NetQuantize Start, FVector_NetQuantize End, float Radius, FColor Color, float Duration)
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	DrawDebugSphere(World, Start, Radius, 12, Color, false, Duration);
+	DrawDebugSphere(World, End, Radius, 12, Color, false, Duration);
+	DrawDebugLine(World, Start, End, Color, false, Duration, 0, 1.5f);
+}
+
 void APlayerCharacterBase::InitializeMovementStats()
 {
 	if (!CharacterClassData || !CharacterClassData->MovementData) return;
@@ -817,7 +845,7 @@ const FPlayerMovementAnimationSet& APlayerCharacterBase::GetCurrentMovementAnims
 void APlayerCharacterBase::ServerHandleShiftAction_Implementation(FVector_NetQuantizeNormal DodgeDirection, bool bHasInput)
 {
 	// 서버 로그 추가
-	UE_LOG(LogTemp, Warning, TEXT("Server: Received Shift Action RPC. Direction: %s"), *DodgeDirection.ToString());
+	// UE_LOG(LogTemp, Warning, TEXT("Server: Received Shift Action RPC. Direction: %s"), *DodgeDirection.ToString());
 
 	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
 	if (!ASC) return;
@@ -846,7 +874,7 @@ void APlayerCharacterBase::Server_TestApplyDamage_Implementation()
 	UCombatComponent* SourceCombatComponent = GetCombatComponent();
 	if (!SourceCombatComponent)
 	{
-		Debug::Print(TEXT("[PlayerCharacterBase] TestDamage failed. CombatComponent is null."));
+		// Debug::Print(TEXT("[PlayerCharacterBase] TestDamage failed. CombatComponent is null."));
 		return;
 	}
 
@@ -854,11 +882,7 @@ void APlayerCharacterBase::Server_TestApplyDamage_Implementation()
 	float BestDistanceSq = TNumericLimits<float>::Max();
 
 	TArray<AActor*> FoundActors;
-	UGameplayStatics::GetAllActorsOfClass(
-		GetWorld(),
-		ABaseCharacter::StaticClass(),
-		FoundActors
-	);
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseCharacter::StaticClass(),FoundActors);
 
 	for (AActor* Actor : FoundActors)
 	{
@@ -900,7 +924,7 @@ void APlayerCharacterBase::Server_TestApplyDamage_Implementation()
 
 	if (!BestTarget)
 	{
-		Debug::Print(TEXT("[PlayerCharacterBase] TestDamage failed. No valid target in range."));
+		// Debug::Print(TEXT("[PlayerCharacterBase] TestDamage failed. No valid target in range."));
 		return;
 	}
 
@@ -914,10 +938,10 @@ void APlayerCharacterBase::Server_TestApplyDamage_Implementation()
 
 	const FDGDamageResult DamageResult = SourceCombatComponent->ApplyDamageRequest(DamageRequest);
 
-	Debug::Print(FString::Printf(
-		TEXT("[PlayerCharacterBase] Server_TestApplyDamage. Target=%s Success=%s Message=%s"),
-		*GetNameSafe(BestTarget),
-		DamageResult.bSuccess ? TEXT("true") : TEXT("false"),
-		*DamageResult.Message
-	));
+	// Debug::Print(FString::Printf(
+	// 	TEXT("[PlayerCharacterBase] Server_TestApplyDamage. Target=%s Success=%s Message=%s"),
+	// 	*GetNameSafe(BestTarget),
+	// 	DamageResult.bSuccess ? TEXT("true") : TEXT("false"),
+	// 	*DamageResult.Message
+	// ));
 }
