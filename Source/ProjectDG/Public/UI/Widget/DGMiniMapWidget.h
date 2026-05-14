@@ -7,7 +7,9 @@
 #include "DGMiniMapWidget.generated.h"
 
 class UOverlay;
-//class UDGMinimapMarkerWidget;
+class UDGOverlayWidgetController;
+class UDGMinimapMarkerComponent;
+class UDGMinimapMarkerWidget;
 
 /**
  * 기본 화면 우상	단에 위치한 미니맵 위젯 관리 용도.
@@ -20,13 +22,16 @@ class PROJECTDG_API UDGMiniMapWidget : public UDGUserWidget
     GENERATED_BODY()
 
 public:
+    // 컨트롤러 바인딩
+    void BindToController(UDGOverlayWidgetController* Controller);
+
     virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
-    // 미니맵 줌 배율
+    // 미니맵 줌 배율 (화면 거리 대비 UMG 픽셀 거리)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-    float ZoomScale = 1.0f;
+    float ZoomScale = 0.1f;
 
-    // 미니맵 반지름 한계치 (위젯 크기를 바탕으로 클리핑/가려짐 조절)
+    // 미니맵 반지름 한계치 픽셀 단위 (위젯 크기를 바탕으로 클리핑/가려짐 조절)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
     float MapRadius = 150.0f;
 
@@ -35,11 +40,22 @@ protected:
     UPROPERTY(meta = (BindWidget))
     UOverlay* MinimapOverlay;
 
-    //// 마커 위젯 클래스 블루프린트 할당용
-    //UPROPERTY(EditDefaultsOnly, Category = "Minimap")
-    //TSubclassOf<UDGMinimapMarkerWidget> MarkerWidgetClass;
+    // 화면에 스폰할 마커 클래스
+    UPROPERTY(EditDefaultsOnly, Category = "Minimap")
+    TSubclassOf<UDGMinimapMarkerWidget> MarkerWidgetClass;
 
 private:
+	// 마커 컴포넌트와 위젯 간의 매핑을 관리하기 위한 핸들러
+    UFUNCTION()
+    void OnMarkerAdded(UDGMinimapMarkerComponent* Marker);
+
+    UFUNCTION()
+    void OnMarkerRemoved(UDGMinimapMarkerComponent* Marker);
+
     // Tick 마다 플레이어 위치를 바탕으로 투영 업데이트
     void UpdateMarkers();
+
+    // 실제 관리 중인 "마커 컴포넌트 데이터 : 렌더링 중인 UI 인스턴스" 매핑 객체
+    UPROPERTY()
+    TMap<UDGMinimapMarkerComponent*, UDGMinimapMarkerWidget*> ActiveMarkerWidgets;
 };
