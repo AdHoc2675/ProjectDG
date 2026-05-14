@@ -5,6 +5,7 @@
 #include "DGOverlayWidget.generated.h"
 
 class UDGPlayerStatWidget;
+class UDGEnemyStatusWidget;
 
 /**
  * 모든 메인 HUD 구성요소(미니맵, 파티창, 스탯, 슬롯 등)를
@@ -23,4 +24,7 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UDGPlayerStatWidget> PlayerStatWidget;
 
+	// 적 상태 위젯
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UDGEnemyStatusWidget> EnemyStatusWidget;
 };

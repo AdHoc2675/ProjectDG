@@ -32,6 +32,8 @@ public:
 
 	virtual void Logout(AController* Exiting) override;
 
+	virtual void RestartPlayer(AController* NewPlayer) override;
+
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
