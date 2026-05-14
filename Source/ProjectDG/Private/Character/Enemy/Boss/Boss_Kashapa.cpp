@@ -2,11 +2,9 @@
 
 
 #include "Character/Enemy/Boss/Boss_Kashapa.h"
-#include "GAS/Attributes/DG_BossAttributeSet.h"
 
 ABoss_Kashapa::ABoss_Kashapa()
 {
-	BossAttributeSet = CreateDefaultSubobject<UDG_BossAttributeSet>(TEXT("BossAttributeSet"));
 }
 
 TSubclassOf<UGameplayAbility> ABoss_Kashapa::GetRandomAttackAbilityClass() const
