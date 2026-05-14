@@ -230,12 +230,13 @@ void UDGSessionSubsystem::TravelToDedicatedServer(
 	}
 
 	const FString TravelUrl = FString::Printf(
-		TEXT("%s:%d?SessionId=%s?JoinToken=%s"),
-		*ConnectionInfo.ServerIP,
-		ConnectionInfo.ServerPort,
-		*ConnectionInfo.SessionId,
-		*ConnectionInfo.JoinToken
-	);
+	TEXT("%s:%d%s?SessionId=%s?JoinToken=%s"),
+	*ConnectionInfo.ServerIP,
+	ConnectionInfo.ServerPort,
+	*ConnectionInfo.MapPath,
+	*ConnectionInfo.SessionId,
+	*ConnectionInfo.JoinToken
+);
 
 	Debug::Print(FString::Printf(
 		TEXT("[DGSessionSubsystem] ClientTravel To %s"),
