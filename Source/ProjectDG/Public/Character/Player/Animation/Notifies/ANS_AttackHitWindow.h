@@ -54,7 +54,7 @@ protected:
 	TArray<FName> TraceSocketNames;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
-	float TraceRadius = 8.f;
+	float TraceRadius = 15.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Pawn;
@@ -85,12 +85,12 @@ private:
 	TMap<TWeakObjectPtr<USkeletalMeshComponent>, FAttackHitWindowRuntimeData> RuntimeDataMap;
 
 	USkeletalMeshComponent* ResolveWeaponMesh(USkeletalMeshComponent* CharacterMesh) const;
-	void InitializeRuntimeData(USkeletalMeshComponent* CharacterMesh, USkeletalMeshComponent*WeaponMesh);
+	void InitializeRuntimeData(USkeletalMeshComponent* CharacterMesh, USkeletalMeshComponent* WeaponMesh);
 	void TraceWeaponSockets(USkeletalMeshComponent* CharacterMesh, USkeletalMeshComponent* WeaponMesh);
 	void SendHitEvent(AActor* OwnerActor, AActor* HitActor) const;
 	
 	//팀 확인 및 디버깅
 	bool ShouldIgnoreHitActor(AActor* OwnerActor, AActor* HitActor) const;
 	bool AreActorsOnSameTeam(AActor* FirstActor, AActor* SecondActor) const;
-	void DrawTraceDebug(UWorld* World, const FVector& Start, const FVector& End, const FColor& Color) const;
+	void DrawTraceDebug(AActor* OwnerActor, UWorld* World, const FVector& Start, const FVector& End, const FColor& Color) const;
 };
