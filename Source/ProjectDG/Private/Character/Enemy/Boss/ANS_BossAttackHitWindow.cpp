@@ -57,8 +57,7 @@ void UANS_BossAttackHitWindow::NotifyTick(
 {
 	Super::NotifyTick(MeshComp, Animation, FrameDeltaTime, EventReference);
 
-	AActor* OwnerActor = MeshComp ? MeshComp->GetOwner() : nullptr;
-	if (!OwnerActor || !OwnerActor->HasAuthority())
+	if (!MeshComp)
 	{
 		return;
 	}
@@ -199,6 +198,11 @@ void UANS_BossAttackHitWindow::TraceBodySockets(USkeletalMeshComponent* MeshComp
 
 void UANS_BossAttackHitWindow::SendHitEvent(AActor* OwnerActor, AActor* HitActor) const
 {
+	if (!OwnerActor || !OwnerActor->HasAuthority())
+	{
+		return;
+	}
+
 	ABaseCharacter* OwnerCharacter = Cast<ABaseCharacter>(OwnerActor);
 	if (!OwnerCharacter)
 	{
