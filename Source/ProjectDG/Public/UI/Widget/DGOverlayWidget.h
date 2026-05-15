@@ -6,6 +6,7 @@
 
 class UDGPlayerStatWidget;
 class UDGEnemyStatusWidget;
+class UDGMiniMapWidget;
 
 /**
  * 모든 메인 HUD 구성요소(미니맵, 파티창, 스탯, 슬롯 등)를
@@ -27,4 +28,8 @@ public:
 	// 적 상태 위젯
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UDGEnemyStatusWidget> EnemyStatusWidget;
+
+	// 미니맵 위젯
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UDGMiniMapWidget> MiniMapWidget;
 };
