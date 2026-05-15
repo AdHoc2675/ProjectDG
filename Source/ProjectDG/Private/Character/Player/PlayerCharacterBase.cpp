@@ -85,6 +85,9 @@ APlayerCharacterBase::APlayerCharacterBase()
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 720.0f, 0.f);
 	
+	AutoPossessPlayer = EAutoReceiveInput::Disabled;
+	AutoPossessAI = EAutoPossessAI::Disabled;
+	
 }
 
 void APlayerCharacterBase::BeginPlay()

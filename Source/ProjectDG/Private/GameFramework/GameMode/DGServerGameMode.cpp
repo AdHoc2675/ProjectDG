@@ -5,7 +5,9 @@
 #include "Engine/World.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/GameSession.h"
+#include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/PlayerState.h"
 #include "HttpModule.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Interfaces/IHttpResponse.h"
@@ -134,6 +136,28 @@ void ADGServerGameMode::PostLogin(APlayerController* NewPlayer)
 		*NewPlayer->GetName()
 	));
 
+	APawn* ControlledPawn = NewPlayer->GetPawn();
+	APlayerState* PS = NewPlayer->PlayerState.Get();
+
+	const FString PlayerName = IsValid(NewPlayer)
+		? NewPlayer->GetName()
+		: TEXT("None");
+
+	const FString PawnName = IsValid(ControlledPawn)
+		? ControlledPawn->GetName()
+		: TEXT("None");
+
+	const FString PlayerStateName = IsValid(PS)
+		? PS->GetName()
+		: TEXT("None");
+
+	Debug::Print(FString::Printf(
+		TEXT("[DGServerGameMode] PostLogin Pawn Check. Player=%s Pawn=%s PlayerState=%s"),
+		*PlayerName,
+		*PawnName,
+		*PlayerStateName
+	));
+
 	if (GetNetMode() == NM_DedicatedServer)
 	{
 		ConnectedPlayerCount++;
@@ -150,6 +174,23 @@ void ADGServerGameMode::Logout(AController* Exiting)
 	const FString ExitingName = IsValid(Exiting)
 		? Exiting->GetName()
 		: TEXT("None");
+
+	APawn* ExitingPawn = IsValid(Exiting)
+		? Exiting->GetPawn()
+		: nullptr;
+
+	if (GetNetMode() == NM_DedicatedServer && IsValid(ExitingPawn))
+	{
+		const FString ExitingPawnName = ExitingPawn->GetName();
+
+		Debug::Print(FString::Printf(
+			TEXT("[DGServerGameMode] Logout. Destroy exiting pawn. Player=%s Pawn=%s"),
+			*ExitingName,
+			*ExitingPawnName
+		));
+
+		ExitingPawn->Destroy();
+	}
 
 	Super::Logout(Exiting);
 
@@ -169,6 +210,43 @@ void ADGServerGameMode::Logout(AController* Exiting)
 	TryReportSessionEndedIfNoPlayers();
 }
 
+void ADGServerGameMode::RestartPlayer(AController* NewPlayer)
+{
+	const FString ControllerName = IsValid(NewPlayer)
+		? NewPlayer->GetName()
+		: TEXT("None");
+
+	APawn* PawnBefore = IsValid(NewPlayer)
+		? NewPlayer->GetPawn()
+		: nullptr;
+
+	const FString PawnBeforeName = IsValid(PawnBefore)
+		? PawnBefore->GetName()
+		: TEXT("None");
+
+	Debug::Print(FString::Printf(
+		TEXT("[DGServerGameMode] RestartPlayer Begin. Controller=%s PawnBefore=%s"),
+		*ControllerName,
+		*PawnBeforeName
+	));
+
+	Super::RestartPlayer(NewPlayer);
+
+	APawn* PawnAfter = IsValid(NewPlayer)
+		? NewPlayer->GetPawn()
+		: nullptr;
+
+	const FString PawnAfterName = IsValid(PawnAfter)
+		? PawnAfter->GetName()
+		: TEXT("None");
+
+	Debug::Print(FString::Printf(
+		TEXT("[DGServerGameMode] RestartPlayer End. Controller=%s PawnAfter=%s"),
+		*ControllerName,
+		*PawnAfterName
+	));
+}
+
 void ADGServerGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (GetNetMode() == NM_DedicatedServer && !ActiveSessionId.IsEmpty() && !bSessionEndReported)
@@ -178,6 +256,8 @@ void ADGServerGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		bSessionEndReported = true;
 
 		StopSessionHeartbeat();
+
+		ActiveSessionId.Empty();
 
 		ReportSessionEndedAsync(SessionIdToEnd);
 	}
@@ -633,6 +713,8 @@ void ADGServerGameMode::TryReportSessionEndedIfNoPlayers()
 
 	StopSessionHeartbeat();
 
+	ActiveSessionId.Empty();
+
 	ReportSessionEndedAsync(SessionIdToEnd);
 }
 
@@ -651,6 +733,18 @@ void ADGServerGameMode::KickPlayerWithReason(
 		*PlayerController->GetName(),
 		*Reason
 	));
+
+	APawn* PawnToDestroy = PlayerController->GetPawn();
+
+	if (IsValid(PawnToDestroy))
+	{
+		Debug::Print(FString::Printf(
+			TEXT("[DGServerGameMode] Kick Player. Destroy pawn. Pawn=%s"),
+			*PawnToDestroy->GetName()
+		));
+
+		PawnToDestroy->Destroy();
+	}
 
 	if (GameSession)
 	{

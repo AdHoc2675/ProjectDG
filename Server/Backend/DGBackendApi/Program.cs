@@ -123,7 +123,7 @@ app.MapPost("/api/sessions/create", async (
         RegionId = request.RegionId,
         RoomName = roomName,
         RoomPasswordHash = HashRoomPassword(request.RoomPassword),
-        MapPath = "/Game/Personal/DOHEE/Level/ServerTest",
+       MapPath = "/Game/Assets/FC_MedievalMonastery_0/Maps/Map_Monastery_4km_Dawn_WP",
         ServerIp = "61.80.6.36",
         ServerPort = 7777,
         Status = "Open",
@@ -250,10 +250,36 @@ app.MapPost("/api/sessions/join", async (
     }
 
     var joinedMemberCount = session.Members.Count(x => x.Status == "Joined");
-    var existingMember = session.Members.FirstOrDefault(x => x.CharacterId == request.CharacterId);
-    var joinToken = $"local-token-{Guid.NewGuid():N}";
 
-    if (existingMember == null && joinedMemberCount >= session.MaxPlayers)
+    var joinedSameAccount = session.Members.FirstOrDefault(x =>
+        x.AccountId == request.AccountId &&
+        x.Status == "Joined"
+    );
+
+    if (joinedSameAccount != null)
+    {
+        return Results.BadRequest(new
+        {
+            success = false,
+            message = "Account is already joined in this session."
+        });
+    }
+
+    var joinedSameCharacter = session.Members.FirstOrDefault(x =>
+        x.CharacterId == request.CharacterId &&
+        x.Status == "Joined"
+    );
+
+    if (joinedSameCharacter != null)
+    {
+        return Results.BadRequest(new
+        {
+            success = false,
+            message = "Character is already joined in this session."
+        });
+    }
+
+    if (joinedMemberCount >= session.MaxPlayers)
     {
         return Results.BadRequest(new
         {
@@ -262,34 +288,20 @@ app.MapPost("/api/sessions/join", async (
         });
     }
 
-    if (existingMember != null)
-    {
-        existingMember.AccountId = request.AccountId;
-        existingMember.Status = "Joined";
-        existingMember.JoinToken = joinToken;
-        existingMember.JoinedAtUtc = DateTime.UtcNow;
-        existingMember.LeftAtUtc = null;
+    var joinToken = $"local-token-{Guid.NewGuid():N}";
 
-        if (existingMember.Role != "Leader")
-        {
-            existingMember.Role = "Member";
-        }
-    }
-    else
+    var member = new SessionMember
     {
-        var member = new SessionMember
-        {
-            SessionId = session.SessionId,
-            AccountId = request.AccountId,
-            CharacterId = request.CharacterId,
-            Role = "Member",
-            Status = "Joined",
-            JoinToken = joinToken,
-            JoinedAtUtc = DateTime.UtcNow
-        };
+        SessionId = session.SessionId,
+        AccountId = request.AccountId,
+        CharacterId = request.CharacterId,
+        Role = "Member",
+        Status = "Joined",
+        JoinToken = joinToken,
+        JoinedAtUtc = DateTime.UtcNow
+    };
 
-        db.SessionMembers.Add(member);
-    }
+    db.SessionMembers.Add(member);
 
     await db.SaveChangesAsync();
 
@@ -579,6 +591,15 @@ app.MapPost("/api/sessions/heartbeat", async (
 
 /**
  * 세션 종료 보고 API
+ *
+ * Dedicated Server가 종료되거나,
+ * 마지막 플레이어가 나갔을 때 호출한다.
+ *
+ * 처리 흐름:
+ * - sessions.status를 Ended로 변경
+ * - sessions.ended_at_utc 기록
+ * - sessions.last_heartbeat_at_utc 갱신
+ * - 해당 세션의 Joined 멤버들을 Left 처리
  */
 app.MapPost("/api/sessions/session-ended", async (
     SessionEndedRequest request,
@@ -597,6 +618,7 @@ app.MapPost("/api/sessions/session-ended", async (
     }
 
     var session = await db.Sessions
+        .Include(x => x.Members)
         .FirstOrDefaultAsync(x => x.SessionId == request.SessionId);
 
     if (session == null)
@@ -620,6 +642,19 @@ app.MapPost("/api/sessions/session-ended", async (
     }
 
     session.LastHeartbeatAtUtc = now;
+
+    foreach (var member in session.Members)
+    {
+        if (member.Status == "Joined")
+        {
+            member.Status = "Left";
+
+            if (member.LeftAtUtc == null)
+            {
+                member.LeftAtUtc = now;
+            }
+        }
+    }
 
     await db.SaveChangesAsync();
 

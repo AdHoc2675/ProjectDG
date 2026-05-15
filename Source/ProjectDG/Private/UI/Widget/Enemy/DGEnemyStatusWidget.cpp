@@ -2,7 +2,23 @@
 
 
 #include "UI/Widget/Enemy/DGEnemyStatusWidget.h"
+#include "UI/WidgetController/DGOverlayWidgetController.h"
 #include "Components/TextBlock.h"
+
+#include "Core/DG_Debug.h"
+
+void UDGEnemyStatusWidget::BindToController(UDGOverlayWidgetController* Controller) {
+	if (!Controller) return;
+
+	// 상속받은 DGUserWidget의 캐싱 변수에 저장 (혹시 블루프린트에서 필요할 수 있으므로)
+	SetWidgetController(Controller);
+
+	// 컨트롤러의 이벤트에 Dynamic 바인딩
+	Controller->OnEnemyHealthChanged.AddDynamic(this, &UDGEnemyStatusWidget::UpdateHealth);
+	Controller->OnEnemyGroggyChanged.AddDynamic(this, &UDGEnemyStatusWidget::UpdateGroggyGauge);
+
+	Debug::Print(FString::Printf(TEXT("[DGEnemyStatusWidget] successfully bound to controller: %s"), *Controller->GetName()));
+}
 
 void UDGEnemyStatusWidget::InitEnemyStatus(const FString& InName, int32 InMaxBars)
 {
