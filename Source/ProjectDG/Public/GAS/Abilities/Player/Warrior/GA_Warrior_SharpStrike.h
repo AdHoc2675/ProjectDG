@@ -66,6 +66,9 @@ private:
 
 	bool bComboInputWindowOpen = false;
 	bool bComboInputBuffered = false;
+	
+	// Montage의 ANS 콤보 중복 방지 로직 강화 : 한 콤보 내에서 데미지 적용된 액터 중복데미지 방지
+	TSet<TWeakObjectPtr<AActor>> HitActorsThisCombo;
 
 	void ResetComboState();
 

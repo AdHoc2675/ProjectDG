@@ -97,9 +97,9 @@ void UPlayerCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	
 	if (FMath::Abs(MeleeTwist) > KINDA_SMALL_NUMBER)
 	{
-		UE_LOG(LogTemp, Log, TEXT("MeleeTwist=%.2f Normalized=%.2f FinalMoveRight=%.2f"),
-				MeleeTwist,
-				NormalizedMeleeTwist,
-				FinalMoveRight);
+		// UE_LOG(LogTemp, Log, TEXT("MeleeTwist=%.2f Normalized=%.2f FinalMoveRight=%.2f"),
+		// 		MeleeTwist,
+		// 		NormalizedMeleeTwist,
+		// 		FinalMoveRight);
 	}
 }

@@ -221,7 +221,12 @@ protected:
 
 	/** 슬롯 입력 해제 처리 공통 함수 */
 	void OnSkillInputCompleted(FGameplayTag SlotTag);
-
+	
+	// <서버 관련> 
+	/** 슬롯 입력 유지 상태를 서버에도 반영 */
+	UFUNCTION(Server, Reliable)
+	void ServerSetSkillInputHeld(FGameplayTag SlotTag, bool bHeld);
+	
 public:
 	/** 특정 슬롯 키가 현재 눌려 있는지 확인 */
 	UFUNCTION(BlueprintCallable, Category = "PlayerCharacterBase|Input|Skill")
@@ -253,6 +258,12 @@ protected:
 	// 임시 진입점이며, 나중에 실제 GA/Skill 구조로 이전 예정.
 	UFUNCTION(Server, Reliable)
 	void Server_TestApplyDamage();
+	
+public:
+	// Skill Debug : GA 실행 및 충돌 판정 등은 서버에서만 실행되며 해당 로직에 따른 디버그라인 그리기 로직 또한 서버에서만 실행됐었음 
+	// -> 서버에서 그려지는 디버그를 그대로 클라이언트에서 받아올 수 있게 설정
+	UFUNCTION(Client, Unreliable)
+	void ClientDrawAttackTraceDebug(FVector_NetQuantize Start, FVector_NetQuantize End, float Radius, FColor Color, float Duration);
 	
 #pragma endregion Skill
 	
