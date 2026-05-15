@@ -3,6 +3,7 @@ using System;
 using DGBackendApi.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DGBackendApi.Migrations
 {
     [DbContext(typeof(DGDbContext))]
-    partial class DGDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260515063216_AddDedicatedServerRuntimeFields")]
+    partial class AddDedicatedServerRuntimeFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -88,14 +91,11 @@ namespace DGBackendApi.Migrations
                         .HasColumnName("server_port");
 
                     b.Property<int?>("ServerProcessId")
-                        .HasColumnType("integer")
-                        .HasColumnName("server_process_id");
+                        .HasColumnType("integer");
 
                     b.Property<string>("ServerRuntimeStatus")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("server_runtime_status");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("StartedAtUtc")
                         .HasColumnType("timestamp with time zone")

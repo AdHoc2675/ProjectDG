@@ -56,6 +56,13 @@ entity.Property(x => x.RoomPasswordHash)
             entity.Property(x => x.ServerPort)
                 .HasColumnName("server_port");
 
+entity.Property(x => x.ServerProcessId)
+    .HasColumnName("server_process_id");
+
+entity.Property(x => x.ServerRuntimeStatus)
+    .HasColumnName("server_runtime_status")
+    .HasMaxLength(30);
+
             entity.Property(x => x.Status)
                 .HasColumnName("status")
                 .HasMaxLength(30);
