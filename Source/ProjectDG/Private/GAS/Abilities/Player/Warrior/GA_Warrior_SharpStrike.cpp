@@ -242,12 +242,12 @@ void UGA_Warrior_SharpStrike::OnComboInputWindowOpened(FGameplayEventData Payloa
 
   void UGA_Warrior_SharpStrike::OnMontageCompleted()
   {
-        if (IsSharpStrikeInputHeld())
-        {
-                ResetComboState();
-                PlaySharpStrikeMontageFromStart();
-                return;
-        }
+        // if (IsSharpStrikeInputHeld())
+        // {
+        //         ResetComboState();
+        //         PlaySharpStrikeMontageFromStart();
+        //         return;
+        // }
         
         K2_EndAbility();
   }
