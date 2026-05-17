@@ -81,6 +81,19 @@ void UGA_Warrior_SharpStrike::ActivateAbility(const FGameplayAbilitySpecHandle H
                 ComboBranchTask->ReadyForActivation();
         }
         
+        SharpStrikeInputPressedTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+        this,
+        DGGameplayTags::Skill_Warrior_SharpStrike.GetTag(),
+        nullptr,
+        false,
+        true);
+        
+        if (SharpStrikeInputPressedTask)
+        {
+                SharpStrikeInputPressedTask->EventReceived.AddDynamic(this, &UGA_Warrior_SharpStrike::OnSharpStrikeInputPressed);
+                SharpStrikeInputPressedTask->ReadyForActivation();
+        }
+        
         AttackHitTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
                 this,
                 DGGameplayTags::Event_Attack_Hit.GetTag(),
@@ -267,6 +280,16 @@ void UGA_Warrior_SharpStrike::OnComboInputWindowOpened(FGameplayEventData Payloa
   {
         K2_EndAbility();
   }
+
+void UGA_Warrior_SharpStrike::OnSharpStrikeInputPressed(FGameplayEventData Payload)
+{
+        if (!bComboInputWindowOpen)
+        {
+                return;
+        }
+
+        bComboInputBuffered = true;
+}
 
 float UGA_Warrior_SharpStrike::GetCurrentComboDamage() const
 {

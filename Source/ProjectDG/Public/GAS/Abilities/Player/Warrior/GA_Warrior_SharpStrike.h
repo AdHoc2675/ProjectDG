@@ -55,6 +55,10 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<class UAbilityTask_WaitGameplayEvent> ComboBranchTask;
+	
+	// 입력 tap 관련 task
+	UPROPERTY()
+	TObjectPtr<class UAbilityTask_WaitGameplayEvent> SharpStrikeInputPressedTask;
 
 	int32 CurrentComboIndex = 1;
 
@@ -91,6 +95,9 @@ private:
 
 	UFUNCTION()
 	void OnMontageCancelled();
+	
+	UFUNCTION()
+	void OnSharpStrikeInputPressed(FGameplayEventData Payload);
 	
 // 데미지 관련 로직
 private:
