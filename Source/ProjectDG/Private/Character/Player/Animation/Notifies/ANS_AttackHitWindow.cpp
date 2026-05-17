@@ -460,15 +460,16 @@ void UANS_AttackHitWindow::TraceForwardBox(USkeletalMeshComponent* CharacterMesh
 
       if (bEnableDebugDraw)
       {
-          DrawDebugBox(
-                  World,
-                  Center,
-                  BoxHalfExtent,
-                  BoxRotation,
-                  bAcceptedAnyHit ? FColor::Green : FColor::Red,
-                  false,
-                  DebugDrawDuration
-          );
+              if (APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(OwnerActor))
+              {
+                      PlayerCharacter->ClientDrawAttackBoxDebug(
+                              Center,
+                              BoxHalfExtent,
+                              BoxRotation.Rotator(),
+                              bAcceptedAnyHit ? FColor::Green : FColor::Red,
+                              DebugDrawDuration
+                      );
+              }
       }  
 }
 

@@ -265,6 +265,12 @@ public:
 	UFUNCTION(Client, Unreliable)
 	void ClientDrawAttackTraceDebug(FVector_NetQuantize Start, FVector_NetQuantize End, float Radius, FColor Color, float Duration);
 	
+	// Socket의 Trace가 아닌 BoxCollision Debugline을 볼 때 사용하는 클라이언트 drawdebug 함수
+	UFUNCTION(Client, Unreliable)
+	void ClientDrawAttackBoxDebug(FVector_NetQuantize Center, FVector_NetQuantize BoxHalfExtent, FRotator BoxRotation,FColor Color, float Duration);
+
+	
+	
 #pragma endregion Skill
 	
 #pragma region Movement

@@ -820,6 +820,26 @@ void APlayerCharacterBase::ClientDrawAttackTraceDebug_Implementation(FVector_Net
 	DrawDebugLine(World, Start, End, Color, false, Duration, 0, 1.5f);
 }
 
+void APlayerCharacterBase::ClientDrawAttackBoxDebug_Implementation(FVector_NetQuantize Center,
+	FVector_NetQuantize BoxHalfExtent, FRotator BoxRotation, FColor Color, float Duration)
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	DrawDebugBox(
+			World,
+			Center,
+			BoxHalfExtent,
+			BoxRotation.Quaternion(),
+			Color,
+			false,
+			Duration
+	);
+}
+
 void APlayerCharacterBase::InitializeMovementStats()
 {
 	if (!CharacterClassData || !CharacterClassData->MovementData) return;
