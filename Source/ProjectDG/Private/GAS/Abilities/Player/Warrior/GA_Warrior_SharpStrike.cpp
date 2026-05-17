@@ -31,9 +31,8 @@ void UGA_Warrior_SharpStrike::ActivateAbility(const FGameplayAbilitySpecHandle H
                 return;
         }
 
-        if (!SharpStrikeFullBodyMontage || !SharpStrikeUpperBodyMontage)
+        if (!SharpStrikeMontage)
         {
-                // Debug::Print(TEXT("[GA_Warrior_SharpStrike] SharpStrikeMontage is null."), FColor::Red);
                 EndAbility(Handle, OwnerInfo, ActivationInfo, true, true);
                 return;
         }
@@ -183,16 +182,14 @@ void UGA_Warrior_SharpStrike::TryJumpToNextComboSection()
 
 void UGA_Warrior_SharpStrike::PlaySharpStrikeMontageFromStart()
 {
-        UAnimMontage* MontageToPlay = GetSharpStrikeMontageToPlay();
-        if (!MontageToPlay)
+        if (!SharpStrikeMontage)
         {
-                // Debug::Print(TEXT("[GA_Warrior_SharpStrike] MontageToPlay is null."), FColor::Red);
                 K2_EndAbility();
                 return;
         }
 
         MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this,TEXT("SharpStrikeMontageTask"),
-                MontageToPlay, SharpStrikePlayRate, Combo1SectionName);
+                SharpStrikeMontage, SharpStrikePlayRate, Combo1SectionName);
 
         if (!MontageTask)
         {
@@ -206,18 +203,6 @@ void UGA_Warrior_SharpStrike::PlaySharpStrikeMontageFromStart()
         MontageTask->OnCancelled.AddDynamic(this, &UGA_Warrior_SharpStrike::OnMontageCancelled);
 
         MontageTask->ReadyForActivation();
-}
-
-UAnimMontage* UGA_Warrior_SharpStrike::GetSharpStrikeMontageToPlay() const
-{
-        APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(GetAvatarActorFromActorInfo());
-        if (!PlayerCharacter)
-        {
-                return SharpStrikeFullBodyMontage;
-        }
-
-        const bool bIsMoving = PlayerCharacter->GetVelocity().Size2D() > MovingMontageThreshold;
-        return bIsMoving ? SharpStrikeUpperBodyMontage : SharpStrikeFullBodyMontage;
 }
 
 void UGA_Warrior_SharpStrike::OnComboInputWindowOpened(FGameplayEventData Payload)

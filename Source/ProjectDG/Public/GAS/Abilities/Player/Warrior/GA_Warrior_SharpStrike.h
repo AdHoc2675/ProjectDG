@@ -30,13 +30,7 @@ protected:
 	// TObjectPtr<UAnimMontage> SharpStrikeMontage;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "SharpStrike|Animation")
-	TObjectPtr<UAnimMontage> SharpStrikeFullBodyMontage;
-
-	UPROPERTY(EditDefaultsOnly, Category = "SharpStrike|Animation")
-	TObjectPtr<UAnimMontage> SharpStrikeUpperBodyMontage;
-
-	UPROPERTY(EditDefaultsOnly, Category = "SharpStrike|Animation")
-	float MovingMontageThreshold = 10.f;
+	TObjectPtr<UAnimMontage> SharpStrikeMontage;
 
 	UPROPERTY(EditDefaultsOnly, Category = "SharpStrike|Combo")
 	FName Combo1SectionName = TEXT("Combo_1");
@@ -76,8 +70,6 @@ private:
 	void TryBufferComboInputFromHeldState();
 	void TryJumpToNextComboSection();
 	void PlaySharpStrikeMontageFromStart();
-	
-	UAnimMontage* GetSharpStrikeMontageToPlay() const;
 
 	UFUNCTION()
 	void OnComboInputWindowOpened(FGameplayEventData Payload);
