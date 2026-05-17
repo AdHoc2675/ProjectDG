@@ -176,6 +176,18 @@ void UGA_Warrior_SharpStrike::TryJumpToNextComboSection()
                 // Debug::Print(TEXT("[GA_Warrior_SharpStrike] Jump to Combo_3."), FColor::Green);
                 return;
         }
+        if (CurrentComboIndex == 3)
+        {
+                if (!IsSharpStrikeInputHeld())
+                {
+                        return;
+                }
+
+                CurrentComboIndex = 1;
+                HitActorsThisCombo.Reset();
+                MontageJumpToSection(Combo1SectionName);
+                return;
+        }
 
         // Debug::Print(TEXT("[GA_Warrior_SharpStrike] ComboBranch ignored. Already at final combo."),FColor::Silver);
 }
