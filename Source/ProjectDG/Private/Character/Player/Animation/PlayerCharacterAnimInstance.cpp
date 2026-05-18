@@ -73,33 +73,35 @@ void UPlayerCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 			1.f
 	);
 	
-	float TargetRunBlendSpacePlayRate = 1.f;
-
-	if (UAbilitySystemComponent* ASC = PlayerCharacter->GetCharacterAbilitySystemComponent())
-	{
-		const bool bIsSharpStrikeActive =
-				ASC->HasMatchingGameplayTag(DGGameplayTags::State_Skill_Warrior_SharpStrike_Active.GetTag());
-
-		if (bIsSharpStrikeActive)
-		{
-			TargetRunBlendSpacePlayRate = SharpStrikeRunBlendSpacePlayRate;
-		}
-	}
-
-	CurrentRunBlendSpacePlayRate = FMath::FInterpTo(
-			CurrentRunBlendSpacePlayRate,
-			TargetRunBlendSpacePlayRate,
-			DeltaSeconds,
-			RunBlendSpacePlayRateInterpSpeed
-	);
-
-	RunBlendSpacePlayRate = CurrentRunBlendSpacePlayRate;
+	// Warrior 관련 함수 -> WarriorAnimInstance로 이전
 	
-	if (FMath::Abs(MeleeTwist) > KINDA_SMALL_NUMBER)
-	{
-		// UE_LOG(LogTemp, Log, TEXT("MeleeTwist=%.2f Normalized=%.2f FinalMoveRight=%.2f"),
-		// 		MeleeTwist,
-		// 		NormalizedMeleeTwist,
-		// 		FinalMoveRight);
-	}
+	// float TargetRunBlendSpacePlayRate = 1.f;
+	//
+	// if (UAbilitySystemComponent* ASC = PlayerCharacter->GetCharacterAbilitySystemComponent())
+	// {
+	// 	const bool bIsSharpStrikeActive =
+	// 			ASC->HasMatchingGameplayTag(DGGameplayTags::State_Skill_Warrior_SharpStrike_Active.GetTag());
+	//
+	// 	if (bIsSharpStrikeActive)
+	// 	{
+	// 		TargetRunBlendSpacePlayRate = SharpStrikeRunBlendSpacePlayRate;
+	// 	}
+	// }
+
+	// CurrentRunBlendSpacePlayRate = FMath::FInterpTo(
+	// 		CurrentRunBlendSpacePlayRate,
+	// 		TargetRunBlendSpacePlayRate,
+	// 		DeltaSeconds,
+	// 		RunBlendSpacePlayRateInterpSpeed
+	// );
+
+	// RunBlendSpacePlayRate = CurrentRunBlendSpacePlayRate;
+	
+	// if (FMath::Abs(MeleeTwist) > KINDA_SMALL_NUMBER)
+	// {
+	// 	// UE_LOG(LogTemp, Log, TEXT("MeleeTwist=%.2f Normalized=%.2f FinalMoveRight=%.2f"),
+	// 	// 		MeleeTwist,
+	// 	// 		NormalizedMeleeTwist,
+	// 	// 		FinalMoveRight);
+	// }
 }

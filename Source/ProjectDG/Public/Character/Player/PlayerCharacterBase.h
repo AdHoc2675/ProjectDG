@@ -227,6 +227,12 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void ServerSetSkillInputHeld(FGameplayTag SlotTag, bool bHeld);
 	
+	// (추가) Hold가 아닌 Tap으로 스킬 활성화
+	UFUNCTION(Server, Reliable)
+	void ServerSendSkillInputStartedEvent(FGameplayTag SkillTag);
+
+	void SendSkillInputStartedEvent(FGameplayTag SkillTag);
+	
 public:
 	/** 특정 슬롯 키가 현재 눌려 있는지 확인 */
 	UFUNCTION(BlueprintCallable, Category = "PlayerCharacterBase|Input|Skill")
@@ -264,6 +270,12 @@ public:
 	// -> 서버에서 그려지는 디버그를 그대로 클라이언트에서 받아올 수 있게 설정
 	UFUNCTION(Client, Unreliable)
 	void ClientDrawAttackTraceDebug(FVector_NetQuantize Start, FVector_NetQuantize End, float Radius, FColor Color, float Duration);
+	
+	// Socket의 Trace가 아닌 BoxCollision Debugline을 볼 때 사용하는 클라이언트 drawdebug 함수
+	UFUNCTION(Client, Unreliable)
+	void ClientDrawAttackBoxDebug(FVector_NetQuantize Center, FVector_NetQuantize BoxHalfExtent, FRotator BoxRotation,FColor Color, float Duration);
+
+	
 	
 #pragma endregion Skill
 	

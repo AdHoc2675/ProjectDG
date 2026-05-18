@@ -2,6 +2,7 @@
 
 #include "Character/Player/PlayerCharacterBase.h"
 
+#include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Core/DG_Debug.h"
@@ -707,11 +708,18 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 	if (!ASC) return;
 
 	FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
+	
 	if (SkillTag.IsValid())
 	{
 		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(SkillTag));
+		
+		SendSkillInputStartedEvent(SkillTag);
+		if (!HasAuthority())
+		{
+			ServerSendSkillInputStartedEvent(SkillTag);
+		}
 
-		FString Msg = FString::Printf(TEXT("Skill Input Started: %s -> Ability: %s"), *SlotTag.ToString(), *SkillTag.ToString());
+		// FString Msg = FString::Printf(TEXT("Skill Input Started: %s -> Ability: %s"), *SlotTag.ToString(), *SkillTag.ToString());
 		// Debug::Print(Msg, FColor::Green);
 	}
 }
@@ -731,6 +739,25 @@ void APlayerCharacterBase::OnSkillInputCompleted(FGameplayTag SlotTag)
 		FString Msg = FString::Printf(TEXT("Skill Input Completed: %s -> Ability: %s"), *SlotTag.ToString(),*SkillTag.ToString());
 		// Debug::Print(Msg, FColor::Silver);
 	}
+}
+
+void APlayerCharacterBase::ServerSendSkillInputStartedEvent_Implementation(FGameplayTag SkillTag)
+{
+	SendSkillInputStartedEvent(SkillTag);
+}
+
+void APlayerCharacterBase::SendSkillInputStartedEvent(FGameplayTag SkillTag)
+{
+	if (!SkillTag.IsValid())
+	{
+		return;
+	}
+
+	FGameplayEventData Payload;
+	Payload.EventTag = SkillTag;
+	Payload.Instigator = this;
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, SkillTag, Payload);
 }
 
 void APlayerCharacterBase::ServerSetSkillInputHeld_Implementation(FGameplayTag SlotTag, bool bHeld)
@@ -818,6 +845,26 @@ void APlayerCharacterBase::ClientDrawAttackTraceDebug_Implementation(FVector_Net
 	DrawDebugSphere(World, Start, Radius, 12, Color, false, Duration);
 	DrawDebugSphere(World, End, Radius, 12, Color, false, Duration);
 	DrawDebugLine(World, Start, End, Color, false, Duration, 0, 1.5f);
+}
+
+void APlayerCharacterBase::ClientDrawAttackBoxDebug_Implementation(FVector_NetQuantize Center,
+	FVector_NetQuantize BoxHalfExtent, FRotator BoxRotation, FColor Color, float Duration)
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	DrawDebugBox(
+			World,
+			Center,
+			BoxHalfExtent,
+			BoxRotation.Quaternion(),
+			Color,
+			false,
+			Duration
+	);
 }
 
 void APlayerCharacterBase::InitializeMovementStats()
