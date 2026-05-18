@@ -12,6 +12,8 @@
 #include "Interfaces/IHttpRequest.h"
 #include "Interfaces/IHttpResponse.h"
 #include "Kismet/GameplayStatics.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 
@@ -105,6 +107,8 @@ FString ADGServerGameMode::InitNewPlayer(
 		Debug::Print(TEXT("[DGServerGameMode] InitNewPlayer validation skipped. Not Dedicated Server."));
 		return ErrorMessage;
 	}
+
+	InitializeBackendBaseUrlFromCommandLine();
 
 	if (SessionId.IsEmpty())
 	{
@@ -267,6 +271,26 @@ void ADGServerGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 
 	Super::EndPlay(EndPlayReason);
+}
+
+void ADGServerGameMode::InitializeBackendBaseUrlFromCommandLine()
+{
+	FString CommandLineBackendUrl;
+
+	if (FParse::Value(FCommandLine::Get(), TEXT("BackendUrl="), CommandLineBackendUrl))
+	{
+		CommandLineBackendUrl.TrimStartAndEndInline();
+
+		if (!CommandLineBackendUrl.IsEmpty())
+		{
+			BackendBaseUrl = CommandLineBackendUrl;
+		}
+	}
+
+	Debug::Print(FString::Printf(
+		TEXT("[DGServerGameMode] BackendBaseUrl=%s"),
+		*BackendBaseUrl
+	));
 }
 
 void ADGServerGameMode::ValidateJoinTokenAsync(

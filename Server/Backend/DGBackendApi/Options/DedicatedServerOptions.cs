@@ -11,4 +11,6 @@ public class DedicatedServerOptions
     public int MinPort { get; set; } = 7777;
 
     public int MaxPort { get; set; } = 7799;
+
+    public string BackendBaseUrl { get; set; } = "http://localhost:8080";
 }

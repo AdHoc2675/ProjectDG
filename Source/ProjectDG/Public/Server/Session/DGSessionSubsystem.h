@@ -95,17 +95,19 @@ private:
 	/**
 	 * 참가 PC / 서버 PC 모두 Backend는 공인 IP로 접근한다.
 	 *
-	 * 서버 PC에서 Backend 실행:
-	 * http://0.0.0.0:8080
+	 * 기본값:
+	 * Stable Backend = http://61.80.6.36:8080
 	 *
-	 * 외부 접근 주소:
-	 * http://61.80.6.36:8080
+	 * 실행 인자:
+	 * -BackendUrl=http://61.80.6.36:8081
 	 */
 	UPROPERTY()
 	FString BackendBaseUrl = TEXT("http://61.80.6.36:8080");
 
 	UPROPERTY()
 	FDGSessionConnectionInfo LastSessionConnectionInfo;
+
+	void InitializeBackendBaseUrlFromCommandLine();
 
 	void HandleCreateSessionCompleted(
 		bool bSuccess,
