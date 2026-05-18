@@ -1,6 +1,8 @@
 ﻿#include "UI/Widget/DGOverlayWidget.h"
 #include "UI/Widget/DGPlayerStatWidget.h"
 #include "UI/Widget/Enemy/DGEnemyStatusWidget.h"
+#include "UI/Widget/DGMiniMapWidget.h"
+
 #include "UI/WidgetController/DGOverlayWidgetController.h"
 
 #include "Core/DG_Debug.h"
@@ -21,6 +23,11 @@ void UDGOverlayWidget::InitializeSubWidgets()
 		{
 			// Enemy 위젯 내부에 BindToOverlayController 함수를 만들고 연결
 			EnemyStatusWidget->BindToController(OverlayController);
+		}
+
+		if (MiniMapWidget)
+		{
+			MiniMapWidget->BindToController(OverlayController);
 		}
 
 		// 2. 나중에 추가될 다른 자식 위젯들도 여기서 바인딩
