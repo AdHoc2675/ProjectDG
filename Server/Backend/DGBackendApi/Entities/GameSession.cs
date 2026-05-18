@@ -19,6 +19,10 @@ public class GameSession
     public string ServerIp { get; set; } = string.Empty;
 
     public int ServerPort { get; set; }
+    
+    public int? ServerProcessId { get; set; }
+    
+    public string ServerRuntimeStatus { get; set; } = "None";
 
     public string Status { get; set; } = "Open";
 
