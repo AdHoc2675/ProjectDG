@@ -1,11 +1,15 @@
 ﻿#include "UI/Widget/DGMiniMapWidget.h"
 #include "UI/WidgetController/DGOverlayWidgetController.h"
 #include "Components/UI/DGMinimapMarkerComponent.h"
+#include "Components/UI/DGMinimapCaptureComponent.h"
 #include "UI/Widget/Minimap/DGMinimapMarkerWidget.h"
+#include "Materials/MaterialInstanceDynamic.h"
 
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
 #include "Components/Image.h"
+
+#include "Engine/TextureRenderTarget2D.h" 
 
 void UDGMiniMapWidget::BindToController(UDGOverlayWidgetController* Controller)
 {
@@ -67,14 +71,42 @@ void UDGMiniMapWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime
 
 void UDGMiniMapWidget::UpdateMarkers()
 {
-	if (ActiveMarkerWidgets.Num() == 0) return;
+	//if (ActiveMarkerWidgets.Num() == 0) return;
 
 	APawn* PlayerPawn = GetOwningPlayerPawn();
 	if (!PlayerPawn) return;
 
-	FVector PlayerLocation = PlayerPawn->GetActorLocation();
+	// 내 캐릭터에 달린 캡처 컴포넌트를 탐색
+	UDGMinimapCaptureComponent* CaptureComp = PlayerPawn->FindComponentByClass<UDGMinimapCaptureComponent>();
+	if (!CaptureComp) return;
 
-	// 모든 마커 UI를 순회하며 위치 갱신
+	// 렌더타겟을 UImage의 동적 머티리얼 인스턴스 파라미터로 삽입
+	if (MapBackgroundImage && CaptureComp->GetRenderTarget())
+	{
+		UMaterialInstanceDynamic* DynamicMat = MapBackgroundImage->GetDynamicMaterial();
+		if (DynamicMat)
+		{
+			// 머티리얼 파라미터 이름이 "RenderTexture" 라고 가정합니다.
+			// (에디터에서 미니맵 UI 머티리얼의 텍스처 파라미터 이름을 이거로 맞춰주세요)
+			DynamicMat->SetTextureParameterValue(FName("RenderTexture"), CaptureComp->GetRenderTarget());
+			MapBackgroundImage->SetRenderTranslation(FVector2D::ZeroVector);
+		}
+		else
+		{
+			// 만약 아직 동적 머티리얼이 안 만들어졌다면 생성해서 UImage에 꽂아줍니다.
+			// 에디터에서 UImage 브러시에 넣은 머티리얼을 기반으로 생성
+			if (UMaterialInterface* BaseMat = Cast<UMaterialInterface>(MapBackgroundImage->GetBrush().GetResourceObject()))
+			{
+				DynamicMat = UMaterialInstanceDynamic::Create(BaseMat, this);
+				DynamicMat->SetTextureParameterValue(FName("RenderTexture"), CaptureComp->GetRenderTarget());
+				MapBackgroundImage->SetBrushFromMaterial(DynamicMat);
+			}
+		}
+	}
+
+	//if (ActiveMarkerWidgets.Num() == 0) return;
+
+	// 각 마커 업데이트
 	for (const auto& Pair : ActiveMarkerWidgets)
 	{
 		UDGMinimapMarkerComponent* MarkerComp = Pair.Key;
@@ -84,58 +116,31 @@ void UDGMiniMapWidget::UpdateMarkers()
 		AActor* TargetActor = MarkerComp->GetOwner();
 		if (!TargetActor) continue;
 
-		// 1. 월드 상의 거리 및 방향 계산
-		FVector TargetLocation = TargetActor->GetActorLocation();
-		FVector RelativeLoc = TargetLocation - PlayerLocation;
+		// 1. 컴포넌트의 수학 공식 호출 (픽셀계산 제거! 0~1 값 추출)
+		FDGMinimapScreenPosition PosInfo = CaptureComp->WorldToScreenPosition(TargetActor->GetActorLocation());
 
-		// 2. 월드 좌표를 UMG 화면(Canvas) 평면 좌표계로 변환 (고정 북쪽 맵 기준)
-		// 월드 좌표 : +X 가 북쪽(위),     +Y 가 동쪽(우)
-		// UMG 좌표 : -Y 가 화면 위쪽,   +X 가 화면 오른쪽
-		float UI_X = RelativeLoc.Y;
-		float UI_Y = -RelativeLoc.X;
+		// 2. 반환받은 0~1 비율을 UMG의 뷰포인트 중심 좌표(-MapRadius ~ +MapRadius) 로 오프셋 변환
+		//    (0.5, 0.5 가 중심이므로 0.5를 빼줌)
+		float UI_X = (PosInfo.ScreenPosition.X - 0.5f) * (MapRadius * 2.f);
+		float UI_Y = (PosInfo.ScreenPosition.Y - 0.5f) * (MapRadius * 2.f);
 
 		FVector2D MapSpacePos(UI_X, UI_Y);
 
-		// 3. UI 스케일에 맞게 축소 (ex: 거리 1000cm를 픽셀 단위로 축소)
-		MapSpacePos *= ZoomScale;
-
-		// 4. (클램핑) 마커가 미니맵 반경을 벗어났다면 한계치 테두리에 밀착시킴
-		if (MapSpacePos.Size() > MapRadius)
+		// 3. 캡처 반경(원 밖)을 벗어나면 안 보이게 하거나/테두리에 걸치게 클램핑 처리
+		if (!PosInfo.bIsInRange)
 		{
+			// 테두리에 머물게 (클램핑)
 			MapSpacePos = MapSpacePos.GetSafeNormal() * MapRadius;
 		}
 
-		// 5. 계산된 위치로 마커 UI 이동
+		// 4. 위치 적용
 		MarkerWidget->SetRenderTranslation(MapSpacePos);
 
-		// 6. 회전 동기화 (적군이나 내 캐릭터 화살표가 도는 기능)
+		// 5. 컴포넌트 회전 여부(화살표)가 있으면 각도 동기화
 		if (MarkerComp->bTrackRotation)
 		{
 			FRotator TargetRot = TargetActor->GetActorRotation();
-			//MarkerWidget->SetRenderAngle(TargetRot.Yaw);
+			MarkerWidget->SetRenderTransformAngle(TargetRot.Yaw);
 		}
-	}
-
-	if (MapBackgroundImage)
-	{
-
-		// 1. 플레이어가 월드맵(WorldMapSize, 예: 400,000cm)의 '어느 비율(-1.0 ~ 1.0 등)' 위치에 있는지 구함
-		float RatioX = PlayerLocation.X / WorldMapSize;
-		float RatioY = PlayerLocation.Y / WorldMapSize;
-
-		// 2. 이미지가 2048x2048이므로, 이동해야 할 픽셀 거리를 환산
-		// X축(월드 앞뒤) 이동은 UI의 Y축(위아래) 픽셀 이동에 해당
-		// Y축(월드 좌우) 이동은 UI의 X축(좌우) 픽셀 이동에 해당
-		// 내 캐릭터가 앞으로(+X) 가면 배경은 뒤로(-Y) 가야 하므로 부호를 반대로 줍니다.
-
-		float ImageSize = 2048.0f; // 실제 UMG에 깔려있는 이미지의 해상도
-
-		float Background_UI_X = -(RatioY * ImageSize); // 동서 이동
-		float Background_UI_Y = (RatioX * ImageSize);  // 남북 이동 (언리얼 기준 +X가 북쪽인데 UI는 -Y가 위쪽)
-
-		FVector2D BackgroundOffset(Background_UI_X, Background_UI_Y);
-
-		// 3. 미니맵 배경 이미지의 위치 적용
-		MapBackgroundImage->SetRenderTranslation(BackgroundOffset);
 	}
 }

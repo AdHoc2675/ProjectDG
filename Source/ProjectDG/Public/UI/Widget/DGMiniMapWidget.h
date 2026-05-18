@@ -28,10 +28,6 @@ public:
 
     virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
-    // 미니맵 줌 배율 (화면 거리 대비 UMG 픽셀 거리)
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-    float ZoomScale = 0.1f;
-
     // 미니맵 반지름 한계치 픽셀 단위 (위젯 크기를 바탕으로 클리핑/가려짐 조절)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
     float MapRadius = 150.0f;
@@ -48,10 +44,6 @@ protected:
     // 실제 맵 이미지가 들어가는 위젯
     UPROPERTY(meta = (BindWidget))
     UImage* MapBackgroundImage;
-
-    // 이 맵 이미지의 실제 월드 사이즈
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-    float WorldMapSize = 400000.0f;
 
 private:
 	// 마커 컴포넌트와 위젯 간의 매핑을 관리하기 위한 핸들러
