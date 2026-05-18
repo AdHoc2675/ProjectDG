@@ -65,3 +65,90 @@ void ADG_HUD::BeginPlay()
 	Super::BeginPlay();
 }
 
+void ADG_HUD::ToggleMapWidget()
+{
+	bIsMapOpen = !bIsMapOpen;
+
+	if (bIsMapOpen)
+	{
+		if (FullMapWidget == nullptr && FullMapWidgetClass != nullptr)
+		{
+			FullMapWidget = CreateWidget<UDGUserWidget>(GetWorld(), FullMapWidgetClass);
+		}
+
+		if (FullMapWidget)
+		{
+			FullMapWidget->AddToViewport();
+			UpdateInputMode();
+
+			UE_LOG(LogTemp, Log, TEXT("[DG_HUD] Map Widget opened."));
+		}
+	}
+	else
+	{
+		if (FullMapWidget)
+		{
+			FullMapWidget->RemoveFromParent();
+			UpdateInputMode();
+
+			UE_LOG(LogTemp, Log, TEXT("[DG_HUD] Map Widget closed."));
+		}
+	}
+}
+
+void ADG_HUD::ToggleInventoryWidget()
+{
+
+	bIsInventoryOpen = !bIsInventoryOpen;
+
+	if (bIsInventoryOpen)
+	{
+		if (InventoryWidget == nullptr && InventoryWidgetClass != nullptr)
+		{
+			InventoryWidget = CreateWidget<UDGUserWidget>(GetWorld(), InventoryWidgetClass);
+		}
+
+		if (InventoryWidget)
+		{
+			InventoryWidget->AddToViewport();
+			UpdateInputMode();
+
+			UE_LOG(LogTemp, Log, TEXT("[DG_HUD] Inventory Widget opened."));
+		}
+	}
+	else
+	{
+		if (InventoryWidget)
+		{
+			InventoryWidget->RemoveFromParent();
+			UpdateInputMode();
+
+			UE_LOG(LogTemp, Log, TEXT("[DG_HUD] Inventory Widget closed."));
+		}
+	}
+}
+
+void ADG_HUD::UpdateInputMode()
+{
+	APlayerController* PC = GetOwningPlayerController();
+	if (!PC) return;
+
+	// 맵이나 인벤토리가 하나라도 열려있으면 마우스 활성화 및 UI 입력 전환
+	if (bIsMapOpen || bIsInventoryOpen)
+	{
+		PC->bShowMouseCursor = true;
+
+		// 마우스 클릭 시 UI와 게임 모두 반응하게 할 것인지, UI만 반응하게 할 것인지 결정
+		FInputModeGameAndUI InputMode;
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		PC->SetInputMode(InputMode);
+	}
+	else
+	{
+		// 모두 닫혀있으면 게임 입력으로 복귀
+		PC->bShowMouseCursor = false;
+
+		FInputModeGameOnly InputMode;
+		PC->SetInputMode(InputMode);
+	}
+}

@@ -351,6 +351,16 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	    EnhancedInputComponent->BindAction(IA_Skill_E, ETriggerEvent::Started, this,&APlayerCharacterBase::OnSkillInputStarted, DGGameplayTags::Input_Slot_E.GetTag());
 	    EnhancedInputComponent->BindAction(IA_Skill_E, ETriggerEvent::Completed, this,&APlayerCharacterBase::OnSkillInputCompleted, DGGameplayTags::Input_Slot_E.GetTag());
 	}
+
+	// UI 토글 (맵, 인벤토리)
+	if (IA_ToggleMap)
+	{
+		EnhancedInputComponent->BindAction(IA_ToggleMap, ETriggerEvent::Started, this, &APlayerCharacterBase::ToggleMapAction);
+	}
+	if (IA_ToggleInventory)
+	{
+		EnhancedInputComponent->BindAction(IA_ToggleInventory, ETriggerEvent::Started, this, &APlayerCharacterBase::ToggleInventoryAction);
+	}
 }
 
 UAbilitySystemComponent* APlayerCharacterBase::GetCharacterAbilitySystemComponent() const
@@ -658,6 +668,32 @@ FVector APlayerCharacterBase::GetDesiredMoveDirection() const
 		return Forward.GetSafeNormal();
 	}
 	return Direction.GetSafeNormal();
+}
+
+// 맵 UI를 호출하는 토글 함수
+void APlayerCharacterBase::ToggleMapAction()
+{
+	// 로컬 플레이어인지 확인 (자신의 UI만 컨트롤)
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ADG_HUD* HUD = Cast<ADG_HUD>(PC->GetHUD()))
+		{
+			HUD->ToggleMapWidget();
+		}
+	}
+}
+
+// 인벤토리 UI를 호출하는 토글 함수
+void APlayerCharacterBase::ToggleInventoryAction()
+{
+	// 로컬 플레이어인지 확인 (자신의 UI만 컨트롤)
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ADG_HUD* HUD = Cast<ADG_HUD>(PC->GetHUD()))
+		{
+			HUD->ToggleInventoryWidget();
+		}
+	}
 }
 
 void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
