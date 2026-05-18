@@ -315,13 +315,6 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 		// Completed: 버튼을 떼더라도 질주가 유지되게 하려면 여기서 질주를 끄지 않음
 	}
 	
-	// Skill Mapping
-	// if (IA_Skill_1) EnhancedInputComponent->BindAction(IA_Skill_1, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_1);
-	// if (IA_Skill_2) EnhancedInputComponent->BindAction(IA_Skill_2, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_2);
-	// if (IA_Skill_3) EnhancedInputComponent->BindAction(IA_Skill_3, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_3);
-	// if (IA_Skill_4) EnhancedInputComponent->BindAction(IA_Skill_4, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_4);
-	// if (IA_Skill_Q) EnhancedInputComponent->BindAction(IA_Skill_Q, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_Q);
-	// if (IA_Skill_E) EnhancedInputComponent->BindAction(IA_Skill_E, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInput_E);
 	
 	// Skill Mapping
 	if (IA_Skill_1)
@@ -474,14 +467,12 @@ void APlayerCharacterBase::InitializePlayerStateFromClassData()
 
 	if (!CharacterClassData)
 	{
-		// Debug::Print(TEXT("[PlayerCharacterBase] CharacterClassData is null."));
 		return;
 	}
 
 	ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>();
 	if (!PS)
 	{
-		// Debug::Print(TEXT("[PlayerCharacterBase] DG_PlayerState is null."));
 		return;
 	}
 
@@ -594,14 +585,6 @@ void APlayerCharacterBase::MoveAction(const FInputActionValue& InputActionValue)
 	
 	if (CurrentMoveInput.IsNearlyZero())
 	{
-		// if (bIsSprinting)
-		// {
-		// 	// 서버에 질주 종료 알림
-		// 	ServerSetSprinting(false, FVector::ZeroVector);
-		// 	
-		// 	//SprintCompleted();
-		// }
-		
 		return;
 	}
 	
@@ -678,23 +661,6 @@ FVector APlayerCharacterBase::GetDesiredMoveDirection() const
 	return Direction.GetSafeNormal();
 }
 
-// void APlayerCharacterBase::OnSkillInput(FGameplayTag SlotTag)
-// {
-// 	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
-// 	if (!ASC) return;
-//
-// 	FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
-// 	if (SkillTag.IsValid())
-// 	{
-// 		// 태그 기반으로 스킬 활성화
-// 		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(SkillTag));
-// 		
-// 		// [수정된 부분] FString::Printf 결과를 FString 변수에 먼저 담아서 넘깁니다.
-// 		FString Msg = FString::Printf(TEXT("Slot Input: %s -> Ability: %s"), *SlotTag.ToString(), *SkillTag.ToString());
-// 		Debug::Print(Msg, FColor::Green);
-// 	}
-// }
-
 void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 {
 	HeldSkillSlots.FindOrAdd(SlotTag) = true;
@@ -711,16 +677,26 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 	
 	if (SkillTag.IsValid())
 	{
-		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(SkillTag));
+		const bool bActivateResult = ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(SkillTag));
+		
+		Debug::Print(FString::Printf(
+				TEXT("[SharpStrikeInput][%s] OnSkillInputStarted Slot=%s Skill=%s ActivateResult=%s Authority=%s LocalRole=%dRemoteRole=%d Time=%.3f"),
+				*GetNameSafe(this),
+				*SlotTag.ToString(),
+				*SkillTag.ToString(),
+				bActivateResult ? TEXT("true") : TEXT("false"),
+				HasAuthority() ? TEXT("true") : TEXT("false"),
+				static_cast<int32>(GetLocalRole()),
+				static_cast<int32>(GetRemoteRole()),
+				GetWorld() ? GetWorld()->GetTimeSeconds() : -1.f
+		), bActivateResult ? FColor::Green : FColor::Red);
 		
 		SendSkillInputStartedEvent(SkillTag);
 		if (!HasAuthority())
 		{
 			ServerSendSkillInputStartedEvent(SkillTag);
 		}
-
-		// FString Msg = FString::Printf(TEXT("Skill Input Started: %s -> Ability: %s"), *SlotTag.ToString(), *SkillTag.ToString());
-		// Debug::Print(Msg, FColor::Green);
+		
 	}
 }
 
@@ -743,6 +719,16 @@ void APlayerCharacterBase::OnSkillInputCompleted(FGameplayTag SlotTag)
 
 void APlayerCharacterBase::ServerSendSkillInputStartedEvent_Implementation(FGameplayTag SkillTag)
 {
+	Debug::Print(FString::Printf(
+				TEXT("[SharpStrikeInput][%s] ServerSendSkillInputStartedEvent Skill=%s Authority=%s LocalRole=%d RemoteRole=%dTime=%.3f"),
+				*GetNameSafe(this),
+				*SkillTag.ToString(),
+				HasAuthority() ? TEXT("true") : TEXT("false"),
+				static_cast<int32>(GetLocalRole()),
+				static_cast<int32>(GetRemoteRole()),
+				GetWorld() ? GetWorld()->GetTimeSeconds() : -1.f
+		), FColor::Orange);
+	
 	SendSkillInputStartedEvent(SkillTag);
 }
 
@@ -757,6 +743,16 @@ void APlayerCharacterBase::SendSkillInputStartedEvent(FGameplayTag SkillTag)
 	Payload.EventTag = SkillTag;
 	Payload.Instigator = this;
 
+	Debug::Print(FString::Printf(
+		TEXT("[SharpStrikeInput][%s] SendGameplayEventToActor Event=%s Authority=%s LocalRole=%d RemoteRole=%d Time=%.3f"),
+		*GetNameSafe(this),
+		*SkillTag.ToString(),
+		HasAuthority() ? TEXT("true") : TEXT("false"),
+		static_cast<int32>(GetLocalRole()),
+		static_cast<int32>(GetRemoteRole()),
+		GetWorld() ? GetWorld()->GetTimeSeconds() : -1.f
+  ), FColor::Cyan);
+	
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, SkillTag, Payload);
 }
 
@@ -803,36 +799,6 @@ FGameplayTag APlayerCharacterBase::GetSkillTagForSlot(FGameplayTag SlotTag) cons
 	}
 	return FGameplayTag::EmptyTag;
 }
-
-// void APlayerCharacterBase::OnSkillInput_1()
-// {
-// 	OnSkillInput(DGGameplayTags::Input_Slot_1);
-// }
-//
-// void APlayerCharacterBase::OnSkillInput_2()
-// {
-// 	OnSkillInput(DGGameplayTags::Input_Slot_2);
-// }
-//
-// void APlayerCharacterBase::OnSkillInput_3()
-// {
-// 	OnSkillInput(DGGameplayTags::Input_Slot_3);
-// }
-//
-// void APlayerCharacterBase::OnSkillInput_4()
-// {
-// 	OnSkillInput(DGGameplayTags::Input_Slot_4);
-// }
-//
-// void APlayerCharacterBase::OnSkillInput_Q()
-// {
-// 	OnSkillInput(DGGameplayTags::Input_Slot_Q);
-// }
-//
-// void APlayerCharacterBase::OnSkillInput_E()
-// {
-// 	OnSkillInput(DGGameplayTags::Input_Slot_E);
-// }
 
 void APlayerCharacterBase::ClientDrawAttackTraceDebug_Implementation(FVector_NetQuantize Start, FVector_NetQuantize End, float Radius, FColor Color, float Duration)
 {
@@ -894,9 +860,6 @@ const FPlayerMovementAnimationSet& APlayerCharacterBase::GetCurrentMovementAnims
 
 void APlayerCharacterBase::ServerHandleShiftAction_Implementation(FVector_NetQuantizeNormal DodgeDirection, bool bHasInput)
 {
-	// 서버 로그 추가
-	// UE_LOG(LogTemp, Warning, TEXT("Server: Received Shift Action RPC. Direction: %s"), *DodgeDirection.ToString());
-
 	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
 	if (!ASC) return;
 
@@ -924,7 +887,7 @@ void APlayerCharacterBase::Server_TestApplyDamage_Implementation()
 	UCombatComponent* SourceCombatComponent = GetCombatComponent();
 	if (!SourceCombatComponent)
 	{
-		// Debug::Print(TEXT("[PlayerCharacterBase] TestDamage failed. CombatComponent is null."));
+		
 		return;
 	}
 
@@ -974,7 +937,7 @@ void APlayerCharacterBase::Server_TestApplyDamage_Implementation()
 
 	if (!BestTarget)
 	{
-		// Debug::Print(TEXT("[PlayerCharacterBase] TestDamage failed. No valid target in range."));
+		
 		return;
 	}
 
@@ -987,11 +950,4 @@ void APlayerCharacterBase::Server_TestApplyDamage_Implementation()
 	DamageRequest.bHasHitLocation = true;
 
 	const FDGDamageResult DamageResult = SourceCombatComponent->ApplyDamageRequest(DamageRequest);
-
-	// Debug::Print(FString::Printf(
-	// 	TEXT("[PlayerCharacterBase] Server_TestApplyDamage. Target=%s Success=%s Message=%s"),
-	// 	*GetNameSafe(BestTarget),
-	// 	DamageResult.bSuccess ? TEXT("true") : TEXT("false"),
-	// 	*DamageResult.Message
-	// ));
 }
