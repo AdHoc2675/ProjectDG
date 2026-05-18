@@ -9,6 +9,7 @@
 #include "Core/DG_GameplayTags.h"
 #include "Perception/AIPerceptionComponent.h"
 
+// AI 퍼셉션 컴포넌트의 타겟 인지 이벤트 바인딩
 void ABossAIController::BeginPlay()
 {
 	Super::BeginPlay();
@@ -22,6 +23,7 @@ void ABossAIController::BeginPlay()
 	}
 }
 
+// 타겟 인지 상태 변경 시 인지된 플레이어 목록 갱신
 void ABossAIController::HandleTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
 {
 	if (!HasAuthority() || !Actor)
@@ -48,6 +50,7 @@ void ABossAIController::HandleTargetPerceptionUpdated(AActor* Actor, FAIStimulus
 	RefreshTargetFromPerception();
 }
 
+// 인지된 플레이어 목록 중 가장 가까운 유효 타겟으로 블랙보드 갱신
 void ABossAIController::RefreshTargetFromPerception()
 {
 	UBlackboardComponent* BlackboardComp = GetBlackboardComponent();
@@ -99,6 +102,7 @@ void ABossAIController::RefreshTargetFromPerception()
 	}
 }
 
+// 액터가 유효한 플레이어 타겟(Team_Player 태그 보유)인지 판별
 bool ABossAIController::IsValidPlayerTarget(AActor* Actor) const
 {
 	if (!IsValid(Actor))
@@ -121,6 +125,7 @@ bool ABossAIController::IsValidPlayerTarget(AActor* Actor) const
 	return ASC->HasMatchingGameplayTag(DGGameplayTags::Team_Player.GetTag());
 }
 
+// 블랙보드에 설정된 타겟 관련 키 값들을 초기화
 void ABossAIController::ClearTargetOnBlackboard(UBlackboardComponent* BlackboardComp)
 {
 	if (!BlackboardComp)

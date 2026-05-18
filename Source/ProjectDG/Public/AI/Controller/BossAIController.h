@@ -15,13 +15,15 @@ class PROJECTDG_API ABossAIController : public AAIControllerBase
 {
 	GENERATED_BODY()
 
+public:
+	UFUNCTION(BlueprintCallable, Category = "AI|Target")
+	void RefreshTargetFromPerception();
+
 protected:
 	virtual void BeginPlay() override;
 
 	UFUNCTION()
 	void HandleTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
-
-	void RefreshTargetFromPerception();
 	bool IsValidPlayerTarget(AActor* Actor) const;
 	void ClearTargetOnBlackboard(class UBlackboardComponent* BlackboardComp);
 
