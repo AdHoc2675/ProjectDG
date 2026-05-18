@@ -58,6 +58,35 @@ void UANS_AttackHitWindow::NotifyBegin(USkeletalMeshComponent* MeshComp,UAnimSeq
         if (TraceMode == EAttackHitTraceMode::ForwardBoxOverlap)
         {
                 InitializeRuntimeData(MeshComp, nullptr);
+                
+                if (bLogWindowLifecycle)
+                {
+                        // AActor* OwnerActor = MeshComp ? MeshComp->GetOwner() : nullptr;
+                        UAnimInstance* AnimInstance = MeshComp ? MeshComp->GetAnimInstance() : nullptr;
+                        UAnimMontage* Montage = Cast<UAnimMontage>(Animation);
+        
+                        const float MontagePosition = (AnimInstance && Montage)
+                                ? AnimInstance->Montage_GetPosition(Montage)
+                                : -1.f;
+        
+                        const FString NetRoleText = OwnerActor
+                                ? FString::Printf(TEXT("Authority=%s LocalRole=%d RemoteRole=%d"),
+                                        OwnerActor->HasAuthority() ? TEXT("true") : TEXT("false"),
+                                        static_cast<int32>(OwnerActor->GetLocalRole()),
+                                        static_cast<int32>(OwnerActor->GetRemoteRole()))
+                                : TEXT("Owner=null");
+        
+                        Debug::Print(FString::Printf(
+                                TEXT("[ANS_AttackHitWindow] Begin Owner=%s Mesh=%s Anim=%s Duration=%.3f Pos=%.3f %s"),
+                                *GetNameSafe(OwnerActor),
+                                *GetNameSafe(MeshComp),
+                                *GetNameSafe(Animation),
+                                TotalDuration,
+                                MontagePosition,
+                                *NetRoleText
+                        ), FColor::Blue);
+                }
+                
                 return;
         }
 
@@ -69,33 +98,7 @@ void UANS_AttackHitWindow::NotifyBegin(USkeletalMeshComponent* MeshComp,UAnimSeq
 
         InitializeRuntimeData(MeshComp, WeaponMesh);
 
-        // if (bLogWindowLifecycle)
-        // {
-        //         AActor* OwnerActor = MeshComp ? MeshComp->GetOwner() : nullptr;
-        //         UAnimInstance* AnimInstance = MeshComp ? MeshComp->GetAnimInstance() : nullptr;
-        //         UAnimMontage* Montage = Cast<UAnimMontage>(Animation);
-        //
-        //         const float MontagePosition = (AnimInstance && Montage)
-        //                 ? AnimInstance->Montage_GetPosition(Montage)
-        //                 : -1.f;
-        //
-        //         const FString NetRoleText = OwnerActor
-        //                 ? FString::Printf(TEXT("Authority=%s LocalRole=%d RemoteRole=%d"),
-        //                         OwnerActor->HasAuthority() ? TEXT("true") : TEXT("false"),
-        //                         static_cast<int32>(OwnerActor->GetLocalRole()),
-        //                         static_cast<int32>(OwnerActor->GetRemoteRole()))
-        //                 : TEXT("Owner=null");
-        //
-        //         Debug::Print(FString::Printf(
-        //                 TEXT("[ANS_AttackHitWindow] Begin Owner=%s Mesh=%s Anim=%s Duration=%.3f Pos=%.3f %s"),
-        //                 *GetNameSafe(OwnerActor),
-        //                 *GetNameSafe(MeshComp),
-        //                 *GetNameSafe(Animation),
-        //                 TotalDuration,
-        //                 MontagePosition,
-        //                 *NetRoleText
-        //         ), FColor::Blue);
-        // }
+        
 }
 
 void UANS_AttackHitWindow::NotifyTick(USkeletalMeshComponent* MeshComp,UAnimSequenceBase* Animation,float FrameDeltaTime,const FAnimNotifyEventReference& EventReference)
@@ -141,32 +144,32 @@ void UANS_AttackHitWindow::NotifyEnd(USkeletalMeshComponent* MeshComp,UAnimSeque
         
         RuntimeDataMap.Remove(MeshComp);
         
-        // if (bLogWindowLifecycle)
-        // {
-        //         AActor* OwnerActor = MeshComp ? MeshComp->GetOwner() : nullptr;
-        //         UAnimInstance* AnimInstance = MeshComp ? MeshComp->GetAnimInstance() : nullptr;
-        //         UAnimMontage* Montage = Cast<UAnimMontage>(Animation);
-        //
-        //         const float MontagePosition = (AnimInstance && Montage)
-        //                 ? AnimInstance->Montage_GetPosition(Montage)
-        //                 : -1.f;
-        //
-        //         const FString NetRoleText = OwnerActor
-        //                 ? FString::Printf(TEXT("Authority=%s LocalRole=%d RemoteRole=%d"),
-        //                         OwnerActor->HasAuthority() ? TEXT("true") : TEXT("false"),
-        //                         static_cast<int32>(OwnerActor->GetLocalRole()),
-        //                         static_cast<int32>(OwnerActor->GetRemoteRole()))
-        //                 : TEXT("Owner=null");
-        //
-        //         Debug::Print(FString::Printf(
-        //                 TEXT("[ANS_AttackHitWindow] End Owner=%s Mesh=%s Anim=%s Pos=%.3f %s"),
-        //                 *GetNameSafe(OwnerActor),
-        //                 *GetNameSafe(MeshComp),
-        //                 *GetNameSafe(Animation),
-        //                 MontagePosition,
-        //                 *NetRoleText
-        //         ), FColor::Blue);
-        // }
+        if (bLogWindowLifecycle)
+        {
+                // AActor* OwnerActor = MeshComp ? MeshComp->GetOwner() : nullptr;
+                UAnimInstance* AnimInstance = MeshComp ? MeshComp->GetAnimInstance() : nullptr;
+                UAnimMontage* Montage = Cast<UAnimMontage>(Animation);
+        
+                const float MontagePosition = (AnimInstance && Montage)
+                        ? AnimInstance->Montage_GetPosition(Montage)
+                        : -1.f;
+        
+                const FString NetRoleText = OwnerActor
+                        ? FString::Printf(TEXT("Authority=%s LocalRole=%d RemoteRole=%d"),
+                                OwnerActor->HasAuthority() ? TEXT("true") : TEXT("false"),
+                                static_cast<int32>(OwnerActor->GetLocalRole()),
+                                static_cast<int32>(OwnerActor->GetRemoteRole()))
+                        : TEXT("Owner=null");
+        
+                Debug::Print(FString::Printf(
+                        TEXT("[ANS_AttackHitWindow] End Owner=%s Mesh=%s Anim=%s Pos=%.3f %s"),
+                        *GetNameSafe(OwnerActor),
+                        *GetNameSafe(MeshComp),
+                        *GetNameSafe(Animation),
+                        MontagePosition,
+                        *NetRoleText
+                ), FColor::Blue);
+        }
 }
 
 USkeletalMeshComponent* UANS_AttackHitWindow::ResolveWeaponMesh(USkeletalMeshComponent* CharacterMesh) const
