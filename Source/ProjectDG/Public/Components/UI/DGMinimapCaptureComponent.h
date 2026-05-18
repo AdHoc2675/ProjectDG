@@ -44,7 +44,7 @@ protected:
 	float CaptureHeight = 10000.f; // 카메라가 떠있는 높이
 
 	UPROPERTY(EditAnywhere, Category = "Capture")
-	float CaptureRadius = 5000.f; // 캡처 반경 (넓을수록 축소됨)
+	float CaptureRadius = 10000.f; // 캡처 반경 (넓을수록 축소됨)
 
 	UPROPERTY(EditAnywhere, Category = "Capture")
 	int32 RenderTargetResolution = 512;

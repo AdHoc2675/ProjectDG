@@ -39,4 +39,8 @@ public:
 	// 미니맵에서 내 회전 방향을 추적할지 여부
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
 	bool bTrackRotation = false;
+
+	// 이 마커가 '나(로컬 플레이어)'의 것인지 '남(파티원 등)'의 것인지 판별하는 유틸 함수
+	UFUNCTION(BlueprintPure, Category = "Minimap")
+	bool IsLocalPlayerMarker() const;
 };

@@ -1,6 +1,8 @@
 #include "Components/UI/DGMinimapMarkerComponent.h"
 #include "UI/Widget/Minimap/DGMinimapSubsystem.h"
 
+#include "GameFramework/Pawn.h"
+
 UDGMinimapMarkerComponent::UDGMinimapMarkerComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
@@ -32,4 +34,16 @@ void UDGMinimapMarkerComponent::EndPlay(const EEndPlayReason::Type EndPlayReason
 			MinimapSubsystem->UnregisterMarker(this);
 		}
 	}
+}
+
+bool UDGMinimapMarkerComponent::IsLocalPlayerMarker() const
+{
+	// 오너가 폰(Pawn)인지 확인
+	if (APawn* OwnerPawn = Cast<APawn>(GetOwner()))
+	{
+		// 폰이 내 로컬 컨트롤러에 의해 조종되고 있는지 확인
+		return OwnerPawn->IsLocallyControlled();
+	}
+
+	return false;
 }

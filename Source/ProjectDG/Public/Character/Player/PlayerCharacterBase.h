@@ -18,6 +18,8 @@ class UAnimMontage;
 
 struct FInputActionValue;
 class UAIPerceptionStimuliSourceComponent;
+class UDGMinimapCaptureComponent;
+class UDGMinimapMarkerComponent;
 
 /**
  * APlayerCharacterBase
@@ -279,4 +281,12 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void ServerHandleShiftAction(FVector_NetQuantizeNormal DodgeDirection, bool bHasInput);
 	
+protected:
+	// 미니맵 캡처용 컴포넌트 추가
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacterBase|Minimap")
+	TObjectPtr<UDGMinimapCaptureComponent> MinimapCaptureComponent;
+
+	// 미니맵 캡처용 컴포넌트 추가
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacterBase|Minimap")
+	TObjectPtr<UDGMinimapMarkerComponent> MinimapMarkerComponent;
 };
