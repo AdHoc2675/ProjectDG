@@ -8,7 +8,7 @@
 #include "AttributeSet.h"
 #include "BaseCharacter.generated.h"
 
-
+    
 class UCombatComponent;
 
 /**

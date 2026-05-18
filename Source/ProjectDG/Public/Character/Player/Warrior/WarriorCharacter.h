@@ -14,4 +14,14 @@ class PROJECTDG_API AWarriorCharacter : public APlayerCharacterBase
 {
 	GENERATED_BODY()
 	
+public:
+	AWarriorCharacter(); // 생성자 선언
+	
+public:
+	UFUNCTION(BlueprintCallable, Category = "Warrior|Weapon")
+	USkeletalMeshComponent* GetMainWeaponMesh() const { return MainWeaponMesh; }
+	
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Warrior|Weapon")
+	TObjectPtr<USkeletalMeshComponent> MainWeaponMesh;
 };
