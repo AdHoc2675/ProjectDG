@@ -31,6 +31,9 @@
 
 #include "UI/HUD/DG_HUD.h"
 
+#include "Components/UI/DGMinimapCaptureComponent.h"
+#include "Components/UI/DGMinimapMarkerComponent.h"
+
 APlayerCharacterBase::APlayerCharacterBase()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -89,6 +92,10 @@ APlayerCharacterBase::APlayerCharacterBase()
 	AutoPossessPlayer = EAutoReceiveInput::Disabled;
 	AutoPossessAI = EAutoPossessAI::Disabled;
 	
+	MinimapCaptureComponent = CreateDefaultSubobject<UDGMinimapCaptureComponent>(TEXT("MinimapCaptureComponent"));
+	MinimapMarkerComponent = CreateDefaultSubobject<UDGMinimapMarkerComponent>(TEXT("MinimapMarkerComponent"));
+
+	MinimapMarkerComponent->MarkerType = EMinimapMarkerType::Player;
 }
 
 void APlayerCharacterBase::BeginPlay()

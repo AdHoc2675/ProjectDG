@@ -4,6 +4,8 @@
 #include "UI/WidgetController/DGWidgetController.h"
 #include "DGOverlayWidgetController.generated.h"
 
+class UDG_AttributeSet;
+
 // UI 로 값 변화를 방송할 다이내믹 멀티캐스트 델리게이트 선언
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChangedSignature, float, NewHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHealthChangedSignature, float, NewMaxHealth);
@@ -17,7 +19,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyHealthChangedSignature, flo
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyGroggyChangedSignature, float, CurrentGroggy, float, MaxGroggy);
 
 
-class UDG_AttributeSet;
+// 미니맵 마커 전방 선언
+class UDGMinimapMarkerComponent;
+
+// 미니맵 마커 업데이트용 델리게이트 (매개변수로 MarkerComponent 전달)
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMinimapMarkerUpdatedSignature, UDGMinimapMarkerComponent*, Marker);
+
 
 UCLASS()
 class PROJECTDG_API UDGOverlayWidgetController : public UDGWidgetController
@@ -70,6 +77,25 @@ protected:
 	FDelegateHandle EnemyHealthChangedDelegateHandle;
 	FDelegateHandle EnemyMaxHealthChangedDelegateHandle;
 	// FDelegateHandle EnemyGroggyChangedDelegateHandle; // 필요시 사용
+
+#pragma endregion
+
+#pragma region Minimap
+public:
+	// --- 미니맵 델리게이트 ---
+	UPROPERTY(BlueprintAssignable, Category = "Minimap")
+	FOnMinimapMarkerUpdatedSignature OnMarkerAdded;
+
+	UPROPERTY(BlueprintAssignable, Category = "Minimap")
+	FOnMinimapMarkerUpdatedSignature OnMarkerRemoved;
+
+protected:
+	// --- 미니맵 핸들러 ---
+	UFUNCTION()
+	void HandleMarkerRegistered(UDGMinimapMarkerComponent* Marker);
+
+	UFUNCTION()
+	void HandleMarkerUnregistered(UDGMinimapMarkerComponent* Marker);
 
 #pragma endregion
 };
