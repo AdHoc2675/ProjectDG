@@ -2,7 +2,10 @@ using System.Security.Cryptography;
 using System.Text;
 using DGBackendApi.Data;
 using DGBackendApi.Entities;
+using DGBackendApi.Options;
+using DGBackendApi.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +14,11 @@ builder.Services.AddDbContext<DGDbContext>(options =>
     var connectionString = builder.Configuration.GetConnectionString("ProjectDGDatabase");
     options.UseNpgsql(connectionString);
 });
+
+builder.Services.Configure<DedicatedServerOptions>(
+    builder.Configuration.GetSection("DedicatedServer"));
+
+builder.Services.AddScoped<DedicatedServerLauncherService>();
 
 var app = builder.Build();
 
@@ -46,8 +54,10 @@ app.MapGet("/health", () =>
  * - RoomPassword는 Hash로만 저장
  */
 app.MapPost("/api/sessions/create", async (
-    CreateSessionRequest request,
-    DGDbContext db
+       CreateSessionRequest request,
+    DGDbContext db,
+    DedicatedServerLauncherService serverLauncher,
+    IOptions<DedicatedServerOptions> dedicatedServerOptions
 ) =>
 {
     if (request.AccountId <= 0)
@@ -115,6 +125,19 @@ app.MapPost("/api/sessions/create", async (
     var sessionId = $"local-session-{Guid.NewGuid():N}";
     var joinToken = $"local-token-{Guid.NewGuid():N}";
 
+var launchResult = await serverLauncher.LaunchAsync(sessionId);
+
+if (!launchResult.Success)
+{
+    return Results.BadRequest(new
+    {
+        success = false,
+        message = launchResult.Message
+    });
+}
+
+var dedicatedServer = dedicatedServerOptions.Value;
+
     var session = new GameSession
     {
         SessionId = sessionId,
@@ -123,10 +146,12 @@ app.MapPost("/api/sessions/create", async (
         RegionId = request.RegionId,
         RoomName = roomName,
         RoomPasswordHash = HashRoomPassword(request.RoomPassword),
-       MapPath = "/Game/Assets/FC_MedievalMonastery_0/Maps/Map_Monastery_4km_Dawn_WP",
-        ServerIp = "61.80.6.36",
-        ServerPort = 7777,
-        Status = "Open",
+       MapPath = dedicatedServer.MapPath,
+ServerIp = dedicatedServer.PublicServerIp,
+        ServerPort = launchResult.ServerPort,
+ServerProcessId = launchResult.ProcessId,
+ServerRuntimeStatus = "Starting",
+Status = "Open",
         MaxPlayers = 4,
         CreatedAtUtc = DateTime.UtcNow
     };
@@ -682,7 +707,7 @@ static string HashRoomPassword(string roomPassword)
     return Convert.ToHexString(hashBytes);
 }
 
-app.Run("http://0.0.0.0:8080");
+app.Run();
 
 public record CreateSessionRequest(
     long AccountId,

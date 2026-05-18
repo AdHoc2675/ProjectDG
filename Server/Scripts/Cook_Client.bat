@@ -5,11 +5,11 @@ echo ========================================
 echo ProjectDG Cook Client
 echo ========================================
 
-set "PROJECT_ROOT=C:\Users\KGA\Desktop\ProjectDG"
-set "ENGINE_ROOT=C:\Users\KGA\Desktop\UnrealEngine-release"
+set "PROJECT_ROOT=D:\ProjectDG"
+set "ENGINE_ROOT=D:\UnrealEngine-release"
 set "UPROJECT=%PROJECT_ROOT%\ProjectDG.uproject"
 set "UAT=%ENGINE_ROOT%\Engine\Build\BatchFiles\RunUAT.bat"
-set "MAP_NAME=/Game/Personal/DOHEE/Level/ServerTest"
+set "MAP_NAME=/Game/Personal/DOHEE/Level/ServerTest+Game/Assets/FC_MedievalMonastery_0/Maps/Map_Monastery_4km_Dawn_WP"
 set "ARCHIVE_DIR=%PROJECT_ROOT%\BuildOutput\Client"
 
 echo Project Root: %PROJECT_ROOT%

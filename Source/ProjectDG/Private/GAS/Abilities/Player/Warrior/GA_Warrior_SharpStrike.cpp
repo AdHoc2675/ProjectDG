@@ -31,9 +31,8 @@ void UGA_Warrior_SharpStrike::ActivateAbility(const FGameplayAbilitySpecHandle H
                 return;
         }
 
-        if (!SharpStrikeFullBodyMontage || !SharpStrikeUpperBodyMontage)
+        if (!SharpStrikeMontage)
         {
-                // Debug::Print(TEXT("[GA_Warrior_SharpStrike] SharpStrikeMontage is null."), FColor::Red);
                 EndAbility(Handle, OwnerInfo, ActivationInfo, true, true);
                 return;
         }
@@ -80,6 +79,19 @@ void UGA_Warrior_SharpStrike::ActivateAbility(const FGameplayAbilitySpecHandle H
         {
                 ComboBranchTask->EventReceived.AddDynamic(this, &UGA_Warrior_SharpStrike::OnComboBranch);
                 ComboBranchTask->ReadyForActivation();
+        }
+        
+        SharpStrikeInputPressedTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+        this,
+        DGGameplayTags::Skill_Warrior_SharpStrike.GetTag(),
+        nullptr,
+        false,
+        true);
+        
+        if (SharpStrikeInputPressedTask)
+        {
+                SharpStrikeInputPressedTask->EventReceived.AddDynamic(this, &UGA_Warrior_SharpStrike::OnSharpStrikeInputPressed);
+                SharpStrikeInputPressedTask->ReadyForActivation();
         }
         
         AttackHitTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
@@ -162,6 +174,11 @@ void UGA_Warrior_SharpStrike::TryJumpToNextComboSection()
         {
                 CurrentComboIndex = 2;
                 HitActorsThisCombo.Reset();
+                
+                // Debug::Print(FString::Printf(
+                //  TEXT("[SharpStrike Reset HitActors] Jump to Combo=%d"),
+                //  CurrentComboIndex), FColor::Green);
+                
                 MontageJumpToSection(Combo2SectionName);
 
                 // Debug::Print(TEXT("[GA_Warrior_SharpStrike] Jump to Combo_2."), FColor::Green);
@@ -172,9 +189,33 @@ void UGA_Warrior_SharpStrike::TryJumpToNextComboSection()
         {
                 CurrentComboIndex = 3;
                 HitActorsThisCombo.Reset();
+                
+         //        Debug::Print(FString::Printf(
+         //         TEXT("[SharpStrike Reset HitActors] Jump to Combo=%d"),
+         //         CurrentComboIndex
+         // ), FColor::Green);
+                
                 MontageJumpToSection(Combo3SectionName);
 
                 // Debug::Print(TEXT("[GA_Warrior_SharpStrike] Jump to Combo_3."), FColor::Green);
+                return;
+        }
+        if (CurrentComboIndex == 3)
+        {
+                // if (!IsSharpStrikeInputHeld())
+                // {
+                //         return;
+                // }
+
+                CurrentComboIndex = 1;
+                HitActorsThisCombo.Reset();
+                
+         //        Debug::Print(FString::Printf(
+         //         TEXT("[SharpStrike Reset HitActors] Jump to Combo=%d"),
+         //         CurrentComboIndex
+         // ), FColor::Green);
+                
+                MontageJumpToSection(Combo1SectionName);
                 return;
         }
 
@@ -183,16 +224,14 @@ void UGA_Warrior_SharpStrike::TryJumpToNextComboSection()
 
 void UGA_Warrior_SharpStrike::PlaySharpStrikeMontageFromStart()
 {
-        UAnimMontage* MontageToPlay = GetSharpStrikeMontageToPlay();
-        if (!MontageToPlay)
+        if (!SharpStrikeMontage)
         {
-                // Debug::Print(TEXT("[GA_Warrior_SharpStrike] MontageToPlay is null."), FColor::Red);
                 K2_EndAbility();
                 return;
         }
 
         MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this,TEXT("SharpStrikeMontageTask"),
-                MontageToPlay, SharpStrikePlayRate, Combo1SectionName);
+                SharpStrikeMontage, SharpStrikePlayRate, Combo1SectionName);
 
         if (!MontageTask)
         {
@@ -206,18 +245,6 @@ void UGA_Warrior_SharpStrike::PlaySharpStrikeMontageFromStart()
         MontageTask->OnCancelled.AddDynamic(this, &UGA_Warrior_SharpStrike::OnMontageCancelled);
 
         MontageTask->ReadyForActivation();
-}
-
-UAnimMontage* UGA_Warrior_SharpStrike::GetSharpStrikeMontageToPlay() const
-{
-        APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(GetAvatarActorFromActorInfo());
-        if (!PlayerCharacter)
-        {
-                return SharpStrikeFullBodyMontage;
-        }
-
-        const bool bIsMoving = PlayerCharacter->GetVelocity().Size2D() > MovingMontageThreshold;
-        return bIsMoving ? SharpStrikeUpperBodyMontage : SharpStrikeFullBodyMontage;
 }
 
 void UGA_Warrior_SharpStrike::OnComboInputWindowOpened(FGameplayEventData Payload)
@@ -271,6 +298,16 @@ void UGA_Warrior_SharpStrike::OnComboInputWindowOpened(FGameplayEventData Payloa
         K2_EndAbility();
   }
 
+void UGA_Warrior_SharpStrike::OnSharpStrikeInputPressed(FGameplayEventData Payload)
+{
+        if (!bComboInputWindowOpen)
+        {
+                return;
+        }
+
+        bComboInputBuffered = true;
+}
+
 float UGA_Warrior_SharpStrike::GetCurrentComboDamage() const
 {
         return ComboDamage;
@@ -290,8 +327,20 @@ void UGA_Warrior_SharpStrike::OnAttackHit(FGameplayEventData Payload)
                 return;
         }
         
+  //       Debug::Print(FString::Printf(
+  //         TEXT("[SharpStrike HitEvent] Combo=%d Target=%s"),
+  //         CurrentComboIndex,
+  //         *GetNameSafe(TargetActor)
+  // ), FColor::Cyan);
+        
         if (HitActorsThisCombo.Contains(TargetActor))
         {
+         //        Debug::Print(FString::Printf(
+         //         TEXT("[SharpStrike Blocked Duplicate] Combo=%d Target=%s"),
+         //         CurrentComboIndex,
+         //         *GetNameSafe(TargetActor)
+         // ), FColor::Yellow);
+                
                 return;
         }
 

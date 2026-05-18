@@ -30,13 +30,7 @@ protected:
 	// TObjectPtr<UAnimMontage> SharpStrikeMontage;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "SharpStrike|Animation")
-	TObjectPtr<UAnimMontage> SharpStrikeFullBodyMontage;
-
-	UPROPERTY(EditDefaultsOnly, Category = "SharpStrike|Animation")
-	TObjectPtr<UAnimMontage> SharpStrikeUpperBodyMontage;
-
-	UPROPERTY(EditDefaultsOnly, Category = "SharpStrike|Animation")
-	float MovingMontageThreshold = 10.f;
+	TObjectPtr<UAnimMontage> SharpStrikeMontage;
 
 	UPROPERTY(EditDefaultsOnly, Category = "SharpStrike|Combo")
 	FName Combo1SectionName = TEXT("Combo_1");
@@ -61,6 +55,10 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<class UAbilityTask_WaitGameplayEvent> ComboBranchTask;
+	
+	// 입력 tap 관련 task
+	UPROPERTY()
+	TObjectPtr<class UAbilityTask_WaitGameplayEvent> SharpStrikeInputPressedTask;
 
 	int32 CurrentComboIndex = 1;
 
@@ -76,8 +74,6 @@ private:
 	void TryBufferComboInputFromHeldState();
 	void TryJumpToNextComboSection();
 	void PlaySharpStrikeMontageFromStart();
-	
-	UAnimMontage* GetSharpStrikeMontageToPlay() const;
 
 	UFUNCTION()
 	void OnComboInputWindowOpened(FGameplayEventData Payload);
@@ -99,6 +95,9 @@ private:
 
 	UFUNCTION()
 	void OnMontageCancelled();
+	
+	UFUNCTION()
+	void OnSharpStrikeInputPressed(FGameplayEventData Payload);
 	
 // 데미지 관련 로직
 private:

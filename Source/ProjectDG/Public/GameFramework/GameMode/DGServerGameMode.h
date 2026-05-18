@@ -51,6 +51,8 @@ private:
 
 	bool bSessionEndReported = false;
 
+	void InitializeBackendBaseUrlFromCommandLine();
+
 	void ValidateJoinTokenAsync(
 		APlayerController* PlayerController,
 		const FString& SessionId,

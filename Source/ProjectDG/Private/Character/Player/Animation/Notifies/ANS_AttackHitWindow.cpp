@@ -10,10 +10,13 @@
 #include "Core/DG_GameplayTags.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "Components/CapsuleComponent.h"
+#include "GameFramework/Character.h"
 
 #include "AbilitySystemComponent.h"
 #include "Core/DG_Debug.h"
 #include "DrawDebugHelpers.h"
+#include "Engine/OverlapResult.h"
 
 UANS_AttackHitWindow::UANS_AttackHitWindow()
 {
@@ -47,8 +50,19 @@ void UANS_AttackHitWindow::NotifyBegin(USkeletalMeshComponent* MeshComp,UAnimSeq
                 return;
         }
         
+        if (!MeshComp)
+        {
+                return;
+        }
+
+        if (TraceMode == EAttackHitTraceMode::ForwardBoxOverlap)
+        {
+                InitializeRuntimeData(MeshComp, nullptr);
+                return;
+        }
+
         USkeletalMeshComponent* WeaponMesh = ResolveWeaponMesh(MeshComp);
-        if (!MeshComp || !WeaponMesh)
+        if (!WeaponMesh)
         {
                 return;
         }
@@ -95,10 +109,20 @@ void UANS_AttackHitWindow::NotifyTick(USkeletalMeshComponent* MeshComp,UAnimSequ
                 return;
         }
 
-        USkeletalMeshComponent* WeaponMesh = ResolveWeaponMesh(MeshComp);
-        if (!MeshComp || !WeaponMesh)
+        if (!MeshComp)
         {
-                // Debug::Print(TEXT("[ANS_AttackHitWindow] NotifyTick: WeaponMesh is null."), FColor::Red);
+                return;
+        }
+
+        if (TraceMode == EAttackHitTraceMode::ForwardBoxOverlap)
+        {
+                TraceForwardBox(MeshComp);
+                return;
+        }
+
+        USkeletalMeshComponent* WeaponMesh = ResolveWeaponMesh(MeshComp);
+        if (!WeaponMesh)
+        {
                 return;
         }
 
@@ -163,7 +187,7 @@ USkeletalMeshComponent* UANS_AttackHitWindow::ResolveWeaponMesh(USkeletalMeshCom
 
 void UANS_AttackHitWindow::InitializeRuntimeData(USkeletalMeshComponent* CharacterMesh, USkeletalMeshComponent* WeaponMesh)
 {
-        if (!CharacterMesh || !WeaponMesh)
+        if (!CharacterMesh)
         {
                 return;
         }
@@ -171,6 +195,11 @@ void UANS_AttackHitWindow::InitializeRuntimeData(USkeletalMeshComponent* Charact
         FAttackHitWindowRuntimeData& RuntimeData = RuntimeDataMap.FindOrAdd(CharacterMesh);
         RuntimeData.PreviousSocketLocations.Reset();
         RuntimeData.HitActors.Reset();
+        
+        if (!WeaponMesh)
+        {
+                return;
+        }
 
         for (const FName& SocketName : TraceSocketNames)
         {
@@ -330,15 +359,15 @@ void UANS_AttackHitWindow::TraceWeaponSockets(USkeletalMeshComponent* CharacterM
                 {
                         if (bAcceptedAnyHit)
                         {
-                                DrawTraceDebug(OwnerActor, World, Start, End, FColor::Green);
+                                // DrawTraceDebug(OwnerActor, World, Start, End, FColor::Green);
                         }
                         else if (bIgnoredAnyHit)
                         {
-                                DrawTraceDebug(OwnerActor, World, Start, End, FColor::Yellow);
+                                // DrawTraceDebug(OwnerActor, World, Start, End, FColor::Yellow);
                         }
                         else
                         {
-                                DrawTraceDebug(OwnerActor, World, Start, End, FColor::Red);
+                                // DrawTraceDebug(OwnerActor, World, Start, End, FColor::Red);
                         }
                 }
                 
@@ -347,7 +376,105 @@ void UANS_AttackHitWindow::TraceWeaponSockets(USkeletalMeshComponent* CharacterM
         }
 }
 
-  void UANS_AttackHitWindow::SendHitEvent(AActor* OwnerActor, AActor* HitActor) const
+void UANS_AttackHitWindow::TraceForwardBox(USkeletalMeshComponent* CharacterMesh)
+{
+      if (!CharacterMesh)
+      {
+              return;
+      }
+        
+      AActor* OwnerActor = CharacterMesh->GetOwner();
+      UWorld* World = OwnerActor ? OwnerActor->GetWorld() : nullptr;
+      if (!OwnerActor || !World)
+      {
+              return;
+      }
+
+      FAttackHitWindowRuntimeData* RuntimeDataPtr = RuntimeDataMap.Find(CharacterMesh);
+      if (!RuntimeDataPtr)
+      {
+          InitializeRuntimeData(CharacterMesh, nullptr);
+          RuntimeDataPtr = RuntimeDataMap.Find(CharacterMesh);
+          if (!RuntimeDataPtr)
+          {
+                  return;
+          }
+      }
+
+      FAttackHitWindowRuntimeData& RuntimeData = *RuntimeDataPtr;
+
+      FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(AttackHitWindowForwardBox), false, OwnerActor);
+      QueryParams.AddIgnoredActor(OwnerActor);
+
+      const FVector Forward = CharacterMesh->GetForwardVector();
+      const FVector Right = CharacterMesh->GetRightVector();
+      const FVector Center =
+          CharacterMesh->GetComponentLocation() +
+          Forward * ForwardBoxForwardOffset +
+          Right * ForwardBoxRightOffset +
+          FVector(0.f, 0.f, ForwardBoxHeightOffset);
+        
+      const FQuat BoxRotation = CharacterMesh->GetComponentQuat();
+        
+      const FVector BoxHalfExtent(
+          ForwardBoxRange * 0.5f,
+          ForwardBoxWidth * 0.5f,
+          ForwardBoxHeight * 0.5f
+      );
+
+      TArray<FOverlapResult> OverlapResults;
+      World->OverlapMultiByChannel(
+          OverlapResults,
+          Center,
+          BoxRotation,
+          TraceChannel,
+          FCollisionShape::MakeBox(BoxHalfExtent),
+          QueryParams
+      );
+
+      bool bAcceptedAnyHit = false;
+
+      for (const FOverlapResult& OverlapResult : OverlapResults)
+      {
+          AActor* HitActor = OverlapResult.GetActor();
+          if (!IsValid(HitActor) || HitActor == OwnerActor)
+          {
+                  continue;
+          }
+
+          if (ShouldIgnoreHitActor(OwnerActor, HitActor))
+          {
+                  continue;
+          }
+
+          if (RuntimeData.HitActors.Contains(HitActor))
+          {
+                  continue;
+          }
+
+          RuntimeData.HitActors.Add(HitActor);
+          bAcceptedAnyHit = true;
+
+          SendHitEvent(OwnerActor, HitActor);
+      }
+
+      if (bEnableDebugDraw)
+      {
+              if (APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(OwnerActor))
+              {
+                      PlayerCharacter->ClientDrawAttackBoxDebug(
+                              Center,
+                              BoxHalfExtent,
+                              BoxRotation.Rotator(),
+                              bAcceptedAnyHit ? FColor::Green : FColor::Red,
+                              DebugDrawDuration
+                      );
+              }
+      }  
+}
+
+
+void UANS_AttackHitWindow::SendHitEvent(AActor* OwnerActor, AActor* HitActor) const
   {
         if (!OwnerActor || !HitActor || !HitEventTag.IsValid())
         {
@@ -427,20 +554,20 @@ bool UANS_AttackHitWindow::AreActorsOnSameTeam(AActor* FirstActor, AActor* Secon
         return bBothPlayer || bBothEnemy || bBothObject;
 }
 
-void UANS_AttackHitWindow::DrawTraceDebug(AActor* OwnerActor, UWorld* World, const FVector& Start, const FVector& End, const FColor& Color) const
-{
-        if (!World)
-        {
-                return;
-        }
-
-        DrawDebugSphere(World, Start, TraceRadius, 12, Color, false, DebugDrawDuration);
-        DrawDebugSphere(World, End, TraceRadius, 12, Color, false, DebugDrawDuration);
-        DrawDebugLine(World, Start, End, Color, false, DebugDrawDuration, 0, 1.5f);
-
-        APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(OwnerActor);
-        if (PlayerCharacter && PlayerCharacter->HasAuthority())
-        {
-                PlayerCharacter->ClientDrawAttackTraceDebug(Start, End, TraceRadius, Color, DebugDrawDuration);
-        }
-}
+// void UANS_AttackHitWindow::DrawTraceDebug(AActor* OwnerActor, UWorld* World, const FVector& Start, const FVector& End, const FColor& Color) const
+// {
+//         if (!World)
+//         {
+//                 return;
+//         }
+//
+//         DrawDebugSphere(World, Start, TraceRadius, 12, Color, false, DebugDrawDuration);
+//         DrawDebugSphere(World, End, TraceRadius, 12, Color, false, DebugDrawDuration);
+//         DrawDebugLine(World, Start, End, Color, false, DebugDrawDuration, 0, 1.5f);
+//
+//         APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(OwnerActor);
+//         if (PlayerCharacter && PlayerCharacter->HasAuthority())
+//         {
+//                 PlayerCharacter->ClientDrawAttackTraceDebug(Start, End, TraceRadius, Color, DebugDrawDuration);
+//         }
+// }

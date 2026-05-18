@@ -15,6 +15,13 @@ struct FAttackHitWindowRuntimeData
 	TSet<TWeakObjectPtr<AActor>> HitActors;
 };
 
+UENUM(BlueprintType)
+enum class EAttackHitTraceMode : uint8
+{
+	WeaponSocketSweep,
+	ForwardBoxOverlap
+};
+
 /**
  * 
  */
@@ -51,6 +58,29 @@ public:
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
+	EAttackHitTraceMode TraceMode = EAttackHitTraceMode::ForwardBoxOverlap;
+	
+	// ForwardBoxOverlap 관련 변수
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|ForwardBox")
+	float ForwardBoxRange = 400.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|ForwardBox")
+	float ForwardBoxWidth = 180.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|ForwardBox")
+	float ForwardBoxHeight = 220.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|ForwardBox")
+	float ForwardBoxForwardOffset = 200.f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|ForwardBox")
+	float ForwardBoxRightOffset = 0.f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|ForwardBox")
+	float ForwardBoxHeightOffset = 90.f;
+	
+	// WeaponSocketSweep 관련 변수
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
 	TArray<FName> TraceSocketNames;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
@@ -86,11 +116,15 @@ private:
 
 	USkeletalMeshComponent* ResolveWeaponMesh(USkeletalMeshComponent* CharacterMesh) const;
 	void InitializeRuntimeData(USkeletalMeshComponent* CharacterMesh, USkeletalMeshComponent* WeaponMesh);
+	
 	void TraceWeaponSockets(USkeletalMeshComponent* CharacterMesh, USkeletalMeshComponent* WeaponMesh);
+	
+	void TraceForwardBox(USkeletalMeshComponent* CharacterMesh);
+	
 	void SendHitEvent(AActor* OwnerActor, AActor* HitActor) const;
 	
 	//팀 확인 및 디버깅
 	bool ShouldIgnoreHitActor(AActor* OwnerActor, AActor* HitActor) const;
 	bool AreActorsOnSameTeam(AActor* FirstActor, AActor* SecondActor) const;
-	void DrawTraceDebug(AActor* OwnerActor, UWorld* World, const FVector& Start, const FVector& End, const FColor& Color) const;
+	// void DrawTraceDebug(AActor* OwnerActor, UWorld* World, const FVector& Start, const FVector& End, const FColor& Color) const;
 };

@@ -4,10 +4,14 @@
 #include "Core/DG_Debug.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 
 void UDGSessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
+
+	InitializeBackendBaseUrlFromCommandLine();
 
 	BackendClient = NewObject<UDGBackendClient>(this);
 	BackendClient->Initialize(BackendBaseUrl);
@@ -133,6 +137,26 @@ FString UDGSessionSubsystem::GetLastSessionId() const
 	return LastSessionConnectionInfo.SessionId;
 }
 
+void UDGSessionSubsystem::InitializeBackendBaseUrlFromCommandLine()
+{
+	FString CommandLineBackendUrl;
+
+	if (FParse::Value(FCommandLine::Get(), TEXT("BackendUrl="), CommandLineBackendUrl))
+	{
+		CommandLineBackendUrl.TrimStartAndEndInline();
+
+		if (!CommandLineBackendUrl.IsEmpty())
+		{
+			BackendBaseUrl = CommandLineBackendUrl;
+		}
+	}
+
+	Debug::Print(FString::Printf(
+		TEXT("[DGSessionSubsystem] BackendBaseUrl=%s"),
+		*BackendBaseUrl
+	));
+}
+
 void UDGSessionSubsystem::HandleCreateSessionCompleted(
 	bool bSuccess,
 	const FDGSessionConnectionInfo& Result
@@ -230,13 +254,12 @@ void UDGSessionSubsystem::TravelToDedicatedServer(
 	}
 
 	const FString TravelUrl = FString::Printf(
-	TEXT("%s:%d%s?SessionId=%s?JoinToken=%s"),
-	*ConnectionInfo.ServerIP,
-	ConnectionInfo.ServerPort,
-	*ConnectionInfo.MapPath,
-	*ConnectionInfo.SessionId,
-	*ConnectionInfo.JoinToken
-);
+		TEXT("%s:%d?SessionId=%s?JoinToken=%s"),
+		*ConnectionInfo.ServerIP,
+		ConnectionInfo.ServerPort,
+		*ConnectionInfo.SessionId,
+		*ConnectionInfo.JoinToken
+	);
 
 	Debug::Print(FString::Printf(
 		TEXT("[DGSessionSubsystem] ClientTravel To %s"),

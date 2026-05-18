@@ -87,6 +87,16 @@ namespace DGBackendApi.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("server_port");
 
+                    b.Property<int?>("ServerProcessId")
+                        .HasColumnType("integer")
+                        .HasColumnName("server_process_id");
+
+                    b.Property<string>("ServerRuntimeStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("server_runtime_status");
+
                     b.Property<DateTime?>("StartedAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("started_at_utc");
