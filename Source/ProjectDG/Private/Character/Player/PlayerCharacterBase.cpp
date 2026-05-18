@@ -691,10 +691,16 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 				GetWorld() ? GetWorld()->GetTimeSeconds() : -1.f
 		), bActivateResult ? FColor::Green : FColor::Red);
 		
-		SendSkillInputStartedEvent(SkillTag);
-		if (!HasAuthority())
+		const FGameplayTag SkillInputEventTag = GetSkillInputEventTag(SkillTag);
+
+		if (SkillInputEventTag.IsValid())
 		{
-			ServerSendSkillInputStartedEvent(SkillTag);
+			SendSkillInputStartedEvent(SkillInputEventTag);
+
+			if (!HasAuthority())
+			{
+				ServerSendSkillInputStartedEvent(SkillInputEventTag);
+			}
 		}
 		
 	}
@@ -797,6 +803,16 @@ FGameplayTag APlayerCharacterBase::GetSkillTagForSlot(FGameplayTag SlotTag) cons
 	{
 		return SkillSlotMapping[SlotTag];
 	}
+	return FGameplayTag::EmptyTag;
+}
+
+FGameplayTag APlayerCharacterBase::GetSkillInputEventTag(FGameplayTag SkillTag) const
+{
+	if (SkillTag == DGGameplayTags::Skill_Warrior_SharpStrike.GetTag())
+	{
+		return DGGameplayTags::Event_Input_Warrior_SharpStrike.GetTag();
+	}
+
 	return FGameplayTag::EmptyTag;
 }
 

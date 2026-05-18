@@ -94,7 +94,7 @@ void UGA_Warrior_SharpStrike::ActivateAbility(const FGameplayAbilitySpecHandle H
         
         SharpStrikeInputPressedTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
         this,
-        DGGameplayTags::Skill_Warrior_SharpStrike.GetTag(),
+        DGGameplayTags::Event_Input_Warrior_SharpStrike.GetTag(),
         nullptr,
         false,
         true);
