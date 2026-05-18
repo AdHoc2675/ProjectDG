@@ -41,16 +41,16 @@ protected:
 	virtual void InitializeComponent() override;
 
 	UPROPERTY(EditAnywhere, Category = "Capture")
-	float CaptureHeight = 1000.f; // 카메라가 떠있는 높이
+	float CaptureHeight = 10000.f; // 카메라가 떠있는 높이
 
 	UPROPERTY(EditAnywhere, Category = "Capture")
-	float CaptureRadius = 3000.f; // 캡처 반경 (넓을수록 축소됨)
+	float CaptureRadius = 5000.f; // 캡처 반경 (넓을수록 축소됨)
 
 	UPROPERTY(EditAnywhere, Category = "Capture")
 	int32 RenderTargetResolution = 512;
 
 	UPROPERTY(EditAnywhere, Category = "Capture")
-	float CaptureUpdateInterval = 0.1f;
+	float CaptureUpdateInterval = 0.05f;
 
 	UPROPERTY(EditAnywhere, Category = "Capture")
 	float RecaptureDistanceThreshold = 50.f;

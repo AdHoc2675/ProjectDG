@@ -32,6 +32,10 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
     float MapRadius = 150.0f;
 
+    // 마커 위치를 갱신할 쿨타임 (초)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap|Optimization")
+    float MarkerUpdateInterval = 0.05f;
+
 protected:
     // UI 배경. 여기에 마커 위젯들이 AddChild 됩니다.
     UPROPERTY(meta = (BindWidget))
@@ -59,4 +63,7 @@ private:
     // 실제 관리 중인 "마커 컴포넌트 데이터 : 렌더링 중인 UI 인스턴스" 매핑 객체
     UPROPERTY()
     TMap<UDGMinimapMarkerComponent*, UDGMinimapMarkerWidget*> ActiveMarkerWidgets;
+
+    // 최적화를 위한 타이머 누적 변수
+    float TimeSinceLastMarkerUpdate = 0.0f;
 };

@@ -65,8 +65,16 @@ void UDGMiniMapWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
 
-	// 매 틱마다 적/파티원/내비마커 마커 위치를 지속 갱신
-	UpdateMarkers();
+	// 부모 패널(WBP_OverlayWidget)에서 지정된 이 미니맵 위젯의 실제 크기를 바탕으로 반지름 동적 계산
+	MapRadius = MyGeometry.GetLocalSize().X * 0.5f;
+
+	// 설정된 Interval 시간마다 한 번씩만 연산 
+	TimeSinceLastMarkerUpdate += InDeltaTime;
+	if (TimeSinceLastMarkerUpdate >= MarkerUpdateInterval)
+	{
+		UpdateMarkers(); // 적/파티원 마커 연산 및 배경 이미지 덮어씌우기
+		TimeSinceLastMarkerUpdate = 0.0f;
+	}
 }
 
 void UDGMiniMapWidget::UpdateMarkers()

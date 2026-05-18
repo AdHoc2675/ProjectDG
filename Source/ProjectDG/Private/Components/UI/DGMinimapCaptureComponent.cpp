@@ -93,8 +93,8 @@ void UDGMinimapCaptureComponent::InitializeCaptureCamera()
 	CaptureComponent->SetRelativeLocation(FVector(0.f, 0.f, CaptureHeight));
 	CaptureComponent->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f));
 
-	CaptureComponent->CaptureSource = SCS_DeviceDepth; // 배경만 찍거나, 머티리얼 세팅에 따라 변경 (SCS_BaseColor 등)
-	CaptureComponent->CaptureSource = SCS_FinalColorLDR;
+	CaptureComponent->CaptureSource = SCS_BaseColor;
+
 	CaptureComponent->bCaptureEveryFrame = false;
 	CaptureComponent->bCaptureOnMovement = false;
 
