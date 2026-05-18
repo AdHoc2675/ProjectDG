@@ -172,6 +172,7 @@ void UANS_AttackHitWindow::NotifyEnd(USkeletalMeshComponent* MeshComp,UAnimSeque
         }
 }
 
+// WeaponMesh 획득
 USkeletalMeshComponent* UANS_AttackHitWindow::ResolveWeaponMesh(USkeletalMeshComponent* CharacterMesh) const
 {
         if (!CharacterMesh)
@@ -197,7 +198,7 @@ void UANS_AttackHitWindow::InitializeRuntimeData(USkeletalMeshComponent* Charact
 
         FAttackHitWindowRuntimeData& RuntimeData = RuntimeDataMap.FindOrAdd(CharacterMesh);
         RuntimeData.PreviousSocketLocations.Reset();
-        RuntimeData.HitActors.Reset();
+        // RuntimeData.HitActors.Reset();
         
         if (!WeaponMesh)
         {
@@ -315,23 +316,23 @@ void UANS_AttackHitWindow::TraceWeaponSockets(USkeletalMeshComponent* CharacterM
                                 continue;
                         }
 
-                        if (RuntimeData.HitActors.Contains(HitActor))
-                        {
-                                bIgnoredAnyHit = true;
-
-                                if (bLogAcceptedHits)
-                                {
-                                        // const FString Msg = FString::Printf(
-                                        //         TEXT("[ANS_AttackHitWindow] Ignored duplicate hit actor: %s"),
-                                        //         *GetNameSafe(HitActor)
-                                        // );
-                                        // Debug::Print(Msg, FColor::Yellow);
-                                }
-
-                                continue;
-                        }
-
-                        RuntimeData.HitActors.Add(HitActor);
+                        // if (RuntimeData.HitActors.Contains(HitActor))
+                        // {
+                        //         bIgnoredAnyHit = true;
+                        //
+                        //         if (bLogAcceptedHits)
+                        //         {
+                        //                 // const FString Msg = FString::Printf(
+                        //                 //         TEXT("[ANS_AttackHitWindow] Ignored duplicate hit actor: %s"),
+                        //                 //         *GetNameSafe(HitActor)
+                        //                 // );
+                        //                 // Debug::Print(Msg, FColor::Yellow);
+                        //         }
+                        //
+                        //         continue;
+                        // }
+                        //
+                        // RuntimeData.HitActors.Add(HitActor);
                         bAcceptedAnyHit = true;
 
                         if (bLogAcceptedHits)
@@ -393,20 +394,21 @@ void UANS_AttackHitWindow::TraceForwardBox(USkeletalMeshComponent* CharacterMesh
               return;
       }
 
-      FAttackHitWindowRuntimeData* RuntimeDataPtr = RuntimeDataMap.Find(CharacterMesh);
-      if (!RuntimeDataPtr)
-      {
-          InitializeRuntimeData(CharacterMesh, nullptr);
-          RuntimeDataPtr = RuntimeDataMap.Find(CharacterMesh);
-          if (!RuntimeDataPtr)
-          {
-                  return;
-          }
-      }
+      // FAttackHitWindowRuntimeData* RuntimeDataPtr = RuntimeDataMap.Find(CharacterMesh);
+      // if (!RuntimeDataPtr)
+      // {
+      //     InitializeRuntimeData(CharacterMesh, nullptr);
+      //     RuntimeDataPtr = RuntimeDataMap.Find(CharacterMesh);
+      //     if (!RuntimeDataPtr)
+      //     {
+      //             return;
+      //     }
+      // }
 
-      FAttackHitWindowRuntimeData& RuntimeData = *RuntimeDataPtr;
+      // FAttackHitWindowRuntimeData& RuntimeData = *RuntimeDataPtr;
 
-      FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(AttackHitWindowForwardBox), false, OwnerActor);
+      FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(AttackHitWindowForwardBox), false, OwnerActor); 
+        
       QueryParams.AddIgnoredActor(OwnerActor);
 
       const FVector Forward = CharacterMesh->GetForwardVector();
@@ -450,12 +452,12 @@ void UANS_AttackHitWindow::TraceForwardBox(USkeletalMeshComponent* CharacterMesh
                   continue;
           }
 
-          if (RuntimeData.HitActors.Contains(HitActor))
-          {
-                  continue;
-          }
+          // if (RuntimeData.HitActors.Contains(HitActor))
+          // {
+          //         continue;
+          // }
 
-          RuntimeData.HitActors.Add(HitActor);
+          // RuntimeData.HitActors.Add(HitActor);
           bAcceptedAnyHit = true;
 
           SendHitEvent(OwnerActor, HitActor);
@@ -504,17 +506,17 @@ bool UANS_AttackHitWindow::ShouldIgnoreHitActor(AActor* OwnerActor, AActor* HitA
                 return true;
         }
 
-        UAbilitySystemComponent* HitASC =
-  UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
+        UAbilitySystemComponent* HitASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
         if (!HitASC)
         {
                 return true;
         }
 
-        if (bIgnoreSameTeam && AreActorsOnSameTeam(OwnerActor, HitActor))
-        {
-                return true;
-        }
+        // 현재는 같은 팀이어도 PvP 허용
+        // if (bIgnoreSameTeam && AreActorsOnSameTeam(OwnerActor, HitActor))
+        // {
+        //         return true;
+        // }
 
         // 현재 단계에서는 적 팀만 유효 타겟으로 간주
         // if (!HitASC->HasMatchingGameplayTag(DGGameplayTags::Team_Enemy.GetTag()))
@@ -532,10 +534,8 @@ bool UANS_AttackHitWindow::AreActorsOnSameTeam(AActor* FirstActor, AActor* Secon
                 return false;
         }
 
-        UAbilitySystemComponent* FirstASC =
-  UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(FirstActor);
-        UAbilitySystemComponent* SecondASC =
-  UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(SecondActor);
+        UAbilitySystemComponent* FirstASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(FirstActor);
+        UAbilitySystemComponent* SecondASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(SecondActor);
 
         if (!FirstASC || !SecondASC)
         {

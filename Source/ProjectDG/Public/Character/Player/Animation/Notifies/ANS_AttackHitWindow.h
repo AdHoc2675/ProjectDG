@@ -12,7 +12,7 @@ class USkeletalMeshComponent;
 struct FAttackHitWindowRuntimeData
 {
 	TMap<FName, FVector> PreviousSocketLocations;
-	TSet<TWeakObjectPtr<AActor>> HitActors;
+	// TSet<TWeakObjectPtr<AActor>> HitActors;
 };
 
 UENUM(BlueprintType)
