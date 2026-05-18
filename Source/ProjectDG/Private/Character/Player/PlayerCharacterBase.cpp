@@ -97,8 +97,6 @@ void APlayerCharacterBase::BeginPlay()
     
 	//월드시작시 ASC초기화
     InitializePlayerAbilitySystem();
-	// ApplyMovementData();
-	// ApplyCurrentMovementSpeed();
 }
 
 void APlayerCharacterBase::Tick(float DeltaSeconds)
@@ -150,17 +148,12 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 	ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>();
 	if (!PS)
 	{
-		//Debug::Print(TEXT("[PlayerCharacterBase] DG_PlayerState is null."));
 		return;
 	}
-
-	/**
-	 * PlayerState가 소유한 ASC를 가져온다.
-	 */
+	
 	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
 	if (!ASC)
 	{
-		//Debug::Print(TEXT("[PlayerCharacterBase] ASC is null on DG_PlayerState."));
 		return;
 	}
 
@@ -178,8 +171,7 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 	 * - 실제 월드에서 움직이고 스킬을 사용하는 존재는 Character
 	 */
 	ASC->InitAbilityActorInfo(PS, this);
-
-	// Debug::Print(TEXT("[PlayerCharacterBase] ASC initialized from DG_PlayerState."));
+	
 }
 
 void APlayerCharacterBase::InitializePlayerUI()
@@ -679,17 +671,17 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 	{
 		const bool bActivateResult = ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(SkillTag));
 		
-		Debug::Print(FString::Printf(
-				TEXT("[SharpStrikeInput][%s] OnSkillInputStarted Slot=%s Skill=%s ActivateResult=%s Authority=%s LocalRole=%dRemoteRole=%d Time=%.3f"),
-				*GetNameSafe(this),
-				*SlotTag.ToString(),
-				*SkillTag.ToString(),
-				bActivateResult ? TEXT("true") : TEXT("false"),
-				HasAuthority() ? TEXT("true") : TEXT("false"),
-				static_cast<int32>(GetLocalRole()),
-				static_cast<int32>(GetRemoteRole()),
-				GetWorld() ? GetWorld()->GetTimeSeconds() : -1.f
-		), bActivateResult ? FColor::Green : FColor::Red);
+		// Debug::Print(FString::Printf(
+		// 		TEXT("[SharpStrikeInput][%s] OnSkillInputStarted Slot=%s Skill=%s ActivateResult=%s Authority=%s LocalRole=%dRemoteRole=%d Time=%.3f"),
+		// 		*GetNameSafe(this),
+		// 		*SlotTag.ToString(),
+		// 		*SkillTag.ToString(),
+		// 		bActivateResult ? TEXT("true") : TEXT("false"),
+		// 		HasAuthority() ? TEXT("true") : TEXT("false"),
+		// 		static_cast<int32>(GetLocalRole()),
+		// 		static_cast<int32>(GetRemoteRole()),
+		// 		GetWorld() ? GetWorld()->GetTimeSeconds() : -1.f
+		// ), bActivateResult ? FColor::Green : FColor::Red);
 		
 		const FGameplayTag SkillInputEventTag = GetSkillInputEventTag(SkillTag);
 
@@ -725,15 +717,15 @@ void APlayerCharacterBase::OnSkillInputCompleted(FGameplayTag SlotTag)
 
 void APlayerCharacterBase::ServerSendSkillInputStartedEvent_Implementation(FGameplayTag SkillTag)
 {
-	Debug::Print(FString::Printf(
-				TEXT("[SharpStrikeInput][%s] ServerSendSkillInputStartedEvent Skill=%s Authority=%s LocalRole=%d RemoteRole=%dTime=%.3f"),
-				*GetNameSafe(this),
-				*SkillTag.ToString(),
-				HasAuthority() ? TEXT("true") : TEXT("false"),
-				static_cast<int32>(GetLocalRole()),
-				static_cast<int32>(GetRemoteRole()),
-				GetWorld() ? GetWorld()->GetTimeSeconds() : -1.f
-		), FColor::Orange);
+	// Debug::Print(FString::Printf(
+	// 			TEXT("[SharpStrikeInput][%s] ServerSendSkillInputStartedEvent Skill=%s Authority=%s LocalRole=%d RemoteRole=%dTime=%.3f"),
+	// 			*GetNameSafe(this),
+	// 			*SkillTag.ToString(),
+	// 			HasAuthority() ? TEXT("true") : TEXT("false"),
+	// 			static_cast<int32>(GetLocalRole()),
+	// 			static_cast<int32>(GetRemoteRole()),
+	// 			GetWorld() ? GetWorld()->GetTimeSeconds() : -1.f
+	// 	), FColor::Orange);
 	
 	SendSkillInputStartedEvent(SkillTag);
 }
@@ -749,15 +741,14 @@ void APlayerCharacterBase::SendSkillInputStartedEvent(FGameplayTag SkillTag)
 	Payload.EventTag = SkillTag;
 	Payload.Instigator = this;
 
-	Debug::Print(FString::Printf(
-		TEXT("[SharpStrikeInput][%s] SendGameplayEventToActor Event=%s Authority=%s LocalRole=%d RemoteRole=%d Time=%.3f"),
-		*GetNameSafe(this),
-		*SkillTag.ToString(),
-		HasAuthority() ? TEXT("true") : TEXT("false"),
-		static_cast<int32>(GetLocalRole()),
-		static_cast<int32>(GetRemoteRole()),
-		GetWorld() ? GetWorld()->GetTimeSeconds() : -1.f
-  ), FColor::Cyan);
+	// Debug::Print(FString::Printf(
+	// 	TEXT("[SharpStrikeInput][%s] SendGameplayEventToActor Event=%s Authority=%s LocalRole=%d RemoteRole=%d Time=%.3f"),
+	// 	*GetNameSafe(this),
+	// 	*SkillTag.ToString(),
+	// 	HasAuthority() ? TEXT("true") : TEXT("false"),
+	// 	static_cast<int32>(GetLocalRole()),
+	// 	static_cast<int32>(GetRemoteRole()),
+	// 	GetWorld() ? GetWorld()->GetTimeSeconds() : -1.f), FColor::Cyan);
 	
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, SkillTag, Payload);
 }
