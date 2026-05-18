@@ -7,6 +7,7 @@
 #include "DGMiniMapWidget.generated.h"
 
 class UOverlay;
+class UImage;
 class UDGOverlayWidgetController;
 class UDGMinimapMarkerComponent;
 class UDGMinimapMarkerWidget;
@@ -43,6 +44,14 @@ protected:
     // 화면에 스폰할 마커 클래스
     UPROPERTY(EditDefaultsOnly, Category = "Minimap")
     TSubclassOf<UDGMinimapMarkerWidget> MarkerWidgetClass;
+
+    // 실제 맵 이미지가 들어가는 위젯
+    UPROPERTY(meta = (BindWidget))
+    UImage* MapBackgroundImage;
+
+    // 이 맵 이미지의 실제 월드 사이즈
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
+    float WorldMapSize = 400000.0f;
 
 private:
 	// 마커 컴포넌트와 위젯 간의 매핑을 관리하기 위한 핸들러

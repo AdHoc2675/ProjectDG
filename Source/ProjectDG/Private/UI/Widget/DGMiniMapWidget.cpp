@@ -5,6 +5,7 @@
 
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
+#include "Components/Image.h"
 
 void UDGMiniMapWidget::BindToController(UDGOverlayWidgetController* Controller)
 {
@@ -113,5 +114,28 @@ void UDGMiniMapWidget::UpdateMarkers()
 			FRotator TargetRot = TargetActor->GetActorRotation();
 			//MarkerWidget->SetRenderAngle(TargetRot.Yaw);
 		}
+	}
+
+	if (MapBackgroundImage)
+	{
+
+		// 1. 플레이어가 월드맵(WorldMapSize, 예: 400,000cm)의 '어느 비율(-1.0 ~ 1.0 등)' 위치에 있는지 구함
+		float RatioX = PlayerLocation.X / WorldMapSize;
+		float RatioY = PlayerLocation.Y / WorldMapSize;
+
+		// 2. 이미지가 2048x2048이므로, 이동해야 할 픽셀 거리를 환산
+		// X축(월드 앞뒤) 이동은 UI의 Y축(위아래) 픽셀 이동에 해당
+		// Y축(월드 좌우) 이동은 UI의 X축(좌우) 픽셀 이동에 해당
+		// 내 캐릭터가 앞으로(+X) 가면 배경은 뒤로(-Y) 가야 하므로 부호를 반대로 줍니다.
+
+		float ImageSize = 2048.0f; // 실제 UMG에 깔려있는 이미지의 해상도
+
+		float Background_UI_X = -(RatioY * ImageSize); // 동서 이동
+		float Background_UI_Y = (RatioX * ImageSize);  // 남북 이동 (언리얼 기준 +X가 북쪽인데 UI는 -Y가 위쪽)
+
+		FVector2D BackgroundOffset(Background_UI_X, Background_UI_Y);
+
+		// 3. 미니맵 배경 이미지의 위치 적용
+		MapBackgroundImage->SetRenderTranslation(BackgroundOffset);
 	}
 }
