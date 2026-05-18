@@ -707,7 +707,7 @@ static string HashRoomPassword(string roomPassword)
     return Convert.ToHexString(hashBytes);
 }
 
-app.Run("http://0.0.0.0:8080");
+app.Run();
 
 public record CreateSessionRequest(
     long AccountId,

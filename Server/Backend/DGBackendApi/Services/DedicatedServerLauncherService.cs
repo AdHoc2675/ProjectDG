@@ -70,6 +70,15 @@ public class DedicatedServerLauncherService
             };
         }
 
+        if (string.IsNullOrWhiteSpace(_options.BackendBaseUrl))
+        {
+            return new DedicatedServerLaunchResult
+            {
+                Success = false,
+                Message = "BackendBaseUrl is empty."
+            };
+        }
+
         var serverPort = await FindAvailablePortAsync();
 
         if (serverPort <= 0)
@@ -82,7 +91,7 @@ public class DedicatedServerLauncherService
         }
 
         var arguments =
-            $"{_options.MapPath} -server -log -port={serverPort} -SessionId={sessionId}";
+            $"{_options.MapPath} -server -log -port={serverPort} -SessionId={sessionId} -BackendUrl={_options.BackendBaseUrl}";
 
         var startInfo = new ProcessStartInfo
         {
@@ -139,7 +148,7 @@ public class DedicatedServerLauncherService
             .Select(x => x.ServerPort)
             .ToListAsync();
 
-        var usedPortsFromOs = GetUsedTcpPorts();
+        var usedPortsFromOs = GetUsedPorts();
 
         for (var port = _options.MinPort; port <= _options.MaxPort; port++)
         {
@@ -159,20 +168,25 @@ public class DedicatedServerLauncherService
         return -1;
     }
 
-    private static HashSet<int> GetUsedTcpPorts()
+    private static HashSet<int> GetUsedPorts()
     {
         var properties = IPGlobalProperties.GetIPGlobalProperties();
 
-        var activeListeners = properties
+        var activeTcpListeners = properties
             .GetActiveTcpListeners()
             .Select(x => x.Port);
 
-        var activeConnections = properties
+        var activeTcpConnections = properties
             .GetActiveTcpConnections()
             .Select(x => x.LocalEndPoint.Port);
 
-        return activeListeners
-            .Concat(activeConnections)
+        var activeUdpListeners = properties
+            .GetActiveUdpListeners()
+            .Select(x => x.Port);
+
+        return activeTcpListeners
+            .Concat(activeTcpConnections)
+            .Concat(activeUdpListeners)
             .ToHashSet();
     }
 }

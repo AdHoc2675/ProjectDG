@@ -2,20 +2,26 @@
 chcp 65001 > nul
 
 echo ========================================
-echo ProjectDG Cook Client
+echo ProjectDG Cook Stable Dedicated Server
 echo ========================================
 
 set "PROJECT_ROOT=D:\ProjectDG"
 set "ENGINE_ROOT=D:\UnrealEngine-release"
 set "UPROJECT=%PROJECT_ROOT%\ProjectDG.uproject"
 set "UAT=%ENGINE_ROOT%\Engine\Build\BatchFiles\RunUAT.bat"
-set "MAP_NAME=/Game/Personal/DOHEE/Level/ServerTest+Game/Assets/FC_MedievalMonastery_0/Maps/Map_Monastery_4km_Dawn_WP"
-set "ARCHIVE_DIR=%PROJECT_ROOT%\BuildOutput\Client"
+
+set "LOBBY_MAP=/Game/Personal/DOHEE/Level/ServerTest"
+set "WORLD_MAP=/Game/Assets/FC_MedievalMonastery_0/Maps/Map_Monastery_4km_Dawn_WP"
+set "COOK_MAPS=%LOBBY_MAP%+%WORLD_MAP%"
+
+set "ARCHIVE_DIR=%PROJECT_ROOT%\BuildOutput\Server"
 
 echo Project Root: %PROJECT_ROOT%
 echo Engine Root: %ENGINE_ROOT%
 echo UProject: %UPROJECT%
-echo Map: %MAP_NAME%
+echo Lobby Map: %LOBBY_MAP%
+echo World Map: %WORLD_MAP%
+echo Cook Maps: %COOK_MAPS%
 echo Archive Dir: %ARCHIVE_DIR%
 echo.
 
@@ -37,10 +43,12 @@ if not exist "%UPROJECT%" (
 -project="%UPROJECT%" ^
 -noP4 ^
 -build ^
--clientconfig=Development ^
--targetplatform=Win64 ^
+-server ^
+-noclient ^
+-serverplatform=Win64 ^
+-serverconfig=Development ^
 -cook ^
--map="%MAP_NAME%" ^
+-map="%COOK_MAPS%" ^
 -stage ^
 -pak ^
 -archive ^
@@ -49,7 +57,7 @@ if not exist "%UPROJECT%" (
 
 echo.
 echo ========================================
-echo Cook Client Finished
+echo Cook Stable Server Finished
 echo Archive Dir:
 echo %ARCHIVE_DIR%
 echo ========================================
