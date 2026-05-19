@@ -173,6 +173,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputAction* IA_Shift;
 
+	// 맵과 인벤토리를 열기 위한 InputAction
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
+	class UInputAction* IA_ToggleMap;
+
+	// 맵과 인벤토리를 열기 위한 InputAction
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
+	class UInputAction* IA_ToggleInventory;
+
 protected:
 	void LookAction(const FInputActionValue& InputActionValue);
 	void MoveAction(const FInputActionValue& InputActionValue);
@@ -184,6 +192,10 @@ protected:
 	FVector GetCameraForwardOnPlane() const;
 	FVector GetCameraRightOnPlane() const;
 	FVector GetDesiredMoveDirection() const;
+
+	// UI 토글 처리 함수
+	void ToggleMapAction();
+	void ToggleInventoryAction();
 
 #pragma endregion Input
 	

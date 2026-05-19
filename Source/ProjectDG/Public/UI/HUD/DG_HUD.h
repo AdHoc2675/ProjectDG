@@ -57,4 +57,28 @@ private:
 	UPROPERTY()
 	TObjectPtr<UDGOverlayWidgetController> OverlayWidgetController;
 
+public:
+	// 캐릭터에서 호출할 UI 토글 노출 함수
+	void ToggleMapWidget();
+	void ToggleInventoryWidget();
+
+private:
+	// --- Map Widget 관련 ---
+	UPROPERTY(EditDefaultsOnly, Category = "DG|UI")
+	TSubclassOf<class UDGUserWidget> FullMapWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<class UDGUserWidget> FullMapWidget;
+	bool bIsMapOpen = false;
+
+	// --- Inventory Widget 관련 ---
+	UPROPERTY(EditDefaultsOnly, Category = "DG|UI")
+	TSubclassOf<class UDGUserWidget> InventoryWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<class UDGUserWidget> InventoryWidget;
+	bool bIsInventoryOpen = false;
+
+	// 공통 입력 상태 관리 헬퍼 함수
+	void UpdateInputMode();
 };
