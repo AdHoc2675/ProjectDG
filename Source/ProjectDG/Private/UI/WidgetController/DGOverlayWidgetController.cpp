@@ -38,6 +38,22 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 		}
 	}
 
+	// 파티원 UI가 초기화될 때 이미 방에 접속해 있는 기존 파티원(PlayerState)들을 긁어와서 목록에 추가
+	if (UWorld* World = GetWorld())
+	{
+		if (ADG_GameState* GameState = World->GetGameState<ADG_GameState>())
+		{
+			// GameState가 관리하는 모든 PlayerState 배열 순회
+			for (APlayerState* PS : GameState->PlayerArray)
+			{
+				if (ADG_PlayerState* DGPS = Cast<ADG_PlayerState>(PS))
+				{
+					// 본인 체크 등 로직이 이미 HandlePartyMemberJoined에 잘 구현되어 있으므로 이를 재활용하여 호출
+					HandlePartyMemberJoined(DGPS);
+				}
+			}
+		}
+	}
 }
 
 void UDGOverlayWidgetController::BindCallbacksToDependencies()
