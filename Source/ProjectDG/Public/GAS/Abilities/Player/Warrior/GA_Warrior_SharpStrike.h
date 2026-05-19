@@ -65,14 +65,14 @@ private:
 	bool bComboInputWindowOpen = false;
 	bool bComboInputBuffered = false;
 	
-	// Montage의 ANS 콤보 중복 방지 로직 강화 : 한 콤보 내에서 데미지 적용된 액터 중복데미지 방지
-	TSet<TWeakObjectPtr<AActor>> HitActorsThisCombo;
+	// AttackHitWindow가 전달한 콤보 번호별로 타격 대상 중복 데미지를 방지
+	TMap<int32, TSet<TWeakObjectPtr<AActor>>> HitActorsByCombo;
 
 	void ResetComboState();
 
 	bool IsSharpStrikeInputHeld() const;
 	void TryBufferComboInputFromHeldState();
-	void TryJumpToNextComboSection();
+	void TryJumpToNextComboSection(int32 BranchComboIndex);
 	void PlaySharpStrikeMontageFromStart();
 
 	UFUNCTION()

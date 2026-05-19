@@ -26,15 +26,6 @@ UGA_Warrior_SharpStrike::UGA_Warrior_SharpStrike()
 void UGA_Warrior_SharpStrike::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* OwnerInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
         AActor* DebugAvatarActor = GetAvatarActorFromActorInfo();
-
-        // Debug::Print(FString::Printf(
-        //       TEXT("[SharpStrikeGA] ActivateAbility Avatar=%s Authority=%s LocalRole=%d CurrentCombo=%d Time=%.3f"),
-        //       *GetNameSafe(DebugAvatarActor),
-        //       DebugAvatarActor && DebugAvatarActor->HasAuthority() ? TEXT("true") : TEXT("false"),
-        //       DebugAvatarActor ? static_cast<int32>(DebugAvatarActor->GetLocalRole()) : -1,
-        //       CurrentComboIndex,
-        //       DebugAvatarActor && DebugAvatarActor->GetWorld() ? DebugAvatarActor->GetWorld()->GetTimeSeconds() : -1.f
-        // ), FColor::Green);
         
 	if (!CommitAbility(Handle, OwnerInfo, ActivationInfo))
         {
@@ -104,15 +95,6 @@ void UGA_Warrior_SharpStrike::ActivateAbility(const FGameplayAbilitySpecHandle H
         {
                 SharpStrikeInputPressedTask->EventReceived.AddDynamic(this, &UGA_Warrior_SharpStrike::OnSharpStrikeInputPressed);
                 SharpStrikeInputPressedTask->ReadyForActivation();
-                
-                // AActor* InfunctionDebugAvatarActor = GetAvatarActorFromActorInfo();
-                // Debug::Print(FString::Printf(
-                //         TEXT("[SharpStrikeGA] InputPressedTask Ready Avatar=%s Authority=%s LocalRole=%d Time=%.3f"),
-                //         *GetNameSafe(InfunctionDebugAvatarActor),
-                //         InfunctionDebugAvatarActor && InfunctionDebugAvatarActor->HasAuthority() ? TEXT("true") : TEXT("false"),
-                //         InfunctionDebugAvatarActor ? static_cast<int32>(InfunctionDebugAvatarActor->GetLocalRole()) : -1,
-                //         InfunctionDebugAvatarActor && InfunctionDebugAvatarActor->GetWorld() ? InfunctionDebugAvatarActor->GetWorld()->GetTimeSeconds() : -1.f
-                // ), FColor::Cyan);
         }
         
         AttackHitTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
@@ -147,7 +129,7 @@ void UGA_Warrior_SharpStrike::ResetComboState()
         CurrentComboIndex = 1;
         bComboInputWindowOpen = false;
         bComboInputBuffered = false;
-        HitActorsThisCombo.Reset();
+        HitActorsByCombo.Reset();
 }
 
 bool UGA_Warrior_SharpStrike::IsSharpStrikeInputHeld() const
@@ -171,18 +153,26 @@ void UGA_Warrior_SharpStrike::TryBufferComboInputFromHeldState()
         }
 }
 
-void UGA_Warrior_SharpStrike::TryJumpToNextComboSection()
+void UGA_Warrior_SharpStrike::TryJumpToNextComboSection(int32 BranchComboIndex)
 {
-        Debug::Print(FString::Printf(
-                  TEXT("[SharpStrikeGA] Branch Enter. CurrentCombo=%d Buffered=%s Held=%s Authority=%s Avatar=%s"),
-                  CurrentComboIndex,
-                  bComboInputBuffered ? TEXT("true") : TEXT("false"),
-                  IsSharpStrikeInputHeld() ? TEXT("true") : TEXT("false"),
-                  GetAvatarActorFromActorInfo() && GetAvatarActorFromActorInfo()->HasAuthority() ? TEXT("true") :
-  TEXT("false"),
-                  *GetNameSafe(GetAvatarActorFromActorInfo())
-          ), FColor::Yellow);
+        if (BranchComboIndex != CurrentComboIndex)
+        {
+                Debug::Print(FString::Printf(
+                        TEXT("[SharpStrikeGA] Branch combo differs from current state. BranchCombo=%d CurrentCombo=%d Buffered=%s Held=%s Authority=%s Avatar=%s"),
+                        BranchComboIndex,
+                        CurrentComboIndex,
+                        bComboInputBuffered ? TEXT("true") : TEXT("false"),
+                        IsSharpStrikeInputHeld() ? TEXT("true") : TEXT("false"),
+                        GetAvatarActorFromActorInfo() && GetAvatarActorFromActorInfo()->HasAuthority() ? TEXT("true") :TEXT("false"),
+                        *GetNameSafe(GetAvatarActorFromActorInfo())
+                ), FColor::Orange);
+        }
         
+        if (BranchComboIndex < 1 || BranchComboIndex > 3)
+        {
+                return;
+        }
+
         if (!bComboInputBuffered)
         {
                 return;
@@ -190,51 +180,31 @@ void UGA_Warrior_SharpStrike::TryJumpToNextComboSection()
 
         bComboInputBuffered = false;
 
-        if (CurrentComboIndex == 1)
+        if (BranchComboIndex == 1)
         {
-                Debug::Print(TEXT("[SharpStrikeGA] Jump Combo1 -> Combo2"), FColor::Green);
-                
                 CurrentComboIndex = 2;
-                HitActorsThisCombo.Reset();
-                
-                // Debug::Print(FString::Printf(TEXT("[SharpStrike Reset HitActors] Jump to Combo=%d"),CurrentComboIndex), FColor::Green);
-                
+
                 MontageJumpToSection(Combo2SectionName);
-
-                // Debug::Print(TEXT("[GA_Warrior_SharpStrike] Jump to Combo_2."), FColor::Green);
                 return;
         }
 
-        if (CurrentComboIndex == 2)
+        if (BranchComboIndex == 2)
         {
-                Debug::Print(TEXT("[SharpStrikeGA] Jump Combo2 -> Combo3"), FColor::Green);
-                
                 CurrentComboIndex = 3;
-                HitActorsThisCombo.Reset();
-                
-                // Debug::Print(FString::Printf(TEXT("[SharpStrike Reset HitActors] Jump to Combo=%d"),CurrentComboIndex), FColor::Green);
-                
-                MontageJumpToSection(Combo3SectionName);
 
-                // Debug::Print(TEXT("[GA_Warrior_SharpStrike] Jump to Combo_3."), FColor::Green);
+                MontageJumpToSection(Combo3SectionName);
                 return;
         }
-        if (CurrentComboIndex == 3)
+
+        if (BranchComboIndex == 3)
         {
                 if (!IsSharpStrikeInputHeld())
                 {
-                        Debug::Print(TEXT("[SharpStrikeGA] Combo3 Branch ignored. Held=false"), FColor::Orange);
-                        
                         return;
                 }
-                
-                Debug::Print(TEXT("[SharpStrikeGA] Jump Combo3 -> Combo1"), FColor::Green);
 
                 CurrentComboIndex = 1;
-                HitActorsThisCombo.Reset();
-                
-                // Debug::Print(FString::Printf(TEXT("[SharpStrike Reset HitActors] Jump to Combo=%d"),CurrentComboIndex), FColor::Green);
-                
+
                 MontageJumpToSection(Combo1SectionName);
                 return;
         }
@@ -281,9 +251,9 @@ void UGA_Warrior_SharpStrike::OnComboInputWindowOpened(FGameplayEventData Payloa
 
   void UGA_Warrior_SharpStrike::OnComboBranch(FGameplayEventData Payload)
   {
-        //Debug::Print(TEXT("[GA_Warrior_SharpStrike] Combo branch."), FColor::Yellow);
+        const int32 BranchComboIndex = FMath::RoundToInt(Payload.EventMagnitude);
 
-        TryJumpToNextComboSection();
+        TryJumpToNextComboSection(BranchComboIndex);
   }
 
 void UGA_Warrior_SharpStrike::OnMontageCompleted()
@@ -308,31 +278,12 @@ void UGA_Warrior_SharpStrike::OnMontageCompleted()
 
 void UGA_Warrior_SharpStrike::OnSharpStrikeInputPressed(FGameplayEventData Payload)
 {
-        // AActor* DebugAvatarActor = GetAvatarActorFromActorInfo();
-
-        // Debug::Print(FString::Printf(
-        //         TEXT("[SharpStrikeGA] InputEvent RECEIVED Avatar=%s Authority=%s Event=%s Combo=%d WindowOpen=%s BufferedBefore=%s Held=%s Time=%.3f"),
-        //         *GetNameSafe(DebugAvatarActor),
-        //         DebugAvatarActor && DebugAvatarActor->HasAuthority() ? TEXT("true") : TEXT("false"),
-        //         *Payload.EventTag.ToString(),
-        //         CurrentComboIndex,
-        //         bComboInputWindowOpen ? TEXT("true") : TEXT("false"),
-        //         bComboInputBuffered ? TEXT("true") : TEXT("false"),
-        //         IsSharpStrikeInputHeld() ? TEXT("true") : TEXT("false"),
-        //         DebugAvatarActor && DebugAvatarActor->GetWorld() ? DebugAvatarActor->GetWorld()->GetTimeSeconds() : -1.f
-        // ), bComboInputWindowOpen ? FColor::Green : FColor::Red);
-        
         if (!bComboInputWindowOpen)
         {
                 return;
         }
 
         bComboInputBuffered = true;
-        
-        // Debug::Print(FString::Printf(
-        //         TEXT("[SharpStrikeGA] InputEvent BUFFERED Combo=%d"),
-        //         CurrentComboIndex
-        // ), FColor::Green);
 }
 
 void UGA_Warrior_SharpStrike::EndSharpStrikeAbility()
@@ -366,23 +317,32 @@ void UGA_Warrior_SharpStrike::OnAttackHit(FGameplayEventData Payload)
         }
         
         const int32 HitComboIndex = FMath::RoundToInt(Payload.EventMagnitude);
+        if (HitComboIndex < 1 || HitComboIndex > 3)
+        {
+                Debug::Print(FString::Printf(
+                        TEXT("[SharpStrikeGA] Invalid HitComboIndex=%d Target=%s"),
+                        HitComboIndex,
+                        *GetNameSafe(TargetActor)), FColor::Red);
+                return;
+        }
+
         if (HitComboIndex != CurrentComboIndex)
         {
                 Debug::Print(FString::Printf(
-                TEXT("[SharpStrikeGA] Hit ignored by combo mismatch. HitCombo=%d CurrentCombo=%d Target=%s"),
-                HitComboIndex,
-                CurrentComboIndex,
-                *GetNameSafe(TargetActor)), FColor::Yellow);
-                
-                return;
+                        TEXT("[SharpStrikeGA] Hit combo differs from current state. HitCombo=%d CurrentCombo=%d Target=%s"),
+                        HitComboIndex,
+                        CurrentComboIndex,
+                        *GetNameSafe(TargetActor)), FColor::Orange);
         }
-        
-        if (HitActorsThisCombo.Contains(TargetActor))
+
+        TSet<TWeakObjectPtr<AActor>>& HitActorsForCombo = HitActorsByCombo.FindOrAdd(HitComboIndex);
+
+        if (HitActorsForCombo.Contains(TargetActor))
         {
                 return;
         }
 
-        HitActorsThisCombo.Add(TargetActor);
+        HitActorsForCombo.Add(TargetActor);
 
         if (!DamageEffectClass)
         {
