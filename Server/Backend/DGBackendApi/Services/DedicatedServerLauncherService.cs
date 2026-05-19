@@ -90,8 +90,21 @@ public class DedicatedServerLauncherService
             };
         }
 
-        var arguments =
-            $"{_options.MapPath} -server -log -port={serverPort} -SessionId={sessionId} -BackendUrl={_options.BackendBaseUrl}";
+        var logDirectory = Path.Combine(
+    Directory.GetCurrentDirectory(),
+    "Logs",
+    "DedicatedServers"
+);
+
+Directory.CreateDirectory(logDirectory);
+
+var logFilePath = Path.Combine(
+    logDirectory,
+    $"Dedi_{serverPort}_{sessionId}.log"
+);
+
+var arguments =
+    $"{_options.MapPath} -server -log -FORCELOGFLUSH -AbsLog=\"{logFilePath}\" -port={serverPort} -SessionId={sessionId} -BackendUrl={_options.BackendBaseUrl}";
 
         var startInfo = new ProcessStartInfo
         {
