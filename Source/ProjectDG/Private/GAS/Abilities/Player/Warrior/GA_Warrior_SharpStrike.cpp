@@ -173,6 +173,16 @@ void UGA_Warrior_SharpStrike::TryBufferComboInputFromHeldState()
 
 void UGA_Warrior_SharpStrike::TryJumpToNextComboSection()
 {
+        Debug::Print(FString::Printf(
+                  TEXT("[SharpStrikeGA] Branch Enter. CurrentCombo=%d Buffered=%s Held=%s Authority=%s Avatar=%s"),
+                  CurrentComboIndex,
+                  bComboInputBuffered ? TEXT("true") : TEXT("false"),
+                  IsSharpStrikeInputHeld() ? TEXT("true") : TEXT("false"),
+                  GetAvatarActorFromActorInfo() && GetAvatarActorFromActorInfo()->HasAuthority() ? TEXT("true") :
+  TEXT("false"),
+                  *GetNameSafe(GetAvatarActorFromActorInfo())
+          ), FColor::Yellow);
+        
         if (!bComboInputBuffered)
         {
                 return;
@@ -182,6 +192,8 @@ void UGA_Warrior_SharpStrike::TryJumpToNextComboSection()
 
         if (CurrentComboIndex == 1)
         {
+                Debug::Print(TEXT("[SharpStrikeGA] Jump Combo1 -> Combo2"), FColor::Green);
+                
                 CurrentComboIndex = 2;
                 HitActorsThisCombo.Reset();
                 
@@ -195,6 +207,8 @@ void UGA_Warrior_SharpStrike::TryJumpToNextComboSection()
 
         if (CurrentComboIndex == 2)
         {
+                Debug::Print(TEXT("[SharpStrikeGA] Jump Combo2 -> Combo3"), FColor::Green);
+                
                 CurrentComboIndex = 3;
                 HitActorsThisCombo.Reset();
                 
@@ -207,10 +221,14 @@ void UGA_Warrior_SharpStrike::TryJumpToNextComboSection()
         }
         if (CurrentComboIndex == 3)
         {
-                // if (!IsSharpStrikeInputHeld())
-                // {
-                //         return;
-                // }
+                if (!IsSharpStrikeInputHeld())
+                {
+                        Debug::Print(TEXT("[SharpStrikeGA] Combo3 Branch ignored. Held=false"), FColor::Orange);
+                        
+                        return;
+                }
+                
+                Debug::Print(TEXT("[SharpStrikeGA] Jump Combo3 -> Combo1"), FColor::Green);
 
                 CurrentComboIndex = 1;
                 HitActorsThisCombo.Reset();
