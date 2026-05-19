@@ -126,6 +126,8 @@ private:
 	
 	void SendHitEvent(AActor* OwnerActor, AActor* HitActor) const;
 	
+	void SendHitWindowBeginEvent(AActor* OwnerActor) const;
+	
 	//팀 확인 및 디버깅
 	bool ShouldIgnoreHitActor(AActor* OwnerActor, AActor* HitActor) const;
 	bool AreActorsOnSameTeam(AActor* FirstActor, AActor* SecondActor) const;

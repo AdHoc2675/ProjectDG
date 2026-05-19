@@ -30,6 +30,8 @@ namespace DGGameplayTags
 	
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Attack_Hit)
 	
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Attack_HitWindow_Begin)
+	
 	// 전사스킬 예리한일격 탭으로 전달 시 필요 태그
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Warrior_SharpStrike)
 	

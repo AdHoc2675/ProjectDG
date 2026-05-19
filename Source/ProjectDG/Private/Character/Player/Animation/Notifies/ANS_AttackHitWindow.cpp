@@ -54,6 +54,8 @@ void UANS_AttackHitWindow::NotifyBegin(USkeletalMeshComponent* MeshComp,UAnimSeq
         {
                 return;
         }
+        
+        SendHitWindowBeginEvent(OwnerActor);
 
         if (TraceMode == EAttackHitTraceMode::ForwardBoxOverlap)
         {
@@ -493,6 +495,26 @@ void UANS_AttackHitWindow::SendHitEvent(AActor* OwnerActor, AActor* HitActor) co
         Payload.EventMagnitude = static_cast<float>(AttackComboIndex);
 
         UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(OwnerActor, HitEventTag, Payload);
+}
+
+void UANS_AttackHitWindow::SendHitWindowBeginEvent(AActor* OwnerActor) const
+{
+        if (!OwnerActor)
+        {
+                return;
+        }
+
+        FGameplayEventData Payload;
+        Payload.EventTag = DGGameplayTags::Event_Attack_HitWindow_Begin.GetTag();
+        Payload.Instigator = OwnerActor;
+        Payload.Target = OwnerActor;
+        Payload.EventMagnitude = static_cast<float>(AttackComboIndex);
+
+        UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+                OwnerActor,
+                DGGameplayTags::Event_Attack_HitWindow_Begin.GetTag(),
+                Payload
+        );
 }
 
 bool UANS_AttackHitWindow::ShouldIgnoreHitActor(AActor* OwnerActor, AActor* HitActor) const

@@ -56,7 +56,9 @@ private:
 	UPROPERTY()
 	TObjectPtr<class UAbilityTask_WaitGameplayEvent> ComboBranchTask;
 	
-	// 입력 tap 관련 task
+	UPROPERTY()
+	TObjectPtr<class UAbilityTask_WaitGameplayEvent> AttackHitWindowBeginTask;
+	
 	UPROPERTY()
 	TObjectPtr<class UAbilityTask_WaitGameplayEvent> SharpStrikeInputPressedTask;
 
@@ -80,6 +82,9 @@ private:
 
 	UFUNCTION()
 	void OnComboInputWindowClosed(FGameplayEventData Payload);
+	
+	UFUNCTION()
+	void OnAttackHitWindowBegin(FGameplayEventData Payload);
 
 	UFUNCTION()
 	void OnComboBranch(FGameplayEventData Payload);
