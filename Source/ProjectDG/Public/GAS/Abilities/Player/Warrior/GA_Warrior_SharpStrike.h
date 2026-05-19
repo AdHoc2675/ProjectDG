@@ -99,6 +99,12 @@ private:
 	UFUNCTION()
 	void OnSharpStrikeInputPressed(FGameplayEventData Payload);
 	
+	// EndAbility
+private:
+	bool bEndingSharpStrike = false;
+
+	void EndSharpStrikeAbility();
+	
 // 데미지 관련 로직
 private:
 	UPROPERTY()

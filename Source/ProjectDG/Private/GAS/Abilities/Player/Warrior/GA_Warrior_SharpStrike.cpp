@@ -48,6 +48,7 @@ void UGA_Warrior_SharpStrike::ActivateAbility(const FGameplayAbilitySpecHandle H
                 return;
         }
 
+        bEndingSharpStrike = false;
         ResetComboState();
 
         ComboInputWindowOpenTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
@@ -227,7 +228,7 @@ void UGA_Warrior_SharpStrike::PlaySharpStrikeMontageFromStart()
 {
         if (!SharpStrikeMontage)
         {
-                K2_EndAbility();
+                EndSharpStrikeAbility();
                 return;
         }
 
@@ -236,7 +237,7 @@ void UGA_Warrior_SharpStrike::PlaySharpStrikeMontageFromStart()
 
         if (!MontageTask)
         {
-                K2_EndAbility();
+                EndSharpStrikeAbility();
                 return;
         }
 
@@ -267,32 +268,24 @@ void UGA_Warrior_SharpStrike::OnComboInputWindowOpened(FGameplayEventData Payloa
         TryJumpToNextComboSection();
   }
 
-  void UGA_Warrior_SharpStrike::OnMontageCompleted()
-  {
-        if (IsSharpStrikeInputHeld())
-        {
-                ResetComboState();
-                PlaySharpStrikeMontageFromStart();
-                return;
-        }
-        
-        K2_EndAbility();
-  }
+void UGA_Warrior_SharpStrike::OnMontageCompleted()
+{
+        EndSharpStrikeAbility();
+}
 
   void UGA_Warrior_SharpStrike::OnMontageInterrupted()
   {
-        K2_EndAbility();
+        EndSharpStrikeAbility();
   }
 
   void UGA_Warrior_SharpStrike::OnMontageBlendOut()
   {
-        // Normal montage completion can trigger BlendOut before Completed.
-        // Do not end the ability here because SharpStrike may restart while the key is held.
+        EndSharpStrikeAbility();
   }
 
   void UGA_Warrior_SharpStrike::OnMontageCancelled()
   {
-        K2_EndAbility();
+        EndSharpStrikeAbility();
   }
 
 void UGA_Warrior_SharpStrike::OnSharpStrikeInputPressed(FGameplayEventData Payload)
@@ -322,6 +315,17 @@ void UGA_Warrior_SharpStrike::OnSharpStrikeInputPressed(FGameplayEventData Paylo
         //         TEXT("[SharpStrikeGA] InputEvent BUFFERED Combo=%d"),
         //         CurrentComboIndex
         // ), FColor::Green);
+}
+
+void UGA_Warrior_SharpStrike::EndSharpStrikeAbility()
+{
+        if (bEndingSharpStrike)
+        {
+                return;
+        }
+
+        bEndingSharpStrike = true;
+        K2_EndAbility();
 }
 
 float UGA_Warrior_SharpStrike::GetCurrentComboDamage() const
