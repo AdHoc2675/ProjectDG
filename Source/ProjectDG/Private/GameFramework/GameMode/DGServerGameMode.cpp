@@ -8,6 +8,7 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerState.h"
+#include "HAL/PlatformMisc.h"
 #include "HttpModule.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Interfaces/IHttpResponse.h"
@@ -179,6 +180,22 @@ void ADGServerGameMode::Logout(AController* Exiting)
 		? Exiting->GetName()
 		: TEXT("None");
 
+	bool bHasMemberInfo = false;
+	FDGConnectedMemberInfo LeavingMemberInfo;
+
+	if (GetNetMode() == NM_DedicatedServer && IsValid(Exiting))
+	{
+		const TObjectKey<AController> ExitingKey(Exiting);
+
+		if (const FDGConnectedMemberInfo* FoundMemberInfo = ConnectedMemberInfos.Find(ExitingKey))
+		{
+			LeavingMemberInfo = *FoundMemberInfo;
+			bHasMemberInfo = true;
+		}
+
+		ConnectedMemberInfos.Remove(ExitingKey);
+	}
+
 	APawn* ExitingPawn = IsValid(Exiting)
 		? Exiting->GetPawn()
 		: nullptr;
@@ -206,10 +223,20 @@ void ADGServerGameMode::Logout(AController* Exiting)
 	ConnectedPlayerCount = FMath::Max(0, ConnectedPlayerCount - 1);
 
 	Debug::Print(FString::Printf(
-		TEXT("[DGServerGameMode] Logout. Player=%s ConnectedPlayerCount=%d"),
+		TEXT("[DGServerGameMode] Logout. Player=%s ConnectedPlayerCount=%d HasMemberInfo=%s"),
 		*ExitingName,
-		ConnectedPlayerCount
+		ConnectedPlayerCount,
+		bHasMemberInfo ? TEXT("true") : TEXT("false")
 	));
+
+	if (bHasMemberInfo)
+	{
+		const bool bWasLastKnownPlayer = ConnectedPlayerCount <= 0;
+		ReportMemberLeftAsync(LeavingMemberInfo, bWasLastKnownPlayer);
+		return;
+	}
+
+	Debug::Print(TEXT("[DGServerGameMode] Logout member info not found. Fallback to session-ended check."));
 
 	TryReportSessionEndedIfNoPlayers();
 }
@@ -362,7 +389,19 @@ void ADGServerGameMode::ValidateJoinTokenAsync(
 			));
 
 			FString ResponseMessage;
-			const bool bValidJoin = ParseValidateJoinResponse(ResponseBody, ResponseMessage);
+			FString ResponseSessionId;
+			int64 ResponseAccountId = 0;
+			int64 ResponseCharacterId = 0;
+			FString ResponseRole;
+
+			const bool bValidJoin = ParseValidateJoinResponse(
+				ResponseBody,
+				ResponseMessage,
+				ResponseSessionId,
+				ResponseAccountId,
+				ResponseCharacterId,
+				ResponseRole
+			);
 
 			if (ResponseCode < 200 || ResponseCode >= 300)
 			{
@@ -386,13 +425,25 @@ void ADGServerGameMode::ValidateJoinTokenAsync(
 				return;
 			}
 
+			FDGConnectedMemberInfo MemberInfo;
+			MemberInfo.SessionId = ResponseSessionId.IsEmpty() ? SessionId : ResponseSessionId;
+			MemberInfo.AccountId = ResponseAccountId;
+			MemberInfo.CharacterId = ResponseCharacterId;
+			MemberInfo.Role = ResponseRole;
+
+			ConnectedMemberInfos.Add(TObjectKey<AController>(PlayerController), MemberInfo);
+
 			Debug::Print(FString::Printf(
-				TEXT("[DGServerGameMode] Validate Join Success. Player=%s Message=%s"),
+				TEXT("[DGServerGameMode] Validate Join Success. Player=%s SessionId=%s AccountId=%lld CharacterId=%lld Role=%s Message=%s"),
 				*PlayerController->GetName(),
+				*MemberInfo.SessionId,
+				MemberInfo.AccountId,
+				MemberInfo.CharacterId,
+				*MemberInfo.Role,
 				*ResponseMessage
 			));
 
-			ReportSessionStartedAsync(SessionId);
+			ReportSessionStartedAsync(MemberInfo.SessionId);
 		}
 	);
 
@@ -549,6 +600,152 @@ void ADGServerGameMode::ReportSessionEndedAsync(
 	if (!bRequestStarted)
 	{
 		Debug::Print(TEXT("[DGServerGameMode] Failed to start session-ended request."));
+	}
+}
+
+void ADGServerGameMode::ReportMemberLeftAsync(
+	const FDGConnectedMemberInfo& MemberInfo,
+	bool bWasLastKnownPlayer
+)
+{
+	if (MemberInfo.SessionId.IsEmpty())
+	{
+		Debug::Print(TEXT("[DGServerGameMode] ReportMemberLeftAsync failed. SessionId is empty."));
+		return;
+	}
+
+	if (MemberInfo.AccountId <= 0 || MemberInfo.CharacterId <= 0)
+	{
+		Debug::Print(FString::Printf(
+			TEXT("[DGServerGameMode] ReportMemberLeftAsync failed. Invalid member. AccountId=%lld CharacterId=%lld"),
+			MemberInfo.AccountId,
+			MemberInfo.CharacterId
+		));
+		return;
+	}
+
+	FString RequestUrl = BackendBaseUrl;
+
+	if (RequestUrl.EndsWith(TEXT("/")))
+	{
+		RequestUrl.LeftChopInline(1);
+	}
+
+	RequestUrl += TEXT("/api/sessions/member-left");
+
+	const FString BodyJson = BuildMemberLeftJson(
+		MemberInfo.SessionId,
+		MemberInfo.AccountId,
+		MemberInfo.CharacterId
+	);
+
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+	Request->SetURL(RequestUrl);
+	Request->SetVerb(TEXT("POST"));
+	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	Request->SetHeader(TEXT("Accept"), TEXT("application/json"));
+	Request->SetContentAsString(BodyJson);
+
+	Debug::Print(FString::Printf(
+		TEXT("[DGServerGameMode] Member Left Request. Url=%s SessionId=%s AccountId=%lld CharacterId=%lld LastKnown=%s"),
+		*RequestUrl,
+		*MemberInfo.SessionId,
+		MemberInfo.AccountId,
+		MemberInfo.CharacterId,
+		bWasLastKnownPlayer ? TEXT("true") : TEXT("false")
+	));
+
+	Request->OnProcessRequestComplete().BindLambda(
+		[this, MemberInfo, bWasLastKnownPlayer](
+			FHttpRequestPtr HttpRequest,
+			FHttpResponsePtr HttpResponse,
+			bool bWasSuccessful
+		)
+		{
+			if (!bWasSuccessful || !HttpResponse.IsValid())
+			{
+				Debug::Print(TEXT("[DGServerGameMode] Member Left Request Failed."));
+
+				if (bWasLastKnownPlayer)
+				{
+					Debug::Print(TEXT("[DGServerGameMode] Member Left failed for last known player. Fallback session-ended."));
+					TryReportSessionEndedIfNoPlayers();
+				}
+
+				return;
+			}
+
+			const int32 ResponseCode = HttpResponse->GetResponseCode();
+			const FString ResponseBody = HttpResponse->GetContentAsString();
+
+			bool bShouldShutdownServer = false;
+			FString ResponseMessage;
+
+			const bool bParsed = ParseMemberLeftResponse(
+				ResponseBody,
+				bShouldShutdownServer,
+				ResponseMessage
+			);
+
+			if (ResponseCode < 200 || ResponseCode >= 300)
+			{
+				Debug::Print(FString::Printf(
+					TEXT("[DGServerGameMode] Member Left Failed. Code=%d Body=%s"),
+					ResponseCode,
+					*ResponseBody
+				));
+
+				if (bWasLastKnownPlayer)
+				{
+					Debug::Print(TEXT("[DGServerGameMode] Member Left HTTP failed for last known player. Fallback session-ended."));
+					TryReportSessionEndedIfNoPlayers();
+				}
+
+				return;
+			}
+
+			Debug::Print(FString::Printf(
+				TEXT("[DGServerGameMode] Member Left Success. Parsed=%s ShouldShutdown=%s Message=%s Body=%s"),
+				bParsed ? TEXT("true") : TEXT("false"),
+				bShouldShutdownServer ? TEXT("true") : TEXT("false"),
+				*ResponseMessage,
+				*ResponseBody
+			));
+
+			if (!bShouldShutdownServer)
+			{
+				return;
+			}
+
+			Debug::Print(FString::Printf(
+				TEXT("[DGServerGameMode] Last member left. Shutdown dedicated server. SessionId=%s"),
+				*MemberInfo.SessionId
+			));
+
+			bSessionEndReported = true;
+
+			StopSessionHeartbeat();
+
+			if (ActiveSessionId == MemberInfo.SessionId)
+			{
+				ActiveSessionId.Empty();
+			}
+
+			FGenericPlatformMisc::RequestExit(false);
+		}
+	);
+
+	const bool bRequestStarted = Request->ProcessRequest();
+
+	if (!bRequestStarted)
+	{
+		Debug::Print(TEXT("[DGServerGameMode] Failed to start member-left request."));
+
+		if (bWasLastKnownPlayer)
+		{
+			Debug::Print(TEXT("[DGServerGameMode] Member Left request start failed for last known player. Fallback session-ended."));
+			TryReportSessionEndedIfNoPlayers();
+		}
 	}
 }
 
@@ -841,9 +1038,32 @@ FString ADGServerGameMode::BuildSessionHeartbeatJson(
 	return OutputString;
 }
 
+FString ADGServerGameMode::BuildMemberLeftJson(
+	const FString& SessionId,
+	int64 AccountId,
+	int64 CharacterId
+)
+{
+	TSharedRef<FJsonObject> JsonObject = MakeShared<FJsonObject>();
+
+	JsonObject->SetStringField(TEXT("sessionId"), SessionId);
+	JsonObject->SetNumberField(TEXT("accountId"), static_cast<double>(AccountId));
+	JsonObject->SetNumberField(TEXT("characterId"), static_cast<double>(CharacterId));
+
+	FString OutputString;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
+	FJsonSerializer::Serialize(JsonObject, Writer);
+
+	return OutputString;
+}
+
 bool ADGServerGameMode::ParseValidateJoinResponse(
 	const FString& ResponseBody,
-	FString& OutMessage
+	FString& OutMessage,
+	FString& OutSessionId,
+	int64& OutAccountId,
+	int64& OutCharacterId,
+	FString& OutRole
 )
 {
 	TSharedPtr<FJsonObject> JsonObject;
@@ -857,6 +1077,50 @@ bool ADGServerGameMode::ParseValidateJoinResponse(
 
 	bool bSuccess = false;
 	JsonObject->TryGetBoolField(TEXT("success"), bSuccess);
+	JsonObject->TryGetStringField(TEXT("message"), OutMessage);
+	JsonObject->TryGetStringField(TEXT("sessionId"), OutSessionId);
+	JsonObject->TryGetStringField(TEXT("role"), OutRole);
+
+	double AccountIdValue = 0.0;
+	double CharacterIdValue = 0.0;
+
+	if (JsonObject->TryGetNumberField(TEXT("accountId"), AccountIdValue))
+	{
+		OutAccountId = static_cast<int64>(AccountIdValue);
+	}
+
+	if (JsonObject->TryGetNumberField(TEXT("characterId"), CharacterIdValue))
+	{
+		OutCharacterId = static_cast<int64>(CharacterIdValue);
+	}
+
+	if (bSuccess && (OutAccountId <= 0 || OutCharacterId <= 0))
+	{
+		OutMessage = TEXT("Validate-join response has invalid AccountId or CharacterId.");
+		return false;
+	}
+
+	return bSuccess;
+}
+
+bool ADGServerGameMode::ParseMemberLeftResponse(
+	const FString& ResponseBody,
+	bool& bOutShouldShutdownServer,
+	FString& OutMessage
+)
+{
+	TSharedPtr<FJsonObject> JsonObject;
+	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseBody);
+
+	if (!FJsonSerializer::Deserialize(Reader, JsonObject) || !JsonObject.IsValid())
+	{
+		OutMessage = TEXT("Failed to parse member-left response.");
+		return false;
+	}
+
+	bool bSuccess = false;
+	JsonObject->TryGetBoolField(TEXT("success"), bSuccess);
+	JsonObject->TryGetBoolField(TEXT("shouldShutdownServer"), bOutShouldShutdownServer);
 	JsonObject->TryGetStringField(TEXT("message"), OutMessage);
 
 	return bSuccess;
