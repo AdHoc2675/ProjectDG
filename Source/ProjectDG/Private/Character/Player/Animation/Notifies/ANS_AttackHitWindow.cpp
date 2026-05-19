@@ -480,7 +480,7 @@ void UANS_AttackHitWindow::TraceForwardBox(USkeletalMeshComponent* CharacterMesh
 
 
 void UANS_AttackHitWindow::SendHitEvent(AActor* OwnerActor, AActor* HitActor) const
-  {
+{
         if (!OwnerActor || !HitActor || !HitEventTag.IsValid())
         {
                 return;
@@ -490,9 +490,10 @@ void UANS_AttackHitWindow::SendHitEvent(AActor* OwnerActor, AActor* HitActor) co
         Payload.EventTag = HitEventTag;
         Payload.Instigator = OwnerActor;
         Payload.Target = HitActor;
+        Payload.EventMagnitude = static_cast<float>(AttackComboIndex);
 
         UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(OwnerActor, HitEventTag, Payload);
-  }
+}
 
 bool UANS_AttackHitWindow::ShouldIgnoreHitActor(AActor* OwnerActor, AActor* HitActor) const
 {
