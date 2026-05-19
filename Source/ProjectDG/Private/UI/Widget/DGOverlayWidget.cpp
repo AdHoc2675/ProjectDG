@@ -2,6 +2,7 @@
 #include "UI/Widget/DGPlayerStatWidget.h"
 #include "UI/Widget/Enemy/DGEnemyStatusWidget.h"
 #include "UI/Widget/DGMiniMapWidget.h"
+#include "UI/Widget/DGPartyListWidget.h"
 
 #include "UI/WidgetController/DGOverlayWidgetController.h"
 
@@ -28,6 +29,11 @@ void UDGOverlayWidget::InitializeSubWidgets()
 		if (MiniMapWidget)
 		{
 			MiniMapWidget->BindToController(OverlayController);
+		}
+
+		if (PartyListWidget)
+		{
+			PartyListWidget->BindToController(OverlayController);
 		}
 
 		// 2. 나중에 추가될 다른 자식 위젯들도 여기서 바인딩

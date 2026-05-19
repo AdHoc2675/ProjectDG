@@ -6,6 +6,7 @@
 
 class UDG_AttributeSet;
 
+
 // UI 로 값 변화를 방송할 다이내믹 멀티캐스트 델리게이트 선언
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChangedSignature, float, NewHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHealthChangedSignature, float, NewMaxHealth);
@@ -24,6 +25,11 @@ class UDGMinimapMarkerComponent;
 
 // 미니맵 마커 업데이트용 델리게이트 (매개변수로 MarkerComponent 전달)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMinimapMarkerUpdatedSignature, UDGMinimapMarkerComponent*, Marker);
+
+
+class ADG_PlayerState;
+// 파티 멤버 변경 델리게이트 (가입/탈퇴 모두 사용, 매개변수로 변경된 멤버의 PlayerState 전달)
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPartyMemberChangedSignature, ADG_PlayerState*, MemberPS);
 
 
 UCLASS()
@@ -97,5 +103,25 @@ protected:
 	UFUNCTION()
 	void HandleMarkerUnregistered(UDGMinimapMarkerComponent* Marker);
 
+#pragma endregion
+
+
+#pragma region Party
+public:
+	UPROPERTY(BlueprintAssignable, Category = "Party")
+	FOnPartyMemberChangedSignature OnPartyMemberJoined;
+
+	UPROPERTY(BlueprintAssignable, Category = "Party")
+	FOnPartyMemberChangedSignature OnPartyMemberLeft;
+
+protected:
+	// --- 파티 핸들러 ---
+	UFUNCTION()
+	void HandlePartyMemberJoined(ADG_PlayerState* NewMemberPS);
+	UFUNCTION()
+	void HandlePartyMemberLeft(ADG_PlayerState* LeavingMemberPS);
+
+	// (추후 시스템 로직에서 호출해줄 헬퍼 함수도 만들 수 있습니다)
+	// void AddPartyMember(ADG_PlayerState* MemberPS) { OnPartyMemberJoined.Broadcast(MemberPS); }
 #pragma endregion
 };

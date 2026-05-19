@@ -7,6 +7,7 @@
 class UDGPlayerStatWidget;
 class UDGEnemyStatusWidget;
 class UDGMiniMapWidget;
+class UDGPartyListWidget;
 
 /**
  * 모든 메인 HUD 구성요소(미니맵, 파티창, 스탯, 슬롯 등)를
@@ -32,4 +33,8 @@ public:
 	// 미니맵 위젯
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UDGMiniMapWidget> MiniMapWidget;
+
+	// 파티 리스트 위젯
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UDGPartyListWidget> PartyListWidget;
 };
