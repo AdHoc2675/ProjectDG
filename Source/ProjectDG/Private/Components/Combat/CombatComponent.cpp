@@ -232,11 +232,11 @@ bool UCombatComponent::ValidateDamageRequest(
 		return false;
 	}
 
-	if (SourceCharacter->IsFriendlyTo(TargetCharacter))
-	{
-		OutFailReason = TEXT("Target is friendly.");
-		return false;
-	}
+	// if (SourceCharacter->IsFriendlyTo(TargetCharacter))
+	// {
+	// 	OutFailReason = TEXT("Target is friendly.");
+	// 	return false;
+	// }
 
 	return true;
 }

@@ -10,8 +10,6 @@
 #include "Core/DG_Debug.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
-#include "AbilitySystemComponent.h"
-#include "GameplayEffect.h"
 
 UGA_Warrior_SharpStrike::UGA_Warrior_SharpStrike()
 {
@@ -379,31 +377,16 @@ void UGA_Warrior_SharpStrike::OnAttackHit(FGameplayEventData Payload)
                         CurrentComboIndex,
                         *GetNameSafe(TargetActor)), FColor::Orange);
         }
+        
+        
+        const FDGDamageResult DamageResult = ApplyDamageToTarget(TargetActor, GetCurrentComboDamage(), DGGameplayTags::Skill_Warrior_SharpStrike.GetTag(),
+          TargetActor->GetActorLocation(),true);
 
-        if (!DamageEffectClass)
+        if (!DamageResult.bSuccess)
         {
-                return;
+                Debug::Print(FString::Printf(
+                        TEXT("[SharpStrikeGA] Damage request failed. Target=%s Reason=%s"),
+                        *GetNameSafe(TargetActor),
+                        *DamageResult.Message), FColor::Red);
         }
-
-        UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
-        UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
-
-        if (!SourceASC || !TargetASC)
-        {
-                return;
-        }
-
-        const FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(DamageEffectClass, GetAbilityLevel());
-        if (!SpecHandle.IsValid())
-        {
-                return;
-        }
-
-        UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(
-                SpecHandle,
-                DGGameplayTags::Data_Damage.GetTag(),
-                GetCurrentComboDamage()
-        );
-
-        SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 }
