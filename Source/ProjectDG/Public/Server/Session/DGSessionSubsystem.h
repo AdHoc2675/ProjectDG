@@ -102,7 +102,7 @@ private:
 	 * -BackendUrl=http://61.80.6.36:8081
 	 */
 	UPROPERTY()
-	FString BackendBaseUrl = TEXT("http://61.80.6.36:8080");
+	FString BackendBaseUrl = TEXT("http://61.80.6.36:8081");
 
 	UPROPERTY()
 	FDGSessionConnectionInfo LastSessionConnectionInfo;
