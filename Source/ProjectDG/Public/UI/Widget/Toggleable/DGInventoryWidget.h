@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "UI/Widget/DGUserWidget.h"
+#include "Components/UniformGridPanel.h"
+#include "UI/Widget/Toggleable/DGInventorySlotWidget.h"
 #include "DGInventoryWidget.generated.h"
 
 class UDGInventoryWidgetController;
@@ -22,6 +24,8 @@ public:
 	void BindToController(UDGInventoryWidgetController* Controller);
 
 protected:
+	virtual void NativeConstruct() override;
+
 	// 위젯 닫기 버튼 등의 기능
 	UFUNCTION(BlueprintCallable, Category = "DG|UI")
 	void CloseInventory();
@@ -30,7 +34,16 @@ protected:
 	UFUNCTION()
 	void OnInventoryUpdatedCallback(const TArray<UDGItemInstance*>& InventoryItems);
 
-	// 추후 바인드 위젯들
-	// UPROPERTY(meta = (BindWidget))
-	// class UUniformGridPanel* InventoryGrid; 
+	// UMG의 UniformGridPanel (10x3 격자 용도)
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UUniformGridPanel> InventoryGrid;
+
+	// UMG 에디터에서 할당할 WBP_InventorySlot 클래스
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
+	TSubclassOf<UDGInventorySlotWidget> SlotWidgetClass;
+
+private:
+	// 생성된 30칸의 슬롯 위젯을 보관하는 캐시 배열
+	UPROPERTY()
+	TArray<TObjectPtr<UDGInventorySlotWidget>> SlotWidgets;
 };
