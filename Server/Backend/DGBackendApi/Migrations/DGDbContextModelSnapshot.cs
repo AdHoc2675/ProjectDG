@@ -22,6 +22,105 @@ namespace DGBackendApi.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("DGBackendApi.Entities.Account", b =>
+                {
+                    b.Property<long>("AccountId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("account_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("AccountId"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("display_name");
+
+                    b.Property<DateTime?>("LastLoginAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_login_at_utc");
+
+                    b.Property<string>("LoginId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("login_id");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("password_hash");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.HasKey("AccountId");
+
+                    b.HasIndex("LoginId")
+                        .IsUnique();
+
+                    b.ToTable("accounts", (string)null);
+                });
+
+            modelBuilder.Entity("DGBackendApi.Entities.GameCharacter", b =>
+                {
+                    b.Property<long>("CharacterId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("character_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("CharacterId"));
+
+                    b.Property<long>("AccountId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("account_id");
+
+                    b.Property<string>("CharacterName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("character_name");
+
+                    b.Property<string>("ClassTag")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("class_tag");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateTime?>("LastPlayedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_played_at_utc");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer")
+                        .HasColumnName("level");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.HasKey("CharacterId");
+
+                    b.HasIndex("AccountId");
+
+                    b.ToTable("game_characters", (string)null);
+                });
+
             modelBuilder.Entity("DGBackendApi.Entities.GameSession", b =>
                 {
                     b.Property<string>("SessionId")
@@ -176,6 +275,17 @@ namespace DGBackendApi.Migrations
                     b.ToTable("session_members", (string)null);
                 });
 
+            modelBuilder.Entity("DGBackendApi.Entities.GameCharacter", b =>
+                {
+                    b.HasOne("DGBackendApi.Entities.Account", "Account")
+                        .WithMany("Characters")
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+                });
+
             modelBuilder.Entity("DGBackendApi.Entities.SessionMember", b =>
                 {
                     b.HasOne("DGBackendApi.Entities.GameSession", "Session")
@@ -185,6 +295,11 @@ namespace DGBackendApi.Migrations
                         .IsRequired();
 
                     b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("DGBackendApi.Entities.Account", b =>
+                {
+                    b.Navigation("Characters");
                 });
 
             modelBuilder.Entity("DGBackendApi.Entities.GameSession", b =>

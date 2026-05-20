@@ -26,7 +26,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDGOnSessionRequestFailed, const FSt
  * - Backend가 SessionId / JoinToken 발급
  * - Dedicated Server는 기존처럼 SessionId / JoinToken만 검증
  */
-UCLASS()
+UCLASS(BlueprintType)
 class PROJECTDG_API UDGSessionSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()

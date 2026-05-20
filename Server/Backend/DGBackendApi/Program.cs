@@ -4,6 +4,7 @@ using DGBackendApi.Data;
 using DGBackendApi.Entities;
 using DGBackendApi.Options;
 using DGBackendApi.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -19,6 +20,7 @@ builder.Services.Configure<DedicatedServerOptions>(
     builder.Configuration.GetSection("DedicatedServer"));
 
 builder.Services.AddScoped<DedicatedServerLauncherService>();
+builder.Services.AddScoped<PasswordHasher<Account>>();
 
 var app = builder.Build();
 
@@ -42,17 +44,237 @@ app.MapGet("/health", () =>
 });
 
 /**
+ * 회원가입 API
+ *
+ * 처리:
+ * - LoginId 중복 검사
+ * - PasswordHasher로 비밀번호 저장
+ * - Account 생성
+ * - Warrior Lv.1 기본 캐릭터 자동 생성
+ */
+app.MapPost("/api/auth/register", async (
+    RegisterRequest request,
+    DGDbContext db,
+    PasswordHasher<Account> passwordHasher
+) =>
+{
+    var loginId = NormalizeLoginId(request.LoginId);
+
+    if (string.IsNullOrWhiteSpace(loginId))
+    {
+        return Results.BadRequest(new RegisterResponse(
+            Success: false,
+            AccountId: 0,
+            LoginId: "",
+            DisplayName: "",
+            Message: "LoginId is required."
+        ));
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Password))
+    {
+        return Results.BadRequest(new RegisterResponse(
+            Success: false,
+            AccountId: 0,
+            LoginId: loginId,
+            DisplayName: "",
+            Message: "Password is required."
+        ));
+    }
+
+    var existingAccount = await db.Accounts
+        .FirstOrDefaultAsync(x => x.LoginId == loginId);
+
+    if (existingAccount != null)
+    {
+        return Results.BadRequest(new RegisterResponse(
+            Success: false,
+            AccountId: 0,
+            LoginId: loginId,
+            DisplayName: "",
+            Message: "LoginId already exists."
+        ));
+    }
+
+    var displayName = string.IsNullOrWhiteSpace(request.DisplayName)
+        ? loginId
+        : request.DisplayName.Trim();
+
+    var now = DateTime.UtcNow;
+
+    var account = new Account
+    {
+        LoginId = loginId,
+        DisplayName = displayName,
+        Status = "Active",
+        CreatedAtUtc = now
+    };
+
+    account.PasswordHash = passwordHasher.HashPassword(account, request.Password);
+
+    var character = new GameCharacter
+    {
+        Account = account,
+        CharacterName = $"{displayName}_Warrior",
+        ClassTag = "Character.Class.Warrior",
+        Level = 1,
+        Status = "Active",
+        CreatedAtUtc = now
+    };
+
+    account.Characters.Add(character);
+
+    db.Accounts.Add(account);
+
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new RegisterResponse(
+        Success: true,
+        AccountId: account.AccountId,
+        LoginId: account.LoginId,
+        DisplayName: account.DisplayName,
+        Message: "Register success."
+    ));
+});
+
+/**
+ * 로그인 API
+ */
+app.MapPost("/api/auth/login", async (
+    LoginRequest request,
+    DGDbContext db,
+    PasswordHasher<Account> passwordHasher
+) =>
+{
+    var loginId = NormalizeLoginId(request.LoginId);
+
+    if (string.IsNullOrWhiteSpace(loginId))
+    {
+        return Results.BadRequest(new LoginResponse(
+            Success: false,
+            AccountId: 0,
+            LoginId: "",
+            DisplayName: "",
+            Message: "LoginId is required."
+        ));
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Password))
+    {
+        return Results.BadRequest(new LoginResponse(
+            Success: false,
+            AccountId: 0,
+            LoginId: loginId,
+            DisplayName: "",
+            Message: "Password is required."
+        ));
+    }
+
+    var account = await db.Accounts
+        .FirstOrDefaultAsync(x =>
+            x.LoginId == loginId &&
+            x.Status == "Active"
+        );
+
+    if (account == null)
+    {
+        return Results.BadRequest(new LoginResponse(
+            Success: false,
+            AccountId: 0,
+            LoginId: loginId,
+            DisplayName: "",
+            Message: "Invalid login id or password."
+        ));
+    }
+
+    var verifyResult = passwordHasher.VerifyHashedPassword(
+        account,
+        account.PasswordHash,
+        request.Password
+    );
+
+    if (verifyResult == PasswordVerificationResult.Failed)
+    {
+        return Results.BadRequest(new LoginResponse(
+            Success: false,
+            AccountId: 0,
+            LoginId: loginId,
+            DisplayName: "",
+            Message: "Invalid login id or password."
+        ));
+    }
+
+    account.LastLoginAtUtc = DateTime.UtcNow;
+
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new LoginResponse(
+        Success: true,
+        AccountId: account.AccountId,
+        LoginId: account.LoginId,
+        DisplayName: account.DisplayName,
+        Message: "Login success."
+    ));
+});
+
+/**
+ * 계정 캐릭터 목록 조회 API
+ */
+app.MapGet("/api/accounts/{accountId:long}/characters", async (
+    long accountId,
+    DGDbContext db
+) =>
+{
+    if (accountId <= 0)
+    {
+        return Results.BadRequest(new CharacterListResponse(
+            Success: false,
+            AccountId: accountId,
+            Characters: new List<CharacterSummaryResponse>(),
+            Message: "AccountId must be greater than 0."
+        ));
+    }
+
+    var accountExists = await db.Accounts
+        .AnyAsync(x =>
+            x.AccountId == accountId &&
+            x.Status == "Active"
+        );
+
+    if (!accountExists)
+    {
+        return Results.NotFound(new CharacterListResponse(
+            Success: false,
+            AccountId: accountId,
+            Characters: new List<CharacterSummaryResponse>(),
+            Message: "Account not found."
+        ));
+    }
+
+    var characters = await db.GameCharacters
+        .Where(x =>
+            x.AccountId == accountId &&
+            x.Status == "Active"
+        )
+        .OrderBy(x => x.CharacterId)
+        .Select(x => new CharacterSummaryResponse(
+            x.CharacterId,
+            x.CharacterName,
+            x.ClassTag,
+            x.Level
+        ))
+        .ToListAsync();
+
+    return Results.Ok(new CharacterListResponse(
+        Success: true,
+        AccountId: accountId,
+        Characters: characters,
+        Message: "Characters loaded."
+    ));
+});
+
+/**
  * 세션 생성 API
- *
- * 유저 입력:
- * - RoomName
- * - RoomPassword
- *
- * 내부 처리:
- * - SessionId 생성
- * - JoinToken 생성
- * - RoomPassword는 Hash로만 저장
- * - Dedicated Server 프로세스 실행
  */
 app.MapPost("/api/sessions/create", async (
     CreateSessionRequest request,
@@ -105,6 +327,35 @@ app.MapPost("/api/sessions/create", async (
         {
             success = false,
             message = "RoomPassword is required."
+        });
+    }
+
+    var accountExists = await db.Accounts.AnyAsync(x =>
+        x.AccountId == request.AccountId &&
+        x.Status == "Active"
+    );
+
+    if (!accountExists)
+    {
+        return Results.BadRequest(new
+        {
+            success = false,
+            message = "Account not found."
+        });
+    }
+
+    var characterExists = await db.GameCharacters.AnyAsync(x =>
+        x.CharacterId == request.CharacterId &&
+        x.AccountId == request.AccountId &&
+        x.Status == "Active"
+    );
+
+    if (!characterExists)
+    {
+        return Results.BadRequest(new
+        {
+            success = false,
+            message = "Character not found."
         });
     }
 
@@ -186,15 +437,6 @@ app.MapPost("/api/sessions/create", async (
 
 /**
  * 세션 합류 API
- *
- * 유저 입력:
- * - RoomName
- * - RoomPassword
- *
- * 내부 처리:
- * - RoomName으로 Open/Playing 세션 조회
- * - RoomPassword Hash 검증
- * - 참가자용 JoinToken 새로 발급
  */
 app.MapPost("/api/sessions/join", async (
     JoinSessionRequest request,
@@ -236,6 +478,35 @@ app.MapPost("/api/sessions/join", async (
         {
             success = false,
             message = "CharacterId must be greater than 0."
+        });
+    }
+
+    var accountExists = await db.Accounts.AnyAsync(x =>
+        x.AccountId == request.AccountId &&
+        x.Status == "Active"
+    );
+
+    if (!accountExists)
+    {
+        return Results.BadRequest(new
+        {
+            success = false,
+            message = "Account not found."
+        });
+    }
+
+    var characterExists = await db.GameCharacters.AnyAsync(x =>
+        x.CharacterId == request.CharacterId &&
+        x.AccountId == request.AccountId &&
+        x.Status == "Active"
+    );
+
+    if (!characterExists)
+    {
+        return Results.BadRequest(new
+        {
+            success = false,
+            message = "Character not found."
         });
     }
 
@@ -403,9 +674,6 @@ app.MapGet("/api/sessions/{sessionId}", async (
 
 /**
  * 세션 접속 토큰 검증 API
- *
- * Dedicated Server가 클라이언트 접속 시 전달받은
- * SessionId / JoinToken을 Backend에 검증 요청할 때 사용한다.
  */
 app.MapPost("/api/sessions/validate-join", async (
     ValidateJoinRequest request,
@@ -619,14 +887,6 @@ app.MapPost("/api/sessions/heartbeat", async (
 
 /**
  * 세션 멤버 퇴장 보고 API
- *
- * Dedicated Server가 특정 플레이어의 Logout을 감지했을 때 호출한다.
- *
- * 처리 흐름:
- * - 해당 멤버만 Left 처리
- * - 남은 Joined 멤버가 있으면 세션 유지
- * - 나간 멤버가 현재 파티장이면 다음 Joined 멤버에게 파티장 승계
- * - 남은 Joined 멤버가 없으면 세션 종료 처리
  */
 app.MapPost("/api/sessions/member-left", async (
     SessionMemberLeftRequest request,
@@ -776,17 +1036,6 @@ app.MapPost("/api/sessions/member-left", async (
 
 /**
  * 세션 종료 보고 API
- *
- * Dedicated Server가 종료되거나,
- * 마지막 플레이어가 나갔을 때 호출한다.
- *
- * 처리 흐름:
- * - sessions.status를 Ended로 변경
- * - sessions.ended_at_utc 기록
- * - sessions.last_heartbeat_at_utc 갱신
- * - sessions.server_runtime_status를 Exited로 변경
- * - sessions.room_name / room_password_hash 비움
- * - 해당 세션의 Joined 멤버들을 Left 처리
  */
 app.MapPost("/api/sessions/session-ended", async (
     SessionEndedRequest request,
@@ -834,6 +1083,13 @@ app.MapPost("/api/sessions/session-ended", async (
     ));
 });
 
+static string NormalizeLoginId(string? loginId)
+{
+    return string.IsNullOrWhiteSpace(loginId)
+        ? ""
+        : loginId.Trim().ToLowerInvariant();
+}
+
 static string NormalizeRoomName(string? roomName)
 {
     return string.IsNullOrWhiteSpace(roomName)
@@ -878,6 +1134,47 @@ static void EndSession(GameSession session, DateTime now)
 }
 
 app.Run();
+
+public record RegisterRequest(
+    string LoginId,
+    string Password,
+    string DisplayName
+);
+
+public record RegisterResponse(
+    bool Success,
+    long AccountId,
+    string LoginId,
+    string DisplayName,
+    string Message
+);
+
+public record LoginRequest(
+    string LoginId,
+    string Password
+);
+
+public record LoginResponse(
+    bool Success,
+    long AccountId,
+    string LoginId,
+    string DisplayName,
+    string Message
+);
+
+public record CharacterSummaryResponse(
+    long CharacterId,
+    string CharacterName,
+    string ClassTag,
+    int Level
+);
+
+public record CharacterListResponse(
+    bool Success,
+    long AccountId,
+    List<CharacterSummaryResponse> Characters,
+    string Message
+);
 
 public record CreateSessionRequest(
     long AccountId,

@@ -3,6 +3,111 @@
 #include "CoreMinimal.h"
 #include "DGBackendTypes.generated.h"
 
+/**
+ * Auth - 회원가입 요청
+ */
+USTRUCT(BlueprintType)
+struct PROJECTDG_API FDGRegisterRequest
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString LoginId;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString Password;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString DisplayName;
+};
+
+/**
+ * Auth - 로그인 요청
+ */
+USTRUCT(BlueprintType)
+struct PROJECTDG_API FDGLoginRequest
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString LoginId;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString Password;
+};
+
+/**
+ * Auth - 회원가입/로그인 결과
+ */
+USTRUCT(BlueprintType)
+struct PROJECTDG_API FDGAuthResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bSuccess = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int64 AccountId = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString LoginId;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString DisplayName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString Message;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString ErrorMessage;
+};
+
+/**
+ * Auth - 캐릭터 요약 정보
+ */
+USTRUCT(BlueprintType)
+struct PROJECTDG_API FDGCharacterSummary
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int64 CharacterId = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString CharacterName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString ClassTag;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 Level = 1;
+};
+
+/**
+ * Auth - 캐릭터 목록 결과
+ */
+USTRUCT(BlueprintType)
+struct PROJECTDG_API FDGCharacterListResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bSuccess = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int64 AccountId = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FDGCharacterSummary> Characters;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString Message;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString ErrorMessage;
+};
+
 
 // Backend API로 방/세션 생성을 요청할 때 사용할 데이터
 // 클라 -> 백엔드
