@@ -274,6 +274,8 @@ void UGA_Warrior_LeapingSlam::StartLeapingTravel(AActor* TargetActor)
 
     if (UWorld* World = GetWorld())
     {
+        TravelStartWorldTime = World->GetTimeSeconds();
+        
         World->GetTimerManager().SetTimer(
             TravelTickTimerHandle,
             this,
@@ -287,13 +289,15 @@ void UGA_Warrior_LeapingSlam::StartLeapingTravel(AActor* TargetActor)
 void UGA_Warrior_LeapingSlam::TickLeapingTravel()
 {
     AActor* AvatarActor = GetAvatarActorFromActorInfo();
-    if (!AvatarActor)
+    UWorld* World = GetWorld();
+
+    if (!AvatarActor || !World)
     {
         FinishLeapingTravel();
         return;
     }
 
-    TravelElapsedTime += TravelTickInterval;
+    TravelElapsedTime = World->GetTimeSeconds() - TravelStartWorldTime;
 
     const float Alpha = FMath::Clamp(TravelElapsedTime / ApproachDuration, 0.f, 1.f);
 

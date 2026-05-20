@@ -64,6 +64,7 @@ private:
     FVector TravelStartLocation = FVector::ZeroVector;
     FVector TravelEndLocation = FVector::ZeroVector;
     float TravelElapsedTime = 0.f;
+	float TravelStartWorldTime = 0.f;
 
     FTimerHandle TravelTickTimerHandle;
 
