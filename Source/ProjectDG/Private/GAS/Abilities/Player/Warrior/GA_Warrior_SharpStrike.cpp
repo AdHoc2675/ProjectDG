@@ -314,13 +314,14 @@ float UGA_Warrior_SharpStrike::GetCurrentComboDamage() const
 
 void UGA_Warrior_SharpStrike::OnAttackHit(FGameplayEventData Payload)
 {
-        AActor* AvatarActor = GetAvatarActorFromActorInfo();
-        if (!AvatarActor || !AvatarActor->HasAuthority())
+        if (!IsAuthorityAvatar())
         {
                 return;
         }
 
-        AActor* TargetActor = const_cast<AActor*>(Payload.Target.Get());
+        AActor* AvatarActor = GetAvatarActorFromActorInfo();
+        AActor* TargetActor = GetPayloadTargetActor(Payload);
+        
         if (!TargetActor || TargetActor == AvatarActor)
         {
                 return;
@@ -343,22 +344,16 @@ void UGA_Warrior_SharpStrike::OnAttackHit(FGameplayEventData Payload)
         
         if (HitComboIndex != CurrentComboIndex)
         {
-                // Debug::Print(FString::Printf(
-                //         TEXT("[SharpStrikeGA] Hit combo differs from current state. HitCombo=%d CurrentCombo=%d Target=%s"),
-                //         HitComboIndex,
-                //         CurrentComboIndex,
-                //         *GetNameSafe(TargetActor)), FColor::Orange);
+                // 필요 시 Debugging Message 출력
         }
         
-        
-        const FDGDamageResult DamageResult = ApplyDamageToTarget(TargetActor, GetCurrentComboDamage(), DGGameplayTags::Skill_Warrior_SharpStrike.GetTag(),
-          TargetActor->GetActorLocation(),true);
+        const FDGDamageResult DamageResult = ApplyDamageToTarget(
+        TargetActor,
+        GetCurrentComboDamage(),
+        DGGameplayTags::Skill_Warrior_SharpStrike.GetTag(),GetPayloadHitLocationOrActorLocation(Payload, TargetActor),true);
 
         if (!DamageResult.bSuccess)
         {
-                // Debug::Print(FString::Printf(
-                //         TEXT("[SharpStrikeGA] Damage request failed. Target=%s Reason=%s"),
-                //         *GetNameSafe(TargetActor),
-                //         *DamageResult.Message), FColor::Red);
+                // 필요 시 Debugging Message 출력
         }
 }

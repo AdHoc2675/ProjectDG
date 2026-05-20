@@ -15,7 +15,7 @@ class UAnimMontage;
 UGA_Warrior_LeapingSlam::UGA_Warrior_LeapingSlam()
 {
     InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-    NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+    NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerOnly;
 
     AbilityTags.AddTag(DGGameplayTags::Skill_Warrior_LeapingSlam);
     ActivationOwnedTags.AddTag(DGGameplayTags::State_Skill_Warrior_LeapingSlam_Active);
@@ -292,13 +292,12 @@ void UGA_Warrior_LeapingSlam::FinishLeapingTravel()
 
 void UGA_Warrior_LeapingSlam::OnAttackHit(FGameplayEventData Payload)
 {
-    AActor* AvatarActor = GetAvatarActorFromActorInfo();
-    if (!AvatarActor || !AvatarActor->HasAuthority())
+    if (!IsAuthorityAvatar())
     {
         return;
     }
 
-    AActor* HitActor = const_cast<AActor*>(Payload.Target.Get());
+    AActor* HitActor = GetPayloadTargetActor(Payload);
     if (!HitActor)
     {
         return;
@@ -309,15 +308,11 @@ void UGA_Warrior_LeapingSlam::OnAttackHit(FGameplayEventData Payload)
         return;
     }
 
-    const FVector HitLocation = Payload.TargetData.Num() > 0
-        ? Payload.TargetData.Get(0)->GetEndPoint()
-        : HitActor->GetActorLocation();
-
     ApplyDamageToTarget(
         HitActor,
         Damage,
         DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag(),
-        HitLocation,
+        GetPayloadHitLocationOrActorLocation(Payload, HitActor),
         true
     );
 }
