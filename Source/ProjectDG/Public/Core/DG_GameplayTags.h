@@ -34,6 +34,7 @@ namespace DGGameplayTags
 	
 	// 전사스킬 예리한일격 탭으로 전달 시 필요 태그
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Warrior_SharpStrike)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Warrior_LeapingSlam)
 	
 
 	// Skill_Common
@@ -47,6 +48,7 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Warrior_AnkleSlash)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Warrior_ShockWave)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Warrior_DoomStrike)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Warrior_LeapingSlam)
 
 	// Skill_Boss
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Boss_Kashapa_Attack)
@@ -62,6 +64,7 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_AnkleSlash_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_ShockWave_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_DoomStrike_Active)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_LeapingSlam_Active)
 	
 	// Data
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Damage)

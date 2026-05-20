@@ -265,6 +265,13 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void Server_TestApplyDamage();
 	
+	UFUNCTION(Server, Reliable)
+	void ServerSendTargetedSkillInputStartedEvent(FGameplayTag SkillEventTag, AActor* TargetActor);
+
+	void SendTargetedSkillInputStartedEvent(FGameplayTag SkillEventTag, AActor* TargetActor);
+
+	AActor* ResolveSkillEventTarget(FGameplayTag SkillTag) const;
+	
 public:
 	// Skill Debug : GA 실행 및 충돌 판정 등은 서버에서만 실행되며 해당 로직에 따른 디버그라인 그리기 로직 또한 서버에서만 실행됐었음 
 	// -> 서버에서 그려지는 디버그를 그대로 클라이언트에서 받아올 수 있게 설정
