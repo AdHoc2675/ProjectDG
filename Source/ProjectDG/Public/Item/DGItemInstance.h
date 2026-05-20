@@ -7,40 +7,40 @@
 
 class UDGItemDefinition;
 
-UCLASS(BlueprintType, Blueprintable)
+UCLASS(BlueprintType, Blueprintable, EditInlineNew, DefaultToInstanced)
 class PROJECTDG_API UDGItemInstance : public UObject
 {
 	GENERATED_BODY()
 
 public:
 	// 개별 아이템 고유 ID (DB 저장 및 복제 구분용)
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Instance")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Instance")
 	int64 ItemUniqueID;
 
 	// 원본 데이터 참조 (이름, 타입, 아이콘 등 접근용)
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Instance")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Instance")
 	TObjectPtr<UDGItemDefinition> ItemDef;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Instance")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Instance")
 	EDGItemGrade Grade;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Instance")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Instance")
 	int32 ItemLevel;
 
 	// --- 생성 시 고정되는 주스탯 ---
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Instance|MainStat")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Instance|MainStat")
 	float MainStatValue = 0.f;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Instance|MainStat")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Instance|MainStat")
 	float HPValue = 0.f;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Instance|MainStat")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Instance|MainStat")
 	float AttackValue = 0.f;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Instance|MainStat")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Instance|MainStat")
 	float DefenseValue = 0.f;
 
 	// 부여된 보조 옵션 (최대 4개)
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Instance|SubOption")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Instance|SubOption")
 	TArray<FDGSubOptionInstanceData> SubOptions;
 };

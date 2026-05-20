@@ -7,7 +7,7 @@
 class UDGItemInstance;
 class UDGItemDefinition;
 
-UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent, PrioritizeCategories="DG"))
 class PROJECTDG_API UDGInventoryComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -25,6 +25,6 @@ public:
 
 protected:
 	// 플레이어가 소유한 장비 인스턴스들의 리스트
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	UPROPERTY(EditAnywhere, Instanced, Category = "DG|Inventory")
 	TArray<TObjectPtr<UDGItemInstance>> InventoryItems;
 };

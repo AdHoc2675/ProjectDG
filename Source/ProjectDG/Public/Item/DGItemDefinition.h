@@ -15,7 +15,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data")
 	FName ItemID;
 
-	// 화면에 표시될 이름 (예: 장검)
+	// 화면에 표시될 이름
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data")
 	FText ItemName;
 
@@ -27,7 +27,4 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data")
 	TObjectPtr<class UTexture2D> ItemIcon;
 
-	// 장착했을 때 보여줄 외형 메시
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data")
-	TObjectPtr<class USkeletalMesh> ItemMesh;
 };
