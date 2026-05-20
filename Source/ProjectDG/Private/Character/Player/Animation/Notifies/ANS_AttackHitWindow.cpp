@@ -10,8 +10,6 @@
 #include "Core/DG_GameplayTags.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
-#include "Components/CapsuleComponent.h"
-#include "GameFramework/Character.h"
 
 #include "AbilitySystemComponent.h"
 #include "Core/DG_Debug.h"
@@ -60,35 +58,6 @@ void UANS_AttackHitWindow::NotifyBegin(USkeletalMeshComponent* MeshComp,UAnimSeq
         if (TraceMode == EAttackHitTraceMode::ForwardBoxOverlap)
         {
                 InitializeRuntimeData(MeshComp, nullptr);
-                
-                if (bLogWindowLifecycle)
-                {
-                        // AActor* OwnerActor = MeshComp ? MeshComp->GetOwner() : nullptr;
-                        UAnimInstance* AnimInstance = MeshComp ? MeshComp->GetAnimInstance() : nullptr;
-                        UAnimMontage* Montage = Cast<UAnimMontage>(Animation);
-        
-                        const float MontagePosition = (AnimInstance && Montage)
-                                ? AnimInstance->Montage_GetPosition(Montage)
-                                : -1.f;
-        
-                        const FString NetRoleText = OwnerActor
-                                ? FString::Printf(TEXT("Authority=%s LocalRole=%d RemoteRole=%d"),
-                                        OwnerActor->HasAuthority() ? TEXT("true") : TEXT("false"),
-                                        static_cast<int32>(OwnerActor->GetLocalRole()),
-                                        static_cast<int32>(OwnerActor->GetRemoteRole()))
-                                : TEXT("Owner=null");
-        
-                        Debug::Print(FString::Printf(
-                                TEXT("[ANS_AttackHitWindow] Begin Owner=%s Mesh=%s Anim=%s Duration=%.3f Pos=%.3f %s"),
-                                *GetNameSafe(OwnerActor),
-                                *GetNameSafe(MeshComp),
-                                *GetNameSafe(Animation),
-                                TotalDuration,
-                                MontagePosition,
-                                *NetRoleText
-                        ), FColor::Blue);
-                }
-                
                 return;
         }
 
@@ -145,33 +114,6 @@ void UANS_AttackHitWindow::NotifyEnd(USkeletalMeshComponent* MeshComp,UAnimSeque
         }
         
         RuntimeDataMap.Remove(MeshComp);
-        
-        if (bLogWindowLifecycle)
-        {
-                // AActor* OwnerActor = MeshComp ? MeshComp->GetOwner() : nullptr;
-                UAnimInstance* AnimInstance = MeshComp ? MeshComp->GetAnimInstance() : nullptr;
-                UAnimMontage* Montage = Cast<UAnimMontage>(Animation);
-        
-                const float MontagePosition = (AnimInstance && Montage)
-                        ? AnimInstance->Montage_GetPosition(Montage)
-                        : -1.f;
-        
-                const FString NetRoleText = OwnerActor
-                        ? FString::Printf(TEXT("Authority=%s LocalRole=%d RemoteRole=%d"),
-                                OwnerActor->HasAuthority() ? TEXT("true") : TEXT("false"),
-                                static_cast<int32>(OwnerActor->GetLocalRole()),
-                                static_cast<int32>(OwnerActor->GetRemoteRole()))
-                        : TEXT("Owner=null");
-        
-                Debug::Print(FString::Printf(
-                        TEXT("[ANS_AttackHitWindow] End Owner=%s Mesh=%s Anim=%s Pos=%.3f %s"),
-                        *GetNameSafe(OwnerActor),
-                        *GetNameSafe(MeshComp),
-                        *GetNameSafe(Animation),
-                        MontagePosition,
-                        *NetRoleText
-                ), FColor::Blue);
-        }
 }
 
 // WeaponMesh 획득
@@ -250,14 +192,6 @@ void UANS_AttackHitWindow::TraceWeaponSockets(USkeletalMeshComponent* CharacterM
         {
                 if (!WeaponMesh->DoesSocketExist(SocketName))
                 {
-                        if (bLogTraceSweeps)
-                        {
-                                // const FString Msg = FString::Printf(
-                                //         TEXT("[ANS_AttackHitWindow] Missing socket on weapon mesh: %s"),
-                                //         *SocketName.ToString()
-                                // );
-                                // Debug::Print(Msg, FColor::Red);
-                        }
                         continue;
                 }
 
@@ -271,15 +205,6 @@ void UANS_AttackHitWindow::TraceWeaponSockets(USkeletalMeshComponent* CharacterM
                         if (bEnableDebugDraw)
                         {
                                 DrawDebugSphere(World, CurrentLocation, TraceRadius, 12, FColor::Blue, false, DebugDrawDuration);
-                        }
-
-                        if (bLogTraceSweeps)
-                        {
-                                // const FString Msg = FString::Printf(
-                                //         TEXT("[ANS_AttackHitWindow] First frame socket init: %s"),
-                                //         *SocketName.ToString()
-                                // );
-                                // Debug::Print(Msg, FColor::Blue);
                         }
 
                         continue;
@@ -317,24 +242,7 @@ void UANS_AttackHitWindow::TraceWeaponSockets(USkeletalMeshComponent* CharacterM
 
                                 continue;
                         }
-
-                        // if (RuntimeData.HitActors.Contains(HitActor))
-                        // {
-                        //         bIgnoredAnyHit = true;
-                        //
-                        //         if (bLogAcceptedHits)
-                        //         {
-                        //                 // const FString Msg = FString::Printf(
-                        //                 //         TEXT("[ANS_AttackHitWindow] Ignored duplicate hit actor: %s"),
-                        //                 //         *GetNameSafe(HitActor)
-                        //                 // );
-                        //                 // Debug::Print(Msg, FColor::Yellow);
-                        //         }
-                        //
-                        //         continue;
-                        // }
-                        //
-                        // RuntimeData.HitActors.Add(HitActor);
+                        
                         bAcceptedAnyHit = true;
 
                         if (bLogAcceptedHits)
@@ -396,19 +304,6 @@ void UANS_AttackHitWindow::TraceForwardBox(USkeletalMeshComponent* CharacterMesh
               return;
       }
 
-      // FAttackHitWindowRuntimeData* RuntimeDataPtr = RuntimeDataMap.Find(CharacterMesh);
-      // if (!RuntimeDataPtr)
-      // {
-      //     InitializeRuntimeData(CharacterMesh, nullptr);
-      //     RuntimeDataPtr = RuntimeDataMap.Find(CharacterMesh);
-      //     if (!RuntimeDataPtr)
-      //     {
-      //             return;
-      //     }
-      // }
-
-      // FAttackHitWindowRuntimeData& RuntimeData = *RuntimeDataPtr;
-
       FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(AttackHitWindowForwardBox), false, OwnerActor); 
         
       QueryParams.AddIgnoredActor(OwnerActor);
@@ -453,13 +348,7 @@ void UANS_AttackHitWindow::TraceForwardBox(USkeletalMeshComponent* CharacterMesh
           {
                   continue;
           }
-
-          // if (RuntimeData.HitActors.Contains(HitActor))
-          // {
-          //         continue;
-          // }
-
-          // RuntimeData.HitActors.Add(HitActor);
+              
           bAcceptedAnyHit = true;
 
           SendHitEvent(OwnerActor, HitActor);
