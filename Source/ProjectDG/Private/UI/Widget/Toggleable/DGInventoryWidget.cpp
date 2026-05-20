@@ -12,7 +12,7 @@ void UDGInventoryWidget::BindToController(UDGInventoryWidgetController* Controll
 {
 	if (!Controller)
 	{
-		Debug::Print(TEXT("[DGInventoryWidget] Controller is null!"));
+		UE_LOG(LogTemp, Warning, TEXT("[DGInventoryWidget] Controller is null"));
 		return;
 	}
 
@@ -25,7 +25,7 @@ void UDGInventoryWidget::BindToController(UDGInventoryWidgetController* Controll
 		Controller->OnInventoryUpdated.AddDynamic(this, &UDGInventoryWidget::OnInventoryUpdatedCallback);
 	}
 
-	Debug::Print(TEXT("[DGInventoryWidget] Bound to Controller successfully."));
+	UE_LOG(LogTemp, Log, TEXT("[DGInventoryWidget] Bound to Controller successfully."));
 }
 
 void UDGInventoryWidget::CloseInventory()
@@ -41,7 +41,7 @@ void UDGInventoryWidget::CloseInventory()
 
 void UDGInventoryWidget::OnInventoryUpdatedCallback(const TArray<UDGItemInstance*>& InventoryItems)
 {
-	UE_LOG(LogTemp, Warning, TEXT("[DGInventoryWidget] Inventory Updated! Item Count: %d"), InventoryItems.Num());
+	UE_LOG(LogTemp, Warning, TEXT("[DGInventoryWidget] Inventory Updated, Item Count: %d"), InventoryItems.Num());
 
 	for (int32 Index = 0; Index < InventoryItems.Num(); ++Index)
 	{
