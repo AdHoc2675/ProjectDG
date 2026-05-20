@@ -33,6 +33,9 @@
 
 #include "Components/UI/DGMinimapCaptureComponent.h"
 #include "Components/UI/DGMinimapMarkerComponent.h"
+#include "Components/Targeting/LockOnComponent.h"
+
+class ULockOnComponent;
 
 APlayerCharacterBase::APlayerCharacterBase()
 {
@@ -94,6 +97,8 @@ APlayerCharacterBase::APlayerCharacterBase()
 	
 	MinimapCaptureComponent = CreateDefaultSubobject<UDGMinimapCaptureComponent>(TEXT("MinimapCaptureComponent"));
 	MinimapMarkerComponent = CreateDefaultSubobject<UDGMinimapMarkerComponent>(TEXT("MinimapMarkerComponent"));
+	
+	LockOnComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOnComponent"));
 
 	MinimapMarkerComponent->MarkerType = EMinimapMarkerType::Player;
 }
@@ -710,6 +715,21 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 
 	FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
 	
+	if (SkillTag == DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag())
+	{
+		const FGameplayTag SkillInputEventTag = GetSkillInputEventTag(SkillTag);
+		AActor* TargetActor = ResolveSkillEventTarget(SkillTag);
+
+		SendTargetedSkillInputStartedEvent(SkillInputEventTag, TargetActor);
+
+		if (!HasAuthority())
+		{
+			ServerSendTargetedSkillInputStartedEvent(SkillInputEventTag, TargetActor);
+		}
+
+		return;
+	}
+	
 	if (SkillTag.IsValid())
 	{
 		const bool bActivateResult = ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(SkillTag));
@@ -846,8 +866,55 @@ FGameplayTag APlayerCharacterBase::GetSkillInputEventTag(FGameplayTag SkillTag) 
 	{
 		return DGGameplayTags::Event_Input_Warrior_SharpStrike.GetTag();
 	}
+	
+	if (SkillTag == DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag())
+	{
+		return DGGameplayTags::Event_Input_Warrior_LeapingSlam.GetTag();
+	}
 
 	return FGameplayTag::EmptyTag;
+}
+
+void APlayerCharacterBase::ServerSendTargetedSkillInputStartedEvent_Implementation(FGameplayTag SkillEventTag,
+	AActor* TargetActor)
+{
+	SendTargetedSkillInputStartedEvent(SkillEventTag, TargetActor);
+}
+
+void APlayerCharacterBase::SendTargetedSkillInputStartedEvent(FGameplayTag SkillEventTag, AActor* TargetActor)
+{
+	if (!SkillEventTag.IsValid())
+	{
+		return;
+	}
+
+	FGameplayEventData Payload;
+	Payload.EventTag = SkillEventTag;
+	Payload.Instigator = this;
+	Payload.Target = TargetActor;
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, SkillEventTag, Payload);
+}
+
+AActor* APlayerCharacterBase::ResolveSkillEventTarget(FGameplayTag SkillTag) const
+{
+	if (SkillTag != DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag())
+	{
+		return nullptr;
+	}
+
+	if (!LockOnComponent)
+	{
+		return nullptr;
+	}
+
+	FLockOnTargetResult TargetResult;
+	if (!LockOnComponent->FindBestTarget(2000.f, TargetResult))
+	{
+		return nullptr;
+	}
+
+	return TargetResult.TargetActor;
 }
 
 void APlayerCharacterBase::ClientDrawAttackTraceDebug_Implementation(FVector_NetQuantize Start, FVector_NetQuantize End, float Radius, FColor Color, float Duration)

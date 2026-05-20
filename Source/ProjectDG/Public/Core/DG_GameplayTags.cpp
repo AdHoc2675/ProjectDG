@@ -29,8 +29,12 @@ namespace DGGameplayTags
 	
 	UE_DEFINE_GAMEPLAY_TAG(Event_Attack_Hit, "Event.Attack.Hit")
 	
+	UE_DEFINE_GAMEPLAY_TAG(Event_Attack_HitWindow_Begin, "Event.Attack.HitWindow.Begin")
+	
 	// 전사스킬 예리한일격 탭으로 전달 시 필요 태그
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Warrior_SharpStrike, "Event.Input.Warrior.SharpStrike")
+	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Warrior_LeapingSlam, "Event.Input.Warrior.LeapingSlam")
+	
 	
 	// Skill.Common
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Common_Dodge, "Skill.Common.Dodge")
@@ -43,6 +47,7 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Warrior_AnkleSlash, "Skill.Warrior.AnkleSlash")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Warrior_ShockWave, "Skill.Warrior.ShockWave")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Warrior_DoomStrike, "Skill.Warrior.DoomStrike")
+	UE_DEFINE_GAMEPLAY_TAG(Skill_Warrior_LeapingSlam, "Skill.Warrior.LeapingSlam")
 
 	// Skill.Boss
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Boss_Kashapa_Attack, "Skill.Boss.Kashapa.Attack")
@@ -58,6 +63,7 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_AnkleSlash_Active, "State.Skill.Warrior.AnkleSlash.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_ShockWave_Active, "State.Skill.Warrior.ShockWave.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_DoomStrike_Active, "State.Skill.Warrior.DoomStrike.Active")
+	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_LeapingSlam_Active, "State.Skill.Warrior.LeapingSlam.Active")
 	
 	// Data
 	UE_DEFINE_GAMEPLAY_TAG(Data_Damage, "Data.Damage")

@@ -10,8 +10,6 @@
 #include "Core/DG_GameplayTags.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
-#include "Components/CapsuleComponent.h"
-#include "GameFramework/Character.h"
 
 #include "AbilitySystemComponent.h"
 #include "Core/DG_Debug.h"
@@ -54,6 +52,8 @@ void UANS_AttackHitWindow::NotifyBegin(USkeletalMeshComponent* MeshComp,UAnimSeq
         {
                 return;
         }
+        
+        SendHitWindowBeginEvent(OwnerActor);
 
         if (TraceMode == EAttackHitTraceMode::ForwardBoxOverlap)
         {
@@ -69,33 +69,7 @@ void UANS_AttackHitWindow::NotifyBegin(USkeletalMeshComponent* MeshComp,UAnimSeq
 
         InitializeRuntimeData(MeshComp, WeaponMesh);
 
-        // if (bLogWindowLifecycle)
-        // {
-        //         AActor* OwnerActor = MeshComp ? MeshComp->GetOwner() : nullptr;
-        //         UAnimInstance* AnimInstance = MeshComp ? MeshComp->GetAnimInstance() : nullptr;
-        //         UAnimMontage* Montage = Cast<UAnimMontage>(Animation);
-        //
-        //         const float MontagePosition = (AnimInstance && Montage)
-        //                 ? AnimInstance->Montage_GetPosition(Montage)
-        //                 : -1.f;
-        //
-        //         const FString NetRoleText = OwnerActor
-        //                 ? FString::Printf(TEXT("Authority=%s LocalRole=%d RemoteRole=%d"),
-        //                         OwnerActor->HasAuthority() ? TEXT("true") : TEXT("false"),
-        //                         static_cast<int32>(OwnerActor->GetLocalRole()),
-        //                         static_cast<int32>(OwnerActor->GetRemoteRole()))
-        //                 : TEXT("Owner=null");
-        //
-        //         Debug::Print(FString::Printf(
-        //                 TEXT("[ANS_AttackHitWindow] Begin Owner=%s Mesh=%s Anim=%s Duration=%.3f Pos=%.3f %s"),
-        //                 *GetNameSafe(OwnerActor),
-        //                 *GetNameSafe(MeshComp),
-        //                 *GetNameSafe(Animation),
-        //                 TotalDuration,
-        //                 MontagePosition,
-        //                 *NetRoleText
-        //         ), FColor::Blue);
-        // }
+        
 }
 
 void UANS_AttackHitWindow::NotifyTick(USkeletalMeshComponent* MeshComp,UAnimSequenceBase* Animation,float FrameDeltaTime,const FAnimNotifyEventReference& EventReference)
@@ -140,35 +114,9 @@ void UANS_AttackHitWindow::NotifyEnd(USkeletalMeshComponent* MeshComp,UAnimSeque
         }
         
         RuntimeDataMap.Remove(MeshComp);
-        
-        // if (bLogWindowLifecycle)
-        // {
-        //         AActor* OwnerActor = MeshComp ? MeshComp->GetOwner() : nullptr;
-        //         UAnimInstance* AnimInstance = MeshComp ? MeshComp->GetAnimInstance() : nullptr;
-        //         UAnimMontage* Montage = Cast<UAnimMontage>(Animation);
-        //
-        //         const float MontagePosition = (AnimInstance && Montage)
-        //                 ? AnimInstance->Montage_GetPosition(Montage)
-        //                 : -1.f;
-        //
-        //         const FString NetRoleText = OwnerActor
-        //                 ? FString::Printf(TEXT("Authority=%s LocalRole=%d RemoteRole=%d"),
-        //                         OwnerActor->HasAuthority() ? TEXT("true") : TEXT("false"),
-        //                         static_cast<int32>(OwnerActor->GetLocalRole()),
-        //                         static_cast<int32>(OwnerActor->GetRemoteRole()))
-        //                 : TEXT("Owner=null");
-        //
-        //         Debug::Print(FString::Printf(
-        //                 TEXT("[ANS_AttackHitWindow] End Owner=%s Mesh=%s Anim=%s Pos=%.3f %s"),
-        //                 *GetNameSafe(OwnerActor),
-        //                 *GetNameSafe(MeshComp),
-        //                 *GetNameSafe(Animation),
-        //                 MontagePosition,
-        //                 *NetRoleText
-        //         ), FColor::Blue);
-        // }
 }
 
+// WeaponMesh 획득
 USkeletalMeshComponent* UANS_AttackHitWindow::ResolveWeaponMesh(USkeletalMeshComponent* CharacterMesh) const
 {
         if (!CharacterMesh)
@@ -194,7 +142,7 @@ void UANS_AttackHitWindow::InitializeRuntimeData(USkeletalMeshComponent* Charact
 
         FAttackHitWindowRuntimeData& RuntimeData = RuntimeDataMap.FindOrAdd(CharacterMesh);
         RuntimeData.PreviousSocketLocations.Reset();
-        RuntimeData.HitActors.Reset();
+        // RuntimeData.HitActors.Reset();
         
         if (!WeaponMesh)
         {
@@ -244,14 +192,6 @@ void UANS_AttackHitWindow::TraceWeaponSockets(USkeletalMeshComponent* CharacterM
         {
                 if (!WeaponMesh->DoesSocketExist(SocketName))
                 {
-                        if (bLogTraceSweeps)
-                        {
-                                // const FString Msg = FString::Printf(
-                                //         TEXT("[ANS_AttackHitWindow] Missing socket on weapon mesh: %s"),
-                                //         *SocketName.ToString()
-                                // );
-                                // Debug::Print(Msg, FColor::Red);
-                        }
                         continue;
                 }
 
@@ -265,15 +205,6 @@ void UANS_AttackHitWindow::TraceWeaponSockets(USkeletalMeshComponent* CharacterM
                         if (bEnableDebugDraw)
                         {
                                 DrawDebugSphere(World, CurrentLocation, TraceRadius, 12, FColor::Blue, false, DebugDrawDuration);
-                        }
-
-                        if (bLogTraceSweeps)
-                        {
-                                // const FString Msg = FString::Printf(
-                                //         TEXT("[ANS_AttackHitWindow] First frame socket init: %s"),
-                                //         *SocketName.ToString()
-                                // );
-                                // Debug::Print(Msg, FColor::Blue);
                         }
 
                         continue;
@@ -311,24 +242,7 @@ void UANS_AttackHitWindow::TraceWeaponSockets(USkeletalMeshComponent* CharacterM
 
                                 continue;
                         }
-
-                        if (RuntimeData.HitActors.Contains(HitActor))
-                        {
-                                bIgnoredAnyHit = true;
-
-                                if (bLogAcceptedHits)
-                                {
-                                        // const FString Msg = FString::Printf(
-                                        //         TEXT("[ANS_AttackHitWindow] Ignored duplicate hit actor: %s"),
-                                        //         *GetNameSafe(HitActor)
-                                        // );
-                                        // Debug::Print(Msg, FColor::Yellow);
-                                }
-
-                                continue;
-                        }
-
-                        RuntimeData.HitActors.Add(HitActor);
+                        
                         bAcceptedAnyHit = true;
 
                         if (bLogAcceptedHits)
@@ -390,20 +304,8 @@ void UANS_AttackHitWindow::TraceForwardBox(USkeletalMeshComponent* CharacterMesh
               return;
       }
 
-      FAttackHitWindowRuntimeData* RuntimeDataPtr = RuntimeDataMap.Find(CharacterMesh);
-      if (!RuntimeDataPtr)
-      {
-          InitializeRuntimeData(CharacterMesh, nullptr);
-          RuntimeDataPtr = RuntimeDataMap.Find(CharacterMesh);
-          if (!RuntimeDataPtr)
-          {
-                  return;
-          }
-      }
-
-      FAttackHitWindowRuntimeData& RuntimeData = *RuntimeDataPtr;
-
-      FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(AttackHitWindowForwardBox), false, OwnerActor);
+      FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(AttackHitWindowForwardBox), false, OwnerActor); 
+        
       QueryParams.AddIgnoredActor(OwnerActor);
 
       const FVector Forward = CharacterMesh->GetForwardVector();
@@ -446,13 +348,7 @@ void UANS_AttackHitWindow::TraceForwardBox(USkeletalMeshComponent* CharacterMesh
           {
                   continue;
           }
-
-          if (RuntimeData.HitActors.Contains(HitActor))
-          {
-                  continue;
-          }
-
-          RuntimeData.HitActors.Add(HitActor);
+              
           bAcceptedAnyHit = true;
 
           SendHitEvent(OwnerActor, HitActor);
@@ -475,7 +371,7 @@ void UANS_AttackHitWindow::TraceForwardBox(USkeletalMeshComponent* CharacterMesh
 
 
 void UANS_AttackHitWindow::SendHitEvent(AActor* OwnerActor, AActor* HitActor) const
-  {
+{
         if (!OwnerActor || !HitActor || !HitEventTag.IsValid())
         {
                 return;
@@ -485,9 +381,30 @@ void UANS_AttackHitWindow::SendHitEvent(AActor* OwnerActor, AActor* HitActor) co
         Payload.EventTag = HitEventTag;
         Payload.Instigator = OwnerActor;
         Payload.Target = HitActor;
+        Payload.EventMagnitude = static_cast<float>(AttackComboIndex);
 
         UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(OwnerActor, HitEventTag, Payload);
-  }
+}
+
+void UANS_AttackHitWindow::SendHitWindowBeginEvent(AActor* OwnerActor) const
+{
+        if (!OwnerActor)
+        {
+                return;
+        }
+
+        FGameplayEventData Payload;
+        Payload.EventTag = DGGameplayTags::Event_Attack_HitWindow_Begin.GetTag();
+        Payload.Instigator = OwnerActor;
+        Payload.Target = OwnerActor;
+        Payload.EventMagnitude = static_cast<float>(AttackComboIndex);
+
+        UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+                OwnerActor,
+                DGGameplayTags::Event_Attack_HitWindow_Begin.GetTag(),
+                Payload
+        );
+}
 
 bool UANS_AttackHitWindow::ShouldIgnoreHitActor(AActor* OwnerActor, AActor* HitActor) const
 {
@@ -501,17 +418,17 @@ bool UANS_AttackHitWindow::ShouldIgnoreHitActor(AActor* OwnerActor, AActor* HitA
                 return true;
         }
 
-        UAbilitySystemComponent* HitASC =
-  UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
+        UAbilitySystemComponent* HitASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
         if (!HitASC)
         {
                 return true;
         }
 
-        if (bIgnoreSameTeam && AreActorsOnSameTeam(OwnerActor, HitActor))
-        {
-                return true;
-        }
+        // 현재는 같은 팀이어도 PvP 허용
+        // if (bIgnoreSameTeam && AreActorsOnSameTeam(OwnerActor, HitActor))
+        // {
+        //         return true;
+        // }
 
         // 현재 단계에서는 적 팀만 유효 타겟으로 간주
         // if (!HitASC->HasMatchingGameplayTag(DGGameplayTags::Team_Enemy.GetTag()))
@@ -529,10 +446,8 @@ bool UANS_AttackHitWindow::AreActorsOnSameTeam(AActor* FirstActor, AActor* Secon
                 return false;
         }
 
-        UAbilitySystemComponent* FirstASC =
-  UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(FirstActor);
-        UAbilitySystemComponent* SecondASC =
-  UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(SecondActor);
+        UAbilitySystemComponent* FirstASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(FirstActor);
+        UAbilitySystemComponent* SecondASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(SecondActor);
 
         if (!FirstASC || !SecondASC)
         {

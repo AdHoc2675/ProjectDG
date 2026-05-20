@@ -46,6 +46,7 @@ void UAN_ComboBranch::SendComboBranchEvent(USkeletalMeshComponent* MeshComp) con
  	Payload.EventTag = BranchEventTag;
  	Payload.Instigator = OwnerActor;
  	Payload.Target = OwnerActor;
+	Payload.EventMagnitude = static_cast<float>(BranchComboIndex);
 
  	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(OwnerActor, BranchEventTag, Payload);
 }
