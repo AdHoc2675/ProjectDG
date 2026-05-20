@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GAS/Abilities/Base/GameplayAbilityBase.h"
+#include "GAS/Abilities/Player/Warrior/GA_WarriorBase.h"
 #include "GA_Warrior_SharpStrike.generated.h"
 
 class UGameplayEffect;
@@ -12,7 +12,7 @@ class UGameplayEffect;
  * 
  */
 UCLASS()
-class PROJECTDG_API UGA_Warrior_SharpStrike : public UGameplayAbilityBase
+class PROJECTDG_API UGA_Warrior_SharpStrike : public UGA_WarriorBase
 {
 	GENERATED_BODY()
 	
