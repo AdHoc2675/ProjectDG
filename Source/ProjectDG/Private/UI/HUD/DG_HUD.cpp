@@ -1,9 +1,52 @@
-﻿#include "UI/HUD/DG_HUD.h"
+﻿// Fill out your copyright notice in the Description page of Project Settings.
+
+#include "UI/HUD/DG_HUD.h"
 #include "UI/Widget/DGUserWidget.h"
 #include "UI/Widget/DGOverlayWidget.h"
 #include "UI/WidgetController/DGOverlayWidgetController.h"
 
+#include "UI/WidgetController/DGInventoryWidgetController.h"
+#include "UI/Widget/Toggleable/DGInventoryWidget.h"
+
 #include "Blueprint/UserWidget.h"
+
+
+#pragma region Core
+
+void ADG_HUD::BeginPlay()
+{
+	Super::BeginPlay();
+}
+
+void ADG_HUD::UpdateInputMode()
+{
+	APlayerController* PC = GetOwningPlayerController();
+	if (!PC) return;
+
+	// 맵이나 인벤토리가 하나라도 열려있으면 마우스 활성화 및 UI 입력 전환
+	if (bIsMapOpen || bIsInventoryOpen)
+	{
+		PC->bShowMouseCursor = true;
+
+		// 마우스 클릭 시 UI와 게임 모두 반응하게 할 것인지, UI만 반응하게 할 것인지 결정
+		FInputModeGameAndUI InputMode;
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		PC->SetInputMode(InputMode);
+	}
+	else
+	{
+		// 모두 닫혀있으면 게임 입력으로 복귀
+		PC->bShowMouseCursor = false;
+
+		FInputModeGameOnly InputMode;
+		PC->SetInputMode(InputMode);
+	}
+}
+
+#pragma endregion Core
+
+
+#pragma region Overlay
 
 UDGOverlayWidgetController* ADG_HUD::GetOverlayWidgetController(const FWidgetControllerParams& WCParams)
 {
@@ -60,10 +103,10 @@ void ADG_HUD::InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySyste
 	}
 }
 
-void ADG_HUD::BeginPlay()
-{
-	Super::BeginPlay();
-}
+#pragma endregion Overlay
+
+
+#pragma region FullMap
 
 void ADG_HUD::ToggleMapWidget()
 {
@@ -96,22 +139,66 @@ void ADG_HUD::ToggleMapWidget()
 	}
 }
 
+#pragma endregion FullMap
+
+
+#pragma region Inventory
+
+UDGInventoryWidgetController* ADG_HUD::GetInventoryWidgetController(const FWidgetControllerParams& WCParams)
+{
+	if (InventoryWidgetController == nullptr)
+	{
+		TSubclassOf<UDGInventoryWidgetController> ClassToSpawn = InventoryWidgetControllerClass;
+		if (ClassToSpawn == nullptr)
+		{
+			ClassToSpawn = UDGInventoryWidgetController::StaticClass();
+		}
+
+		InventoryWidgetController = NewObject<UDGInventoryWidgetController>(this, ClassToSpawn);
+		InventoryWidgetController->SetWidgetControllerParams(WCParams);
+		InventoryWidgetController->BindCallbacksToDependencies();
+	}
+	return InventoryWidgetController;
+}
+
 void ADG_HUD::ToggleInventoryWidget()
 {
-
 	bIsInventoryOpen = !bIsInventoryOpen;
 
 	if (bIsInventoryOpen)
 	{
 		if (InventoryWidget == nullptr && InventoryWidgetClass != nullptr)
 		{
-			InventoryWidget = CreateWidget<UDGUserWidget>(GetWorld(), InventoryWidgetClass);
+			// 위젯이 UDGInventoryWidget 타입인지 확인하며 캐스팅
+			InventoryWidget = CreateWidget<UDGInventoryWidget>(GetWorld(), InventoryWidgetClass);
+
+			if (InventoryWidget)
+			{
+				APlayerController* PC = GetOwningPlayerController();
+				APlayerState* PS = PC ? PC->PlayerState : nullptr;
+				// ASC, AS는 임시로 nullptr 처리 (나중에 연동 시 찾아오도록 수정)
+				const FWidgetControllerParams WidgetControllerParams(PC, PS, nullptr, nullptr);
+
+				UDGInventoryWidgetController* WidgetController = GetInventoryWidgetController(WidgetControllerParams);
+
+				// UDGUserWidget 레벨의 함수 대신, 방금 만든 함수로 컨트롤러 바인딩
+				if (UDGInventoryWidget* DGInventory = Cast<UDGInventoryWidget>(InventoryWidget))
+				{
+					DGInventory->BindToController(WidgetController);
+				}
+			}
 		}
 
 		if (InventoryWidget)
 		{
 			InventoryWidget->AddToViewport();
 			UpdateInputMode();
+
+			// 창이 열릴 때마다 컨트롤러에게 초기값을 다시 방송해달라고 요청
+			if (InventoryWidgetController)
+			{
+				InventoryWidgetController->BroadcastInitialValues();
+			}
 
 			UE_LOG(LogTemp, Log, TEXT("[DG_HUD] Inventory Widget opened."));
 		}
@@ -128,27 +215,4 @@ void ADG_HUD::ToggleInventoryWidget()
 	}
 }
 
-void ADG_HUD::UpdateInputMode()
-{
-	APlayerController* PC = GetOwningPlayerController();
-	if (!PC) return;
-
-	// 맵이나 인벤토리가 하나라도 열려있으면 마우스 활성화 및 UI 입력 전환
-	if (bIsMapOpen || bIsInventoryOpen)
-	{
-		PC->bShowMouseCursor = true;
-
-		// 마우스 클릭 시 UI와 게임 모두 반응하게 할 것인지, UI만 반응하게 할 것인지 결정
-		FInputModeGameAndUI InputMode;
-		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-		PC->SetInputMode(InputMode);
-	}
-	else
-	{
-		// 모두 닫혀있으면 게임 입력으로 복귀
-		PC->bShowMouseCursor = false;
-
-		FInputModeGameOnly InputMode;
-		PC->SetInputMode(InputMode);
-	}
-}
+#pragma endregion Inventory
