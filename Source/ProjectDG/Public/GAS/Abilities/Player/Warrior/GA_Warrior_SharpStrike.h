@@ -71,8 +71,7 @@ private:
 	TMap<int32, TSet<TWeakObjectPtr<AActor>>> HitActorsByCombo;
 
 	void ResetComboState();
-
-	bool IsSharpStrikeInputHeld() const;
+	
 	void TryBufferComboInputFromHeldState();
 	void TryJumpToNextComboSection(int32 BranchComboIndex);
 	void PlaySharpStrikeMontageFromStart();

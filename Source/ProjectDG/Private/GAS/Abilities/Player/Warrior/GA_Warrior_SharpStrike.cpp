@@ -5,7 +5,6 @@
 
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
-#include "Character/Player/PlayerCharacterBase.h"
 #include "Core/DG_GameplayTags.h"
 #include "Core/DG_Debug.h"
 
@@ -143,20 +142,10 @@ void UGA_Warrior_SharpStrike::ResetComboState()
         HitActorsByCombo.Reset();
 }
 
-bool UGA_Warrior_SharpStrike::IsSharpStrikeInputHeld() const
-{
-        APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(GetAvatarActorFromActorInfo());
-        if (!PlayerCharacter)
-        {
-                return false;
-        }
-
-        return PlayerCharacter->IsSkillTagHeld(DGGameplayTags::Skill_Warrior_SharpStrike.GetTag());
-}
 
 void UGA_Warrior_SharpStrike::TryBufferComboInputFromHeldState()
 {
-        const bool bHeld = IsSharpStrikeInputHeld();
+        const bool bHeld = IsWarriorSkillInputHeld(DGGameplayTags::Skill_Warrior_SharpStrike.GetTag());
 
         if (bHeld)
         {
@@ -173,7 +162,7 @@ void UGA_Warrior_SharpStrike::TryJumpToNextComboSection(int32 BranchComboIndex)
                         BranchComboIndex,
                         CurrentComboIndex,
                         bComboInputBuffered ? TEXT("true") : TEXT("false"),
-                        IsSharpStrikeInputHeld() ? TEXT("true") : TEXT("false"),
+                        IsWarriorSkillInputHeld(DGGameplayTags::Skill_Warrior_SharpStrike.GetTag()) ? TEXT("true") : TEXT("false"),
                         GetAvatarActorFromActorInfo() && GetAvatarActorFromActorInfo()->HasAuthority() ? TEXT("true") :TEXT("false"),
                         *GetNameSafe(GetAvatarActorFromActorInfo())
                 ), FColor::Orange);
@@ -209,7 +198,7 @@ void UGA_Warrior_SharpStrike::TryJumpToNextComboSection(int32 BranchComboIndex)
 
         if (BranchComboIndex == 3)
         {
-                if (!IsSharpStrikeInputHeld())
+                if (!IsWarriorSkillInputHeld(DGGameplayTags::Skill_Warrior_SharpStrike.GetTag()))
                 {
                         return;
                 }
