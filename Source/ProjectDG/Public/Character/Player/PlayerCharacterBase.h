@@ -113,6 +113,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|View", meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCam;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacterBase|Targeting")
+	TObjectPtr<ULockOnComponent> LockOnComponent;
+	
+public:
+	UFUNCTION(BlueprintCallable, Category = "PlayerCharacterBase|Targeting")
+	ULockOnComponent* GetLockOnComponent() const { return LockOnComponent; }
+	
 	//외관 설정
 #pragma region OutLook
 protected:
@@ -211,12 +218,7 @@ protected:
 	/** 슬롯 태그(Input.Slot.X)와 실제 스킬 태그(Skill.Warrior.SharpStrike 등)의 매핑 테이블 */
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	TMap<FGameplayTag, FGameplayTag> SkillSlotMapping;
-
-	/** 슬롯 입력 처리 공통 함수 */
-	// void OnSkillInput(FGameplayTag SlotTag);
-
-	/** 특정 슬롯에 할당된 스킬 태그를 가져오는 헬퍼 함수 */
-	// FGameplayTag GetSkillTagForSlot(FGameplayTag SlotTag) const;
+	
 	
 	/** 슬롯 입력 처리 공통 함수 */
 	void OnSkillInputStarted(FGameplayTag SlotTag);

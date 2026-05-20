@@ -413,10 +413,10 @@ bool ULockOnComponent::IsValidTarget(AActor* TargetActor, float MaxRangeOverride
 		return false;
 	}
 
-	if (OwnerCharacter->IsFriendlyTo(TargetCharacter))
-	{
-		return false;
-	}
+	// if (OwnerCharacter->IsFriendlyTo(TargetCharacter))
+	// {
+	// 	return false;
+	// }
 
 	const float UseRange = MaxRangeOverride > 0.f ? MaxRangeOverride : MaxRange;
 	const float DistSq = FVector::DistSquared(OwnerCharacter->GetActorLocation(), TargetCharacter->GetActorLocation());
@@ -440,8 +440,24 @@ void ULockOnComponent::RefreshCurrentTarget()
 
 	if (!bFound || !IsValid(NewResult.TargetActor))
 	{
+		if (HasValidCurrentTarget())
+		{
+			UE_LOG(LogTemp, Log,
+					TEXT("[LockOn] Released Target=%s"),
+					*GetNameSafe(CurrentTargetActor.Get()));
+		}
 		ClearCurrentTarget();
 		return;
+	}
+	
+	if (CurrentTargetActor.Get() != NewResult.TargetActor)
+	{
+		UE_LOG(LogTemp, Log,
+				TEXT("[LockOn] Acquired Target=%s Distance=%.1f Angle=%.1f Score=%.2f"),
+				*GetNameSafe(NewResult.TargetActor),
+				NewResult.Distance,
+				NewResult.AngleDegrees,
+				NewResult.Score);
 	}
 
 	SetCurrentTarget(NewResult.TargetActor, NewResult);

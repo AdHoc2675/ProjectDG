@@ -33,6 +33,7 @@
 
 #include "Components/UI/DGMinimapCaptureComponent.h"
 #include "Components/UI/DGMinimapMarkerComponent.h"
+#include "Components/Targeting/LockOnComponent.h"
 
 APlayerCharacterBase::APlayerCharacterBase()
 {
@@ -94,6 +95,8 @@ APlayerCharacterBase::APlayerCharacterBase()
 	
 	MinimapCaptureComponent = CreateDefaultSubobject<UDGMinimapCaptureComponent>(TEXT("MinimapCaptureComponent"));
 	MinimapMarkerComponent = CreateDefaultSubobject<UDGMinimapMarkerComponent>(TEXT("MinimapMarkerComponent"));
+	
+	LockOnComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOnComponent"));
 
 	MinimapMarkerComponent->MarkerType = EMinimapMarkerType::Player;
 }
