@@ -5,6 +5,7 @@
 #include "DGInventoryWidget.generated.h"
 
 class UDGInventoryWidgetController;
+class UDGItemInstance;
 
 /**
  * 전체 화면 인벤토리 창 View
@@ -24,6 +25,10 @@ protected:
 	// 위젯 닫기 버튼 등의 기능
 	UFUNCTION(BlueprintCallable, Category = "DG|UI")
 	void CloseInventory();
+
+	// 컨트롤러의 OnInventoryUpdated 델리게이트와 바인딩될 콜백 함수
+	UFUNCTION()
+	void OnInventoryUpdatedCallback(const TArray<UDGItemInstance*>& InventoryItems);
 
 	// 추후 바인드 위젯들
 	// UPROPERTY(meta = (BindWidget))

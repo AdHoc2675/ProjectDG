@@ -3,6 +3,9 @@
 #include "UI/Widget/DGOverlayWidget.h"
 #include "UI/WidgetController/DGOverlayWidgetController.h"
 
+#include "UI/WidgetController/DGInventoryWidgetController.h"
+#include "UI/Widget/Toggleable/DGInventoryWidget.h"
+
 #include "Blueprint/UserWidget.h"
 
 UDGOverlayWidgetController* ADG_HUD::GetOverlayWidgetController(const FWidgetControllerParams& WCParams)
@@ -65,6 +68,23 @@ void ADG_HUD::BeginPlay()
 	Super::BeginPlay();
 }
 
+UDGInventoryWidgetController* ADG_HUD::GetInventoryWidgetController(const FWidgetControllerParams& WCParams)
+{
+	if (InventoryWidgetController == nullptr)
+	{
+		TSubclassOf<UDGInventoryWidgetController> ClassToSpawn = InventoryWidgetControllerClass;
+		if (ClassToSpawn == nullptr)
+		{
+			ClassToSpawn = UDGInventoryWidgetController::StaticClass();
+		}
+
+		InventoryWidgetController = NewObject<UDGInventoryWidgetController>(this, ClassToSpawn);
+		InventoryWidgetController->SetWidgetControllerParams(WCParams);
+		InventoryWidgetController->BindCallbacksToDependencies();
+	}
+	return InventoryWidgetController;
+}
+
 void ADG_HUD::ToggleMapWidget()
 {
 	bIsMapOpen = !bIsMapOpen;
@@ -98,20 +118,42 @@ void ADG_HUD::ToggleMapWidget()
 
 void ADG_HUD::ToggleInventoryWidget()
 {
-
 	bIsInventoryOpen = !bIsInventoryOpen;
 
 	if (bIsInventoryOpen)
 	{
 		if (InventoryWidget == nullptr && InventoryWidgetClass != nullptr)
 		{
-			InventoryWidget = CreateWidget<UDGUserWidget>(GetWorld(), InventoryWidgetClass);
+			// 위젯이 UDGInventoryWidget 타입인지 확인하며 캐스팅
+			InventoryWidget = CreateWidget<UDGInventoryWidget>(GetWorld(), InventoryWidgetClass);
+
+			if (InventoryWidget)
+			{
+				APlayerController* PC = GetOwningPlayerController();
+				APlayerState* PS = PC ? PC->PlayerState : nullptr;
+				// ASC, AS는 임시로 nullptr 처리 (나중에 연동 시 찾아오도록 수정)
+				const FWidgetControllerParams WidgetControllerParams(PC, PS, nullptr, nullptr);
+
+				UDGInventoryWidgetController* WidgetController = GetInventoryWidgetController(WidgetControllerParams);
+
+				// UDGUserWidget 레벨의 함수 대신, 방금 만든 함수로 컨트롤러 바인딩
+				if (UDGInventoryWidget* DGInventory = Cast<UDGInventoryWidget>(InventoryWidget))
+				{
+					DGInventory->BindToController(WidgetController);
+				}
+			}
 		}
 
 		if (InventoryWidget)
 		{
 			InventoryWidget->AddToViewport();
 			UpdateInputMode();
+
+			// 창이 열릴 때마다 컨트롤러에게 초기값을 다시 방송해달라고 요청
+			if (InventoryWidgetController)
+			{
+				InventoryWidgetController->BroadcastInitialValues();
+			}
 
 			UE_LOG(LogTemp, Log, TEXT("[DG_HUD] Inventory Widget opened."));
 		}

@@ -13,6 +13,8 @@ class UDGOverlayWidgetController;
 struct FWidgetControllerParams;
 class UDGUserWidget;
 
+class UDGInventoryWidgetController;
+class UDGInventoryWidget;
 /*
 설명
 - 게임의 HUD를 전체적으로 관리하는 역할
@@ -57,6 +59,16 @@ private:
 	UPROPERTY()
 	TObjectPtr<UDGOverlayWidgetController> OverlayWidgetController;
 
+	// 기존 Overlay 외에 Inventory용 컨트롤러 클래스 지정 속성
+	UPROPERTY(EditAnywhere, Category = "DG|UI")
+	TSubclassOf<UDGInventoryWidgetController> InventoryWidgetControllerClass;
+
+	// 인벤토리 컨트롤러 인스턴스
+	UPROPERTY()
+	TObjectPtr<UDGInventoryWidgetController> InventoryWidgetController;
+
+	// 인벤토리 컨트롤러를 가져오거나 생성하는 헬퍼 함수
+	UDGInventoryWidgetController* GetInventoryWidgetController(const FWidgetControllerParams& WCParams);
 public:
 	// 캐릭터에서 호출할 UI 토글 노출 함수
 	void ToggleMapWidget();

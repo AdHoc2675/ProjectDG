@@ -23,6 +23,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DG|Inventory")
 	bool EnhanceItem(UDGItemInstance* TargetItem);
 
+	// (임시) 인벤토리 아이템 리스트 Getter
+	UFUNCTION(BlueprintCallable, Category = "DG|Inventory")
+	TArray<UDGItemInstance*> GetInventoryItems() const { return InventoryItems; }
+
 protected:
 	// 플레이어가 소유한 장비 인스턴스들의 리스트
 	UPROPERTY(EditAnywhere, Instanced, Category = "DG|Inventory")
