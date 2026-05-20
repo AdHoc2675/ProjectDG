@@ -33,6 +33,8 @@ void UGA_Warrior_LeapingSlam::ActivateAbility(
     const FGameplayAbilityActivationInfo ActivationInfo,
     const FGameplayEventData* TriggerEventData)
 {
+    HitActors.Reset();
+    
     CurrentTarget = ResolveTargetFromPayload(TriggerEventData);
 
     if (!ValidateTargetForActivation(CurrentTarget))
@@ -99,6 +101,8 @@ void UGA_Warrior_LeapingSlam::EndAbility(
     bool bReplicateEndAbility,
     bool bWasCancelled)
 {
+    HitActors.Reset();
+    
     if (UWorld* World = GetWorld())
     {
         World->GetTimerManager().ClearTimer(TravelTickTimerHandle);
@@ -340,12 +344,19 @@ void UGA_Warrior_LeapingSlam::OnAttackHit(FGameplayEventData Payload)
     {
         return;
     }
+    
+    if (HitActors.Contains(HitActor))
+    {
+        return;
+    }
 
     if (!ValidateTargetForActivation(HitActor))
     {
         return;
     }
 
+    HitActors.Add(HitActor);
+    
     ApplyDamageToTarget(
         HitActor,
         Damage,

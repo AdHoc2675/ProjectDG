@@ -42,9 +42,6 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "LeapingSlam|Movement")
     float StopDistanceFromTarget = 180.f;
 
-    // UPROPERTY(EditDefaultsOnly, Category = "LeapingSlam|Movement")
-    // float ArcHeight = 350.f;
-
     UPROPERTY(EditDefaultsOnly, Category = "LeapingSlam|Movement")
     float TravelTickInterval = 0.01f;
 
@@ -60,6 +57,9 @@ protected:
 private:
     UPROPERTY()
     TObjectPtr<AActor> CurrentTarget;
+	
+	UPROPERTY()
+	TSet<TWeakObjectPtr<AActor>> HitActors;
 
     FVector TravelStartLocation = FVector::ZeroVector;
     FVector TravelEndLocation = FVector::ZeroVector;
