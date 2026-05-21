@@ -12,7 +12,7 @@ class USkeletalMeshComponent;
 struct FAttackHitWindowRuntimeData
 {
 	TMap<FName, FVector> PreviousSocketLocations;
-	TSet<TWeakObjectPtr<AActor>> HitActors;
+	// TSet<TWeakObjectPtr<AActor>> HitActors;
 };
 
 UENUM(BlueprintType)
@@ -60,6 +60,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
 	EAttackHitTraceMode TraceMode = EAttackHitTraceMode::ForwardBoxOverlap;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
+	FGameplayTag HitEventTag;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
+	int32 AttackComboIndex = 1;
+	
 	// ForwardBoxOverlap 관련 변수
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|ForwardBox")
 	float ForwardBoxRange = 400.f;
@@ -88,9 +94,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
 	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_Pawn;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
-	FGameplayTag HitEventTag;
 	
 	//주로 디버그를 위한 변수
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|Debug")
@@ -122,6 +125,8 @@ private:
 	void TraceForwardBox(USkeletalMeshComponent* CharacterMesh);
 	
 	void SendHitEvent(AActor* OwnerActor, AActor* HitActor) const;
+	
+	void SendHitWindowBeginEvent(AActor* OwnerActor) const;
 	
 	//팀 확인 및 디버깅
 	bool ShouldIgnoreHitActor(AActor* OwnerActor, AActor* HitActor) const;

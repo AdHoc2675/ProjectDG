@@ -81,10 +81,10 @@ FDGDamageResult UCombatComponent::ApplyDamageRequest(const FDGDamageRequest& Dam
 	if (!ValidateDamageRequest(DamageRequest, FailReason))
 	{
 		Result.Message = FailReason;
-		Debug::Print(FString::Printf(
-			TEXT("[CombatComponent] Damage request failed. Reason=%s"),
-			*FailReason
-		));
+		// Debug::Print(FString::Printf(
+		// 	TEXT("[CombatComponent] Damage request failed. Reason=%s"),
+		// 	*FailReason
+		// ));
 		return Result;
 	}
 
@@ -160,12 +160,12 @@ FDGDamageResult UCombatComponent::ApplyDamageRequest(const FDGDamageRequest& Dam
 	Result.FinalDamage = DamageRequest.BaseDamage;
 	Result.Message = TEXT("Damage GameplayEffect applied.");
 
-	Debug::Print(FString::Printf(
-		TEXT("[CombatComponent] Damage applied. Source=%s Target=%s IncomingDamage=%.2f"),
-		*GetNameSafe(SourceActor),
-		*GetNameSafe(TargetActor),
-		DamageRequest.BaseDamage
-	));
+	// Debug::Print(FString::Printf(
+	// 	TEXT("[CombatComponent] Damage applied. Source=%s Target=%s IncomingDamage=%.2f"),
+	// 	*GetNameSafe(SourceActor),
+	// 	*GetNameSafe(TargetActor),
+	// 	DamageRequest.BaseDamage
+	// ));
 
 	return Result;
 }
@@ -232,11 +232,11 @@ bool UCombatComponent::ValidateDamageRequest(
 		return false;
 	}
 
-	if (SourceCharacter->IsFriendlyTo(TargetCharacter))
-	{
-		OutFailReason = TEXT("Target is friendly.");
-		return false;
-	}
+	// if (SourceCharacter->IsFriendlyTo(TargetCharacter))
+	// {
+	// 	OutFailReason = TEXT("Target is friendly.");
+	// 	return false;
+	// }
 
 	return true;
 }

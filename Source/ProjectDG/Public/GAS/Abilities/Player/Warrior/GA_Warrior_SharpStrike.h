@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GAS/Abilities/Base/GameplayAbilityBase.h"
+#include "GAS/Abilities/Player/Warrior/GA_WarriorBase.h"
 #include "GA_Warrior_SharpStrike.generated.h"
 
 class UGameplayEffect;
@@ -12,7 +12,7 @@ class UGameplayEffect;
  * 
  */
 UCLASS()
-class PROJECTDG_API UGA_Warrior_SharpStrike : public UGameplayAbilityBase
+class PROJECTDG_API UGA_Warrior_SharpStrike : public UGA_WarriorBase
 {
 	GENERATED_BODY()
 	
@@ -56,7 +56,9 @@ private:
 	UPROPERTY()
 	TObjectPtr<class UAbilityTask_WaitGameplayEvent> ComboBranchTask;
 	
-	// 입력 tap 관련 task
+	UPROPERTY()
+	TObjectPtr<class UAbilityTask_WaitGameplayEvent> AttackHitWindowBeginTask;
+	
 	UPROPERTY()
 	TObjectPtr<class UAbilityTask_WaitGameplayEvent> SharpStrikeInputPressedTask;
 
@@ -65,14 +67,13 @@ private:
 	bool bComboInputWindowOpen = false;
 	bool bComboInputBuffered = false;
 	
-	// Montage의 ANS 콤보 중복 방지 로직 강화 : 한 콤보 내에서 데미지 적용된 액터 중복데미지 방지
-	TSet<TWeakObjectPtr<AActor>> HitActorsThisCombo;
+	// AttackHitWindow가 전달한 콤보 번호별로 타격 대상 중복 데미지를 방지
+	TMap<int32, TSet<TWeakObjectPtr<AActor>>> HitActorsByCombo;
 
 	void ResetComboState();
-
-	bool IsSharpStrikeInputHeld() const;
+	
 	void TryBufferComboInputFromHeldState();
-	void TryJumpToNextComboSection();
+	void TryJumpToNextComboSection(int32 BranchComboIndex);
 	void PlaySharpStrikeMontageFromStart();
 
 	UFUNCTION()
@@ -80,6 +81,9 @@ private:
 
 	UFUNCTION()
 	void OnComboInputWindowClosed(FGameplayEventData Payload);
+	
+	UFUNCTION()
+	void OnAttackHitWindowBegin(FGameplayEventData Payload);
 
 	UFUNCTION()
 	void OnComboBranch(FGameplayEventData Payload);
@@ -98,6 +102,12 @@ private:
 	
 	UFUNCTION()
 	void OnSharpStrikeInputPressed(FGameplayEventData Payload);
+	
+	// EndAbility
+private:
+	bool bEndingSharpStrike = false;
+
+	void EndSharpStrikeAbility();
 	
 // 데미지 관련 로직
 private:

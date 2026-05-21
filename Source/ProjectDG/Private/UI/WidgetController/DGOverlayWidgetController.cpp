@@ -5,6 +5,9 @@
 #include "UI/Widget/Minimap/DGMinimapSubsystem.h"
 #include "Components/UI/DGMinimapMarkerComponent.h"
 
+#include "GameFramework/DG_GameState.h"
+#include "GameFramework/DG_PlayerState.h"
+
 void UDGOverlayWidgetController::BroadcastInitialValues()
 {
 	UDG_AttributeSet* DGAS = GetDGAttributeSet();
@@ -35,6 +38,22 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 		}
 	}
 
+	// 파티원 UI가 초기화될 때 이미 방에 접속해 있는 기존 파티원(PlayerState)들을 긁어와서 목록에 추가
+	if (UWorld* World = GetWorld())
+	{
+		if (ADG_GameState* GameState = World->GetGameState<ADG_GameState>())
+		{
+			// GameState가 관리하는 모든 PlayerState 배열 순회
+			for (APlayerState* PS : GameState->PlayerArray)
+			{
+				if (ADG_PlayerState* DGPS = Cast<ADG_PlayerState>(PS))
+				{
+					// 본인 체크 등 로직이 이미 HandlePartyMemberJoined에 잘 구현되어 있으므로 이를 재활용하여 호출
+					HandlePartyMemberJoined(DGPS);
+				}
+			}
+		}
+	}
 }
 
 void UDGOverlayWidgetController::BindCallbacksToDependencies()
@@ -80,6 +99,16 @@ void UDGOverlayWidgetController::BindCallbacksToDependencies()
 		{
 			MinimapSubsystem->OnMarkerRegistered.AddDynamic(this, &UDGOverlayWidgetController::HandleMarkerRegistered);
 			MinimapSubsystem->OnMarkerUnregistered.AddDynamic(this, &UDGOverlayWidgetController::HandleMarkerUnregistered);
+		}
+	}
+
+	// 파티(GameState) 합류/탈퇴 델리게이트 바인딩
+	if (UWorld* World = GetWorld())
+	{
+		if (ADG_GameState* GameState = World->GetGameState<ADG_GameState>())
+		{
+			GameState->OnPlayerJoinedDelegate.AddDynamic(this, &UDGOverlayWidgetController::HandlePartyMemberJoined);
+			GameState->OnPlayerLeftDelegate.AddDynamic(this, &UDGOverlayWidgetController::HandlePartyMemberLeft);
 		}
 	}
 }
@@ -137,4 +166,39 @@ void UDGOverlayWidgetController::HandleMarkerRegistered(UDGMinimapMarkerComponen
 void UDGOverlayWidgetController::HandleMarkerUnregistered(UDGMinimapMarkerComponent* Marker)
 {
 	OnMarkerRemoved.Broadcast(Marker);
+}
+
+void UDGOverlayWidgetController::HandlePartyMemberJoined(ADG_PlayerState* NewMemberPS)
+{
+	if (!NewMemberPS) return;
+
+	// 내 PlayerState면 파티원 리스트에는 시각적으로 추가하지 않음
+	if (NewMemberPS == PlayerState)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] 본인(로컬 플레이어)이 월드에 참가했습니다: %s"), *NewMemberPS->GetPlayerName());
+		return;
+	}
+
+	// 파티원 합류 로그 출력
+	UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] 새로운 파티원이 참가했습니다: %s"), *NewMemberPS->GetPlayerName());
+
+	// View(DGPartyListWidget)에게 새로운 파티원이 왔다고 방송
+	OnPartyMemberJoined.Broadcast(NewMemberPS);
+}
+
+void UDGOverlayWidgetController::HandlePartyMemberLeft(ADG_PlayerState* LeavingMemberPS)
+{
+	if (!LeavingMemberPS) return;
+
+	if (LeavingMemberPS == PlayerState)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] 본인(로컬 플레이어)이 월드에서 퇴장했습니다: %s"), *LeavingMemberPS->GetPlayerName());
+		return;
+	}
+
+	// 파티원 퇴장 로그 출력
+	UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] 파티원이 탈퇴(퇴장)했습니다: %s"), *LeavingMemberPS->GetPlayerName());
+
+	// View(DGPartyListWidget)에게 파티원이 나갔다고 방송
+	OnPartyMemberLeft.Broadcast(LeavingMemberPS);
 }

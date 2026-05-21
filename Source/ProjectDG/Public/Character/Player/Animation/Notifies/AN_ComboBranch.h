@@ -29,6 +29,9 @@ public:
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combo")
 	FGameplayTag BranchEventTag;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combo", meta = (ClampMin = "1", ClampMax = "3"))
+	int32 BranchComboIndex = 1;
 
 private:
 	void SendComboBranchEvent(USkeletalMeshComponent* MeshComp) const;

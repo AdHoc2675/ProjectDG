@@ -113,6 +113,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|View", meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCam;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacterBase|Targeting")
+	TObjectPtr<ULockOnComponent> LockOnComponent;
+	
+public:
+	UFUNCTION(BlueprintCallable, Category = "PlayerCharacterBase|Targeting")
+	ULockOnComponent* GetLockOnComponent() const { return LockOnComponent; }
+	
 	//외관 설정
 #pragma region OutLook
 protected:
@@ -173,6 +180,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputAction* IA_Shift;
 
+	// 맵과 인벤토리를 열기 위한 InputAction
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
+	class UInputAction* IA_ToggleMap;
+
+	// 맵과 인벤토리를 열기 위한 InputAction
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
+	class UInputAction* IA_ToggleInventory;
+
 protected:
 	void LookAction(const FInputActionValue& InputActionValue);
 	void MoveAction(const FInputActionValue& InputActionValue);
@@ -184,6 +199,10 @@ protected:
 	FVector GetCameraForwardOnPlane() const;
 	FVector GetCameraRightOnPlane() const;
 	FVector GetDesiredMoveDirection() const;
+
+	// UI 토글 처리 함수
+	void ToggleMapAction();
+	void ToggleInventoryAction();
 
 #pragma endregion Input
 	
@@ -211,12 +230,7 @@ protected:
 	/** 슬롯 태그(Input.Slot.X)와 실제 스킬 태그(Skill.Warrior.SharpStrike 등)의 매핑 테이블 */
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	TMap<FGameplayTag, FGameplayTag> SkillSlotMapping;
-
-	/** 슬롯 입력 처리 공통 함수 */
-	// void OnSkillInput(FGameplayTag SlotTag);
-
-	/** 특정 슬롯에 할당된 스킬 태그를 가져오는 헬퍼 함수 */
-	// FGameplayTag GetSkillTagForSlot(FGameplayTag SlotTag) const;
+	
 	
 	/** 슬롯 입력 처리 공통 함수 */
 	void OnSkillInputStarted(FGameplayTag SlotTag);
@@ -262,6 +276,13 @@ protected:
 	// 임시 진입점이며, 나중에 실제 GA/Skill 구조로 이전 예정.
 	UFUNCTION(Server, Reliable)
 	void Server_TestApplyDamage();
+	
+	UFUNCTION(Server, Reliable)
+	void ServerSendTargetedSkillInputStartedEvent(FGameplayTag SkillEventTag, AActor* TargetActor);
+
+	void SendTargetedSkillInputStartedEvent(FGameplayTag SkillEventTag, AActor* TargetActor);
+
+	AActor* ResolveSkillEventTarget(FGameplayTag SkillTag) const;
 	
 public:
 	// Skill Debug : GA 실행 및 충돌 판정 등은 서버에서만 실행되며 해당 로직에 따른 디버그라인 그리기 로직 또한 서버에서만 실행됐었음 

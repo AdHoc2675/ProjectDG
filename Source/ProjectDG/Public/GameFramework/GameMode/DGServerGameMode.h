@@ -3,10 +3,19 @@
 #include "CoreMinimal.h"
 #include "GameFramework/DG_GameMode.h"
 #include "TimerManager.h"
+#include "UObject/ObjectKey.h"
 #include "DGServerGameMode.generated.h"
 
 class AController;
 class APlayerController;
+
+struct FDGConnectedMemberInfo
+{
+	FString SessionId;
+	int64 AccountId = 0;
+	int64 CharacterId = 0;
+	FString Role;
+};
 
 UCLASS()
 class PROJECTDG_API ADGServerGameMode : public ADG_GameMode
@@ -51,6 +60,8 @@ private:
 
 	bool bSessionEndReported = false;
 
+	TMap<TObjectKey<AController>, FDGConnectedMemberInfo> ConnectedMemberInfos;
+
 	void InitializeBackendBaseUrlFromCommandLine();
 
 	void ValidateJoinTokenAsync(
@@ -65,6 +76,11 @@ private:
 
 	void ReportSessionEndedAsync(
 		const FString& SessionId
+	);
+
+	void ReportMemberLeftAsync(
+		const FDGConnectedMemberInfo& MemberInfo,
+		bool bWasLastKnownPlayer
 	);
 
 	void StartSessionHeartbeat(
@@ -103,8 +119,24 @@ private:
 		const FString& SessionId
 	);
 
+	static FString BuildMemberLeftJson(
+		const FString& SessionId,
+		int64 AccountId,
+		int64 CharacterId
+	);
+
 	static bool ParseValidateJoinResponse(
 		const FString& ResponseBody,
+		FString& OutMessage,
+		FString& OutSessionId,
+		int64& OutAccountId,
+		int64& OutCharacterId,
+		FString& OutRole
+	);
+
+	static bool ParseMemberLeftResponse(
+		const FString& ResponseBody,
+		bool& bOutShouldShutdownServer,
 		FString& OutMessage
 	);
 };
