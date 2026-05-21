@@ -715,7 +715,8 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 
 	FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
 	
-	if (SkillTag == DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag())
+	if (SkillTag == DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag() ||
+		SkillTag == DGGameplayTags::Skill_Warrior_DoomStrike.GetTag())
 	{
 		const FGameplayTag SkillInputEventTag = GetSkillInputEventTag(SkillTag);
 		AActor* TargetActor = ResolveSkillEventTarget(SkillTag);
@@ -733,18 +734,6 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 	if (SkillTag.IsValid())
 	{
 		const bool bActivateResult = ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(SkillTag));
-		
-		// Debug::Print(FString::Printf(
-		// 		TEXT("[SharpStrikeInput][%s] OnSkillInputStarted Slot=%s Skill=%s ActivateResult=%s Authority=%s LocalRole=%dRemoteRole=%d Time=%.3f"),
-		// 		*GetNameSafe(this),
-		// 		*SlotTag.ToString(),
-		// 		*SkillTag.ToString(),
-		// 		bActivateResult ? TEXT("true") : TEXT("false"),
-		// 		HasAuthority() ? TEXT("true") : TEXT("false"),
-		// 		static_cast<int32>(GetLocalRole()),
-		// 		static_cast<int32>(GetRemoteRole()),
-		// 		GetWorld() ? GetWorld()->GetTimeSeconds() : -1.f
-		// ), bActivateResult ? FColor::Green : FColor::Red);
 		
 		const FGameplayTag SkillInputEventTag = GetSkillInputEventTag(SkillTag);
 
@@ -871,6 +860,11 @@ FGameplayTag APlayerCharacterBase::GetSkillInputEventTag(FGameplayTag SkillTag) 
 	{
 		return DGGameplayTags::Event_Input_Warrior_LeapingSlam.GetTag();
 	}
+	
+	if (SkillTag == DGGameplayTags::Skill_Warrior_DoomStrike.GetTag())
+	{
+		return DGGameplayTags::Event_Input_Warrior_DoomStrike.GetTag();
+	}
 
 	return FGameplayTag::EmptyTag;
 }
@@ -898,7 +892,8 @@ void APlayerCharacterBase::SendTargetedSkillInputStartedEvent(FGameplayTag Skill
 
 AActor* APlayerCharacterBase::ResolveSkillEventTarget(FGameplayTag SkillTag) const
 {
-	if (SkillTag != DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag())
+	if (SkillTag != DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag() &&
+				SkillTag != DGGameplayTags::Skill_Warrior_DoomStrike.GetTag())
 	{
 		return nullptr;
 	}
@@ -908,8 +903,10 @@ AActor* APlayerCharacterBase::ResolveSkillEventTarget(FGameplayTag SkillTag) con
 		return nullptr;
 	}
 
+	const float TargetingDistance = SkillTag == DGGameplayTags::Skill_Warrior_DoomStrike.GetTag() ? 2000.f : 2000.f;
+
 	FLockOnTargetResult TargetResult;
-	if (!LockOnComponent->FindBestTarget(2000.f, TargetResult))
+	if (!LockOnComponent->FindBestTarget(TargetingDistance, TargetResult))
 	{
 		return nullptr;
 	}
