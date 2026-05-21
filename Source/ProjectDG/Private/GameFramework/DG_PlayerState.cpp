@@ -6,7 +6,7 @@
 #include "AbilitySystemComponent.h"
 #include "Character/Player/Data/PlayerCharacterClassData.h"
 #include "Core/DG_Debug.h"
-#include "Data/DT_Attribute.h"
+#include "Data/Attribute/DT_Attribute.h"
 #include "Engine/DataTable.h"
 #include "GAS/Attributes/DG_AttributeSet.h"
 #include "Net/UnrealNetwork.h"

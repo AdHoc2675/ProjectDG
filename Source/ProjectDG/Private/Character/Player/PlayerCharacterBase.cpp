@@ -1,6 +1,7 @@
 ﻿
 
 #include "Character/Player/PlayerCharacterBase.h"
+#include "Character/Player//Data//PlayerSkillData.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
@@ -35,7 +36,7 @@
 #include "Components/UI/DGMinimapMarkerComponent.h"
 #include "Components/Targeting/LockOnComponent.h"
 
-class ULockOnComponent;
+
 
 APlayerCharacterBase::APlayerCharacterBase()
 {
@@ -499,18 +500,22 @@ void APlayerCharacterBase::InitializeSkillSlotsFromClassData()
 
 	if (!CharacterClassData)
 	{
-		// Debug::Print(TEXT("[PlayerCharacterBase] CharacterClassData is null. Skill slots skipped."));
 		return;
 	}
 
 	for (const FSkillSlotDefinition& SkillSlot : CharacterClassData->SkillSlots)
 	{
-		if (!SkillSlot.SlotTag.IsValid() || !SkillSlot.SkillTag.IsValid())
+		if (!SkillSlot.SlotTag.IsValid() || !SkillSlot.SkillData)
 		{
 			continue;
 		}
 
-		SkillSlotMapping.Add(SkillSlot.SlotTag, SkillSlot.SkillTag);
+		if (!SkillSlot.SkillData->SkillTag.IsValid())
+		{
+			continue;
+		}
+
+		SkillSlotMapping.Add(SkillSlot.SlotTag, SkillSlot.SkillData->SkillTag);
 	}
 }
 
@@ -532,7 +537,12 @@ void APlayerCharacterBase::GrantClassSkillAbilities()
 
 	for (const FSkillSlotDefinition& SkillSlot : CharacterClassData->SkillSlots)
 	{
-		if (!SkillSlot.AbilityClass)
+		if (!SkillSlot.SkillData)
+		{
+			continue;
+		}
+
+		if (!SkillSlot.SkillData->AbilityClass)
 		{
 			continue;
 		}
@@ -542,7 +552,7 @@ void APlayerCharacterBase::GrantClassSkillAbilities()
 			continue;
 		}
 
-		ASC->GiveAbility(FGameplayAbilitySpec(SkillSlot.AbilityClass, 1));
+		ASC->GiveAbility(FGameplayAbilitySpec(SkillSlot.SkillData->AbilityClass, 1));
 	}
 }
 

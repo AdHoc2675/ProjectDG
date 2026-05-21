@@ -33,6 +33,10 @@ struct PROJECTDG_API FDGDamageRequest
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DG|Combat")
 	float BaseDamage = 0.f;
 
+	/** Source AttackPower에 곱해질 스킬 공격력 계수 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DG|Combat")
+	float DamageMultiplier = 1.f;
+	
 	/** 데미지 타입 태그. 예: Damage.Physical, Damage.Fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DG|Combat")
 	FGameplayTag DamageTypeTag;

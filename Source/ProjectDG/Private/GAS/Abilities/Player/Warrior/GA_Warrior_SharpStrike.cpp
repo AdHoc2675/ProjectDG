@@ -349,10 +349,15 @@ void UGA_Warrior_SharpStrike::OnAttackHit(FGameplayEventData Payload)
                 //         CurrentComboIndex,
                 //         *GetNameSafe(TargetActor)), FColor::Orange);
         }
-        
-        
-        const FDGDamageResult DamageResult = ApplyDamageToTarget(TargetActor, GetCurrentComboDamage(), DGGameplayTags::Skill_Warrior_SharpStrike.GetTag(),
-          TargetActor->GetActorLocation(),true);
+
+        const FDGDamageResult DamageResult = ApplyDamageToTarget(
+                TargetActor,
+                0.f,
+                GetCurrentComboDamage(),
+                DGGameplayTags::Skill_Warrior_SharpStrike.GetTag(),
+                TargetActor->GetActorLocation(),
+                true
+        );
 
         if (!DamageResult.bSuccess)
         {

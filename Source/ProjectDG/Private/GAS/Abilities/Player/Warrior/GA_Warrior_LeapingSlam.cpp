@@ -315,6 +315,7 @@ void UGA_Warrior_LeapingSlam::OnAttackHit(FGameplayEventData Payload)
 
     ApplyDamageToTarget(
         HitActor,
+        0.f,
         Damage,
         DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag(),
         HitLocation,

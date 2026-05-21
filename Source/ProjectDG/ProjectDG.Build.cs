@@ -22,6 +22,7 @@ public class ProjectDG : ModuleRules
 			"GameplayTags",
 			"GameplayTasks",
 			"GameplayAbilities",
+			"Niagara",
 			"HTTP",
 			"Json",
 			"JsonUtilities"
