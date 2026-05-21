@@ -31,4 +31,12 @@ protected:
 	// 플레이어가 소유한 장비 인스턴스들의 리스트
 	UPROPERTY(EditAnywhere, Instanced, Category = "DG|Inventory")
 	TArray<TObjectPtr<UDGItemInstance>> InventoryItems;
+
+	// 플레이어가 소유한 소모품 인스턴스들의 리스트
+	UPROPERTY(EditAnywhere, Instanced, Category = "DG|Inventory")
+	TArray<TObjectPtr<UDGItemInstance>> InventoryConsumableItems;
+
+	// 플레이어가 소유한 제작 재료 인스턴스들의 리스트
+	UPROPERTY(EditAnywhere, Instanced, Category = "DG|Inventory")
+	TArray<TObjectPtr<UDGItemInstance>> InventoryCraftingMaterialItems;
 };
