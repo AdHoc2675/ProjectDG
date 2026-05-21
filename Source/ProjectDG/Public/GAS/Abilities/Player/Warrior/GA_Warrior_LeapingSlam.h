@@ -6,6 +6,10 @@
 #include "GAS/Abilities/Player/Warrior/GA_WarriorBase.h"
 #include "GA_Warrior_LeapingSlam.generated.h"
 
+class UAbilityTask_ApplyRootMotionMoveToForce;
+class UAbilityTask_PlayMontageAndWait;
+class UAbilityTask_WaitGameplayEvent;
+
 /**
  * 
  */
@@ -37,13 +41,7 @@ protected:
 	float MaxTargetingDistance = 2000.f;
 
     UPROPERTY(EditDefaultsOnly, Category = "LeapingSlam|Movement")
-    float ApproachDuration = 0.3f;
-
-    UPROPERTY(EditDefaultsOnly, Category = "LeapingSlam|Movement")
     float StopDistanceFromTarget = 180.f;
-
-    UPROPERTY(EditDefaultsOnly, Category = "LeapingSlam|Movement")
-    float TravelTickInterval = 0.01f;
 
     UPROPERTY(EditDefaultsOnly, Category = "LeapingSlam|Animation")
     TObjectPtr<UAnimMontage> LeapingSlamMontage;
@@ -60,22 +58,29 @@ private:
 	
 	UPROPERTY()
 	TSet<TWeakObjectPtr<AActor>> HitActors;
+	
+	UPROPERTY()
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> MoveBeginTask;
 
-    FVector TravelStartLocation = FVector::ZeroVector;
-    FVector TravelEndLocation = FVector::ZeroVector;
-    float TravelElapsedTime = 0.f;
-	float TravelStartWorldTime = 0.f;
+	UPROPERTY()
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> AttackHitTask;
 
-    FTimerHandle TravelTickTimerHandle;
+	UPROPERTY()
+	TObjectPtr<UAbilityTask_PlayMontageAndWait> MontageTask;
+
+	UPROPERTY()
+	TObjectPtr<UAbilityTask_ApplyRootMotionMoveToForce> MoveToTargetTask;
+	
+	UFUNCTION()
+	void OnMoveBegin(FGameplayEventData Payload);
+
+	void StartLeapingMove(float Duration);
 
     AActor* ResolveTargetFromPayload(const FGameplayEventData* TriggerEventData) const;
     bool ValidateTargetForActivation(AActor* TargetActor) const;
     bool BuildLandingLocation(AActor* TargetActor, FVector& OutLocation) const;
 
-    void FaceTarget(AActor* TargetActor);
-    void StartLeapingTravel(AActor* TargetActor);
-    void TickLeapingTravel();
-    void FinishLeapingTravel();
+    void FaceTarget(AActor* TargetActor);;
 
 	UFUNCTION()
 	void OnAttackHit(FGameplayEventData Payload);
