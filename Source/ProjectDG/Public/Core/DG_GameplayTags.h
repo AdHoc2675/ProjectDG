@@ -22,7 +22,7 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_Slot_Q)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_Slot_E)
 	
-	// Event
+	// Event (주로 ANS에서 사용됨)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combo_InputWindow_Open)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combo_InputWindow_Close)
 	
@@ -32,9 +32,16 @@ namespace DGGameplayTags
 	
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Attack_HitWindow_Begin)
 	
+	// DoomStrike(파멸의 맹타) 몽타주 출력 시 타겟팅 대상에게 Dash 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그 
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Movement_Warrior_DoomStrike_DashBegin)
+	
+	// LeapingSlam(도약찍기) 몽타주 출력 시 타겟팅 대상에게 Leap 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그 
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Movement_Warrior_LeapingSlam_MoveBegin)
+	
 	// 전사스킬 예리한일격 탭으로 전달 시 필요 태그
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Warrior_SharpStrike)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Warrior_LeapingSlam)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Warrior_DoomStrike)
 	
 
 	// Skill_Common
