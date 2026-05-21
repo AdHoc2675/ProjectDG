@@ -7,6 +7,15 @@
 /**
  * 아이템 시스템 핵심 Enum
  */
+
+UENUM(BlueprintType)
+enum class EDGItemType : uint8
+{
+	Equipment	UMETA(DisplayName = "장비"),
+	Consumable	UMETA(DisplayName = "소모품"),
+	Material	UMETA(DisplayName = "재료")
+};
+
 UENUM(BlueprintType)
 enum class EDGEquipmentType : uint8
 {

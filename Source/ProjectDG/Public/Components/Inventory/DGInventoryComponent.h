@@ -25,12 +25,20 @@ public:
 
 	// (임시) 인벤토리 아이템 리스트 Getter
 	UFUNCTION(BlueprintCallable, Category = "DG|Inventory")
-	TArray<UDGItemInstance*> GetInventoryItems() const { return InventoryItems; }
+	TArray<UDGItemInstance*> GetInventoryEquipmentItems() const { return InventoryEquipmentItems; }
+
+	// (임시) 소모품 리스트 Getter
+	UFUNCTION(BlueprintCallable, Category = "DG|Inventory")
+	TArray<UDGItemInstance*> GetInventoryConsumableItems() const { return InventoryConsumableItems; }
+
+	// (임시) 제작 재료 리스트 Getter
+	UFUNCTION(BlueprintCallable, Category = "DG|Inventory")
+	TArray<UDGItemInstance*> GetInventoryCraftingMaterialItems() const { return InventoryCraftingMaterialItems; }
 
 protected:
 	// 플레이어가 소유한 장비 인스턴스들의 리스트
 	UPROPERTY(EditAnywhere, Instanced, Category = "DG|Inventory")
-	TArray<TObjectPtr<UDGItemInstance>> InventoryItems;
+	TArray<TObjectPtr<UDGItemInstance>> InventoryEquipmentItems;
 
 	// 플레이어가 소유한 소모품 인스턴스들의 리스트
 	UPROPERTY(EditAnywhere, Instanced, Category = "DG|Inventory")

@@ -67,7 +67,22 @@ void UDGInventoryWidget::NativeConstruct()
 			}
 		}
 	}
+
+	// 탭 버튼 클릭 이벤트 바인딩
+	if (EquipmentItemsButton)
+	{
+		EquipmentItemsButton->OnClicked.AddDynamic(this, &UDGInventoryWidget::OnEquipmentTabClicked);
+	}
+	if (ConsumableItemsButton)
+	{
+		ConsumableItemsButton->OnClicked.AddDynamic(this, &UDGInventoryWidget::OnConsumableTabClicked);
+	}
+	if (CraftingMaterialButton)
+	{
+		CraftingMaterialButton->OnClicked.AddDynamic(this, &UDGInventoryWidget::OnMaterialTabClicked);
+	}
 }
+
 void UDGInventoryWidget::CloseInventory()
 {
 	if (APlayerController* PC = GetOwningPlayer())
@@ -93,5 +108,32 @@ void UDGInventoryWidget::OnInventoryUpdatedCallback(const TArray<UDGItemInstance
 
 		// 각 슬롯에 데이터 주입. (nullptr이 들어가면 빈 이미지 출력 처리됨)
 		SlotWidgets[i]->UpdateSlot(CurrentItem);
+	}
+}
+
+void UDGInventoryWidget::OnEquipmentTabClicked()
+{
+	// 부모(UDGUserWidget)가 가지고 있는 WidgetController 변수를 직접 사용
+	if (UDGInventoryWidgetController* C = Cast<UDGInventoryWidgetController>(WidgetController))
+	{
+		C->SwitchTab(EDGItemType::Equipment);
+	}
+}
+
+void UDGInventoryWidget::OnConsumableTabClicked()
+{
+	// 부모(UDGUserWidget)가 가지고 있는 WidgetController 변수를 직접 사용
+	if (UDGInventoryWidgetController* C = Cast<UDGInventoryWidgetController>(WidgetController))
+	{
+		C->SwitchTab(EDGItemType::Consumable);
+	}
+}
+
+void UDGInventoryWidget::OnMaterialTabClicked()
+{
+	// 부모(UDGUserWidget)가 가지고 있는 WidgetController 변수를 직접 사용
+	if (UDGInventoryWidgetController* C = Cast<UDGInventoryWidgetController>(WidgetController))
+	{
+		C->SwitchTab(EDGItemType::Material);
 	}
 }

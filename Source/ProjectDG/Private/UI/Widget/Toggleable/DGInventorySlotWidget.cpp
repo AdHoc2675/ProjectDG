@@ -29,14 +29,13 @@ void UDGInventorySlotWidget::UpdateSlot(UDGItemInstance* ItemInstance)
 		if (!CachedToolTipWidget && ToolTipClass)
 		{
 			CachedToolTipWidget = CreateWidget<UDGItemToolTipWidget>(this, ToolTipClass);
-			// 위젯의 기본 툴팁으로 설정 (이제 마우스 호버 시 자동으로 툴팁 생성)
-			SetToolTip(CachedToolTipWidget);
 		}
 
 		// 아이템에 맞게 툴팁 정보 업데이트
 		if (CachedToolTipWidget)
 		{
 			CachedToolTipWidget->UpdateToolTip(ItemInstance);
+			SetToolTip(CachedToolTipWidget);
 		}
 	}
 	else

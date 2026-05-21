@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "UI/Widget/DGUserWidget.h"
 #include "Components/UniformGridPanel.h"
+#include "Components/Button.h"
 #include "UI/Widget/Toggleable/DGInventorySlotWidget.h"
 #include "DGInventoryWidget.generated.h"
 
@@ -34,9 +35,28 @@ protected:
 	UFUNCTION()
 	void OnInventoryUpdatedCallback(const TArray<UDGItemInstance*>& InventoryItems);
 
+	// 버튼 클릭 이벤트 핸들러
+	UFUNCTION()
+	void OnEquipmentTabClicked();
+
+	UFUNCTION()
+	void OnConsumableTabClicked();
+
+	UFUNCTION()
+	void OnMaterialTabClicked();
+
 	// UMG의 UniformGridPanel (10x3 격자 용도)
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UUniformGridPanel> InventoryGrid;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> EquipmentItemsButton;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> ConsumableItemsButton;
+	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> CraftingMaterialButton;
 
 	// UMG 에디터에서 할당할 WBP_InventorySlot 클래스
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory")

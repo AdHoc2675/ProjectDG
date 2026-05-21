@@ -23,6 +23,11 @@ public:
 	virtual void BroadcastInitialValues() override;
 	virtual void BindCallbacksToDependencies() override;
 
+
+	// UI에서 탭이 전환되었을 때 호출되는 함수
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void SwitchTab(EDGItemType TabType);
+
 	// 블루프린트 UI에서 바인딩할 이벤트
 	UPROPERTY(BlueprintAssignable, Category = "DG|Inventory")
 	FOnInventoryUpdatedSignature OnInventoryUpdated;

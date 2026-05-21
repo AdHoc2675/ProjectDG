@@ -43,4 +43,8 @@ public:
 	// 부여된 보조 옵션 (최대 4개)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Instance|SubOption")
 	TArray<FDGSubOptionInstanceData> SubOptions;
+
+	// 겹침 수량 (장비는 항상 1, 소모품/재료는 1 이상)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Instance|Stack")
+	int32 Quantity = 1;
 };

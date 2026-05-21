@@ -19,8 +19,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data")
 	FText ItemName;
 
-	// 무기인지 방어구인지 구분
+	// 아이템 타입 (장비, 소모품, 재료)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data")
+	EDGItemType ItemType;
+
+	// 무기인지 방어구인지 구분 (장비 타입일 때만 유효)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data", meta = (EditCondition = "ItemType == EDGItemType::Equipment", EditConditionHides))
 	EDGEquipmentType EquipmentType;
 
 	// 아이콘 이미지
