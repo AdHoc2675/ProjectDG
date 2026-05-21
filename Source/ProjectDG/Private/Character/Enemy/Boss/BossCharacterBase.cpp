@@ -12,12 +12,43 @@ ABossCharacterBase::ABossCharacterBase()
 	BossAttributeSet = CreateDefaultSubobject<UDG_BossAttributeSet>(TEXT("BossAttributeSet"));
 }
 
+void ABossCharacterBase::InitializeBossTagFromClassData()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (!BossClassData)
+	{
+		return;
+	}
+
+	if (!BossClassData->BossTag.IsValid())
+	{
+		return;
+	}
+	
+	BossTag = BossClassData->BossTag;
+
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->AddLooseGameplayTag(BossTag);
+
+		UE_LOG(LogTemp, Warning, TEXT("[BossCharacterBase] InitializeBossTagFromClassData Success. NetMode=%d Name=%s"),
+			static_cast<int32>(GetNetMode()),
+			*GetName());
+	}
+	
+}
+
 void ABossCharacterBase::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
 	if (HasAuthority())
 	{
+		InitializeBossTagFromClassData();
 		ApplyBossSpecialEffects();
 	}
 }
