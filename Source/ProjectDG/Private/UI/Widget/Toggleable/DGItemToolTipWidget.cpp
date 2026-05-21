@@ -11,9 +11,24 @@ void UDGItemToolTipWidget::UpdateToolTip_Implementation(UDGItemInstance* ItemIns
 	if (!ItemInstance || !ItemInstance->ItemDef) return;
 
 	// 1. 아이템 이름
-	if (ItemNameText)
+	if (ItemNameText) ItemNameText->SetText(ItemInstance->ItemDef->ItemName);
+
+	if (ItemTypeText)
 	{
-		ItemNameText->SetText(ItemInstance->ItemDef->ItemName);
+		FString TypeString = TEXT("알 수 없음");
+		switch (ItemInstance->ItemDef->ItemType)
+		{
+		case EDGItemType::Equipment:
+			TypeString = (ItemInstance->ItemDef->EquipmentType == EDGEquipmentType::Weapon) ? TEXT("무기") : TEXT("방어구");
+			break;
+		case EDGItemType::Consumable:
+			TypeString = TEXT("소모품");
+			break;
+		case EDGItemType::Material:
+			TypeString = TEXT("제작 재료");
+			break;
+		}
+		ItemTypeText->SetText(FText::FromString(TypeString));
 	}
 
 	// 2. 파밍/장비 타입
@@ -26,57 +41,73 @@ void UDGItemToolTipWidget::UpdateToolTip_Implementation(UDGItemInstance* ItemIns
 		ItemTypeText->SetText(FText::FromString(TypeString));
 	}
 
-	// 3. 아이템 레벨
-	if (ItemLevelText)
+	if (ItemInstance->ItemDef->ItemType == EDGItemType::Equipment)
 	{
-		FString LevelString = FString::Printf(TEXT("아이템 레벨: %d"), ItemInstance->ItemLevel);
-		ItemLevelText->SetText(FText::FromString(LevelString));
-	}
+		//////////////////////////
+		// [장비일 경우]
+		//////////////////////////
 
-	// 4. 주스탯 표시 (기획서: 무기 = 주스탯 + 체력 + 공격력 / 방어구 = 주스탯 + 체력 + 방어력)
-	if (MainStatText)
-	{
-		FString MainStatString = FString::Printf(TEXT("주스탯: %.0f\n체력: +%.0f"), ItemInstance->MainStatValue, ItemInstance->HPValue);
+		// 장비 위젯들 켜기
+		if (ItemLevelText) ItemLevelText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		if (MainStatText) MainStatText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		if (SubOptionText) SubOptionText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 
-		if (ItemInstance->ItemDef->EquipmentType == EDGEquipmentType::Weapon)
+		// 텍스트 내용 채우기 (장비 레벨)
+		if (ItemLevelText)
 		{
-			MainStatString += FString::Printf(TEXT("\n공격력: +%.0f"), ItemInstance->AttackValue);
-		}
-		else
-		{
-			MainStatString += FString::Printf(TEXT("\n방어력: +%.0f"), ItemInstance->DefenseValue);
+			ItemLevelText->SetText(FText::FromString(FString::Printf(TEXT("아이템 레벨: %d"), ItemInstance->ItemLevel)));
 		}
 
-		MainStatText->SetText(FText::FromString(MainStatString));
-	}
-
-	// 5. 보조 옵션 표시 (최대 4개)
-	if (SubOptionText)
-	{
-		FString SubOptionString = TEXT("");
-
-		if (ItemInstance->SubOptions.Num() > 0)
+		// 장비 주스탯
+		if (MainStatText)
 		{
-			for (const FDGSubOptionInstanceData& SubOpt : ItemInstance->SubOptions)
+			FString MainStatString = FString::Printf(TEXT("주스탯: %.0f\n체력: +%.0f"), ItemInstance->MainStatValue, ItemInstance->HPValue);
+			MainStatString += (ItemInstance->ItemDef->EquipmentType == EDGEquipmentType::Weapon) ?
+				FString::Printf(TEXT("\n공격력: +%.0f"), ItemInstance->AttackValue) :
+				FString::Printf(TEXT("\n방어력: +%.0f"), ItemInstance->DefenseValue);
+			MainStatText->SetText(FText::FromString(MainStatString));
+		}
+
+		// 장비 보조옵션
+		if (SubOptionText)
+		{
+			FString SubOptionString = TEXT("");
+			if (ItemInstance->SubOptions.Num() > 0)
 			{
-				// 강화 수치가 있다면 (+N) 형식으로 표기 (기획서 10번 강화 로직 참조)
-				FString EnhanceStr = (SubOpt.EnhanceCount > 0) ? FString::Printf(TEXT("(+%d)"), SubOpt.EnhanceCount) : TEXT("");
-
-				// 최종 값 = 기본 수치 + 강화 상승치 총합
-				float FinalValue = SubOpt.BaseValue + SubOpt.EnhanceTotalValue;
-
-				// TODO: 데이터 테이블(DT_SubOptionDefinition)을 조회해 SubOpt.SubOptionID(FName)를 
-				// 한글 DisplayName("치명타 확률" 등)으로 변환하는 로직을 나중에 대체해야 함. 
-				// 현재는 ID(Name)를 그대로 출력.
-				SubOptionString += FString::Printf(TEXT("- %s : %.1f%% %s\n"),
-					*SubOpt.SubOptionID.ToString(), FinalValue, *EnhanceStr);
+				for (const FDGSubOptionInstanceData& SubOpt : ItemInstance->SubOptions)
+				{
+					FString EnhanceStr = (SubOpt.EnhanceCount > 0) ? FString::Printf(TEXT("(+%d)"), SubOpt.EnhanceCount) : TEXT("");
+					float FinalValue = SubOpt.BaseValue + SubOpt.EnhanceTotalValue;
+					SubOptionString += FString::Printf(TEXT("- %s : %.1f%% %s\n"), *SubOpt.SubOptionID.ToString(), FinalValue, *EnhanceStr);
+				}
 			}
-		}
-		else
-		{
-			SubOptionString = TEXT("보조 옵션 없음");
+			else SubOptionString = TEXT("보조 옵션 없음");
+			SubOptionText->SetText(FText::FromString(SubOptionString));
 		}
 
-		SubOptionText->SetText(FText::FromString(SubOptionString));
+		// 장비 설명
+		if (DescriptionText)
+		{
+			DescriptionText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+			DescriptionText->SetText(ItemInstance->ItemDef->ItemDescription);
+		}
+	}
+	else
+	{
+		//////////////////////////
+		// [소모품, 재료일 경우]
+		//////////////////////////
+
+		// 장비 전용 위젯들 완전히 접어버림
+		if (ItemLevelText) ItemLevelText->SetVisibility(ESlateVisibility::Collapsed);
+		if (MainStatText) MainStatText->SetVisibility(ESlateVisibility::Collapsed);
+		if (SubOptionText) SubOptionText->SetVisibility(ESlateVisibility::Collapsed);
+
+		// 설명 위젯 켜고 텍스트 삽입
+		if (DescriptionText)
+		{
+			DescriptionText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+			DescriptionText->SetText(ItemInstance->ItemDef->ItemDescription);
+		}
 	}
 }

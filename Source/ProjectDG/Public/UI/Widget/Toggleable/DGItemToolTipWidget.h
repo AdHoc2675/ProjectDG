@@ -46,4 +46,8 @@ protected:
 	// 보조 옵션 정보들을 텍스트 (여러 줄로 표시)
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> SubOptionText;
+	
+	// 아이템 설명 (여러 줄로 표시)
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> DescriptionText;
 };

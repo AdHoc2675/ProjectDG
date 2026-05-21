@@ -27,6 +27,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data", meta = (EditCondition = "ItemType == EDGItemType::Equipment", EditConditionHides))
 	EDGEquipmentType EquipmentType;
 
+	// 아이템 설명 (UI에서 여러 줄로 표시될 수 있음)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data", meta = (MultiLine = true))
+	FText ItemDescription;
+
 	// 아이콘 이미지
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data")
 	TObjectPtr<class UTexture2D> ItemIcon;
