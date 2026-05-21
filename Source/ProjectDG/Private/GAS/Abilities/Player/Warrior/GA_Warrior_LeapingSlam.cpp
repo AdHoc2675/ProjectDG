@@ -9,6 +9,7 @@
 #include "Core/DG_GameplayTags.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Components/CapsuleComponent.h"
 
 class UAnimMontage;
 
@@ -32,6 +33,8 @@ void UGA_Warrior_LeapingSlam::ActivateAbility(
     const FGameplayAbilityActivationInfo ActivationInfo,
     const FGameplayEventData* TriggerEventData)
 {
+    HitActors.Reset();
+    
     CurrentTarget = ResolveTargetFromPayload(TriggerEventData);
 
     if (!ValidateTargetForActivation(CurrentTarget))
@@ -98,6 +101,8 @@ void UGA_Warrior_LeapingSlam::EndAbility(
     bool bReplicateEndAbility,
     bool bWasCancelled)
 {
+    HitActors.Reset();
+    
     if (UWorld* World = GetWorld())
     {
         World->GetTimerManager().ClearTimer(TravelTickTimerHandle);
@@ -178,9 +183,48 @@ bool UGA_Warrior_LeapingSlam::BuildLandingLocation(AActor* TargetActor, FVector&
         return false;
     }
 
-    OutLocation = TargetLocation - DirectionToTarget * StopDistanceFromTarget;
-    OutLocation.Z = AvatarLocation.Z;
+    FVector DesiredLocation = TargetLocation - DirectionToTarget * StopDistanceFromTarget;
 
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return false;
+    }
+
+    FHitResult GroundHit;
+    const FVector TraceStart = DesiredLocation + FVector(0.f, 0.f, 500.f);
+    const FVector TraceEnd = DesiredLocation - FVector(0.f, 0.f, 1500.f);
+
+    FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(LeapingSlamLandingTrace), false);
+    QueryParams.AddIgnoredActor(AvatarActor);
+    QueryParams.AddIgnoredActor(TargetActor);
+
+    const bool bHitGround = World->LineTraceSingleByChannel(
+        GroundHit,
+        TraceStart,
+        TraceEnd,
+        ECC_Visibility,
+        QueryParams
+    );
+
+    if (bHitGround)
+    {
+        OutLocation = DesiredLocation;
+        OutLocation.Z = GroundHit.Location.Z;
+
+        if (const ACharacter* Character = Cast<ACharacter>(AvatarActor))
+        {
+            if (const UCapsuleComponent* Capsule = Character->GetCapsuleComponent())
+            {
+                OutLocation.Z += Capsule->GetScaledCapsuleHalfHeight();
+            }
+        }
+
+        return true;
+    }
+
+    OutLocation = DesiredLocation;
+    OutLocation.Z = AvatarLocation.Z;
     return true;
 }
 
@@ -230,6 +274,8 @@ void UGA_Warrior_LeapingSlam::StartLeapingTravel(AActor* TargetActor)
 
     if (UWorld* World = GetWorld())
     {
+        TravelStartWorldTime = World->GetTimeSeconds();
+        
         World->GetTimerManager().SetTimer(
             TravelTickTimerHandle,
             this,
@@ -243,19 +289,19 @@ void UGA_Warrior_LeapingSlam::StartLeapingTravel(AActor* TargetActor)
 void UGA_Warrior_LeapingSlam::TickLeapingTravel()
 {
     AActor* AvatarActor = GetAvatarActorFromActorInfo();
-    if (!AvatarActor)
+    UWorld* World = GetWorld();
+
+    if (!AvatarActor || !World)
     {
         FinishLeapingTravel();
         return;
     }
 
-    TravelElapsedTime += TravelTickInterval;
+    TravelElapsedTime = World->GetTimeSeconds() - TravelStartWorldTime;
 
     const float Alpha = FMath::Clamp(TravelElapsedTime / ApproachDuration, 0.f, 1.f);
 
-    FVector NewLocation = FMath::Lerp(TravelStartLocation, TravelEndLocation, Alpha);
-    NewLocation.Z += FMath::Sin(Alpha * PI) * ArcHeight;
-
+    const FVector NewLocation = FMath::Lerp(TravelStartLocation, TravelEndLocation, Alpha);
     AvatarActor->SetActorLocation(NewLocation, true);
 
     if (Alpha >= 1.f)
@@ -276,7 +322,7 @@ void UGA_Warrior_LeapingSlam::FinishLeapingTravel()
     {
         return;
     }
-
+    
     AvatarActor->SetActorLocation(TravelEndLocation, true);
 
     if (ACharacter* Character = Cast<ACharacter>(AvatarActor))
@@ -292,14 +338,18 @@ void UGA_Warrior_LeapingSlam::FinishLeapingTravel()
 
 void UGA_Warrior_LeapingSlam::OnAttackHit(FGameplayEventData Payload)
 {
-    AActor* AvatarActor = GetAvatarActorFromActorInfo();
-    if (!AvatarActor || !AvatarActor->HasAuthority())
+    if (!IsAuthorityAvatar())
     {
         return;
     }
 
-    AActor* HitActor = const_cast<AActor*>(Payload.Target.Get());
+    AActor* HitActor = GetPayloadTargetActor(Payload);
     if (!HitActor)
+    {
+        return;
+    }
+    
+    if (HitActors.Contains(HitActor))
     {
         return;
     }
@@ -309,15 +359,13 @@ void UGA_Warrior_LeapingSlam::OnAttackHit(FGameplayEventData Payload)
         return;
     }
 
-    const FVector HitLocation = Payload.TargetData.Num() > 0
-        ? Payload.TargetData.Get(0)->GetEndPoint()
-        : HitActor->GetActorLocation();
-
+    HitActors.Add(HitActor);
+    
     ApplyDamageToTarget(
         HitActor,
         Damage,
         DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag(),
-        HitLocation,
+        GetPayloadHitLocationOrActorLocation(Payload, HitActor),
         true
     );
 }
