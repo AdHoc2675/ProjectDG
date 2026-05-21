@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "UI/Widget/DGUserWidget.h"
+#include "UI/Widget/Toggleable/DGItemToolTipWidget.h"
 #include "DGInventorySlotWidget.generated.h"
 
 class UImage;
@@ -23,4 +24,14 @@ protected:
 	// 아이템의 실제 아이콘을 표시할 이미지
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> ItemIcon;
+
+	// UMG 에디터에서 할당할 툴팁 위젯 클래스
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ToolTip")
+	TSubclassOf<UDGItemToolTipWidget> ToolTipClass;
+
+private:
+	// 매번 생성하지 않고 캐싱하기 위한 변수
+	UPROPERTY()
+	TObjectPtr<UDGItemToolTipWidget> CachedToolTipWidget;
+
 };
