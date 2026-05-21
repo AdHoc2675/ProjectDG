@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "GameplayTagContainer.h"
 #include "BossCharacterClassData.generated.h"
 
 class UGameplayEffect;
@@ -18,6 +19,10 @@ class PROJECTDG_API UBossCharacterClassData : public UPrimaryDataAsset
 	GENERATED_BODY()
 
 public:
+	// 보스 식별용 태그
+	UPROPERTY(EditDefaultsOnly, Category = "Boss")
+	FGameplayTag BossTag;
+
 	// 기본 AttributeSet(UDG_AttributeSet) 초기화용 GE
 	UPROPERTY(EditDefaultsOnly, Category = "GAS")
 	TArray<TSubclassOf<UGameplayEffect>> StartupEffects;
