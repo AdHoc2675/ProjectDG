@@ -1,6 +1,4 @@
-﻿
-
-#include "Character/Player/PlayerCharacterBase.h"
+﻿#include "Character/Player/PlayerCharacterBase.h"
 #include "Character/Player//Data//PlayerSkillData.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
@@ -37,12 +35,11 @@
 #include "Components/Targeting/LockOnComponent.h"
 
 
-
 APlayerCharacterBase::APlayerCharacterBase()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
-	
+
 	// 컴포넌트 생성 및 할당
 	// 외형 관련 컴포넌트
 	HeadMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("HeadMesh"));
@@ -58,8 +55,8 @@ APlayerCharacterBase::APlayerCharacterBase()
 
 	// 리스트를 만들어 일괄 설정
 	TArray<USkeletalMeshComponent*> ModularMeshes = {
-		HeadMesh, Hair1Mesh, Hair2Mesh, Hair3Mesh, 
-		UpperBodyMesh, LowerBodyMesh, HelmetMesh, 
+		HeadMesh, Hair1Mesh, Hair2Mesh, Hair3Mesh,
+		UpperBodyMesh, LowerBodyMesh, HelmetMesh,
 		ShoesMesh, ShoulderMesh, GlovesMesh
 	};
 
@@ -70,10 +67,11 @@ APlayerCharacterBase::APlayerCharacterBase()
 			MeshComp->SetupAttachment(GetMesh()); // 애니메이션 동기화를 위해 보통 메인 메쉬에 부착합니다.
 		}
 	}
-	
+
 	//AI관련 StimuliSourceComponent
-	StimuliSourceComponent = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>(TEXT("StimuliSourceComponent"));
-	
+	StimuliSourceComponent = CreateDefaultSubobject<
+		UAIPerceptionStimuliSourceComponent>(TEXT("StimuliSourceComponent"));
+
 	//스프링암 생성
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(GetRootComponent());
@@ -92,13 +90,13 @@ APlayerCharacterBase::APlayerCharacterBase()
 	//이동방향기준회전,속도
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 720.0f, 0.f);
-	
+
 	AutoPossessPlayer = EAutoReceiveInput::Disabled;
 	AutoPossessAI = EAutoPossessAI::Disabled;
-	
+
 	MinimapCaptureComponent = CreateDefaultSubobject<UDGMinimapCaptureComponent>(TEXT("MinimapCaptureComponent"));
 	MinimapMarkerComponent = CreateDefaultSubobject<UDGMinimapMarkerComponent>(TEXT("MinimapMarkerComponent"));
-	
+
 	LockOnComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOnComponent"));
 
 	MinimapMarkerComponent->MarkerType = EMinimapMarkerType::Player;
@@ -106,16 +104,15 @@ APlayerCharacterBase::APlayerCharacterBase()
 
 void APlayerCharacterBase::BeginPlay()
 {
-    Super::BeginPlay();
-    
+	Super::BeginPlay();
+
 	//월드시작시 ASC초기화
-    InitializePlayerAbilitySystem();
+	InitializePlayerAbilitySystem();
 }
 
 void APlayerCharacterBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	
 }
 
 void APlayerCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -141,7 +138,7 @@ void APlayerCharacterBase::PostInitializeComponents()
 			{
 				// 메인 메쉬(GetMesh())의 애니메이션 포즈를 따르도록 설정
 				MeshComp->SetLeaderPoseComponent(GetMesh());
-				
+
 				// [최적화] 리더 포즈 사용 시 틱 옵션 조정
 				MeshComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
 
@@ -163,7 +160,7 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 	{
 		return;
 	}
-	
+
 	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
 	if (!ASC)
 	{
@@ -184,7 +181,6 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 	 * - 실제 월드에서 움직이고 스킬을 사용하는 존재는 Character
 	 */
 	ASC->InitAbilityActorInfo(PS, this);
-	
 }
 
 void APlayerCharacterBase::InitializePlayerUI()
@@ -213,7 +209,7 @@ void APlayerCharacterBase::InitializePlayerUI()
 void APlayerCharacterBase::PawnClientRestart()
 {
 	Super::PawnClientRestart();
-	
+
 	// 클라이언트에서 Controller가 Pawn에 할당된 직후, 다시 한번 ActorInfo를 업데이트합니다.
 	if (UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent())
 	{
@@ -286,7 +282,6 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
 	if (!EnhancedInputComponent)
 	{
-		// Debug::Print(TEXT("[PlayerCharacterBase] EnhancedInputComponent cast failed."));
 		return;
 	}
 
@@ -296,76 +291,103 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	 * nullptr 상태에서 바인딩하려 하면 문제 생길 수 있으므로
 	 * 하나씩 방어적으로 체크한다.
 	 */
-	 if (IA_Move)
+	if (IA_Move)
 	{
-        EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered,this,&APlayerCharacterBase::MoveAction);
-        EnhancedInputComponent->BindAction(IA_Move,ETriggerEvent::Completed,this,&APlayerCharacterBase::MoveAction);
+		EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered, this, &APlayerCharacterBase::MoveAction);
+		EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Completed, this, &APlayerCharacterBase::MoveAction);
 	}
 
-    if (IA_Look)
-    {
-        EnhancedInputComponent->BindAction(IA_Look,ETriggerEvent::Triggered,this,&APlayerCharacterBase::LookAction);
-    }
+	if (IA_Look)
+	{
+		EnhancedInputComponent->BindAction(IA_Look, ETriggerEvent::Triggered, this, &APlayerCharacterBase::LookAction);
+	}
 
-    if (IA_Jump)
-    {
-        EnhancedInputComponent->BindAction(IA_Jump,ETriggerEvent::Started,this,&ACharacter::Jump);
-        EnhancedInputComponent->BindAction(IA_Jump,ETriggerEvent::Completed,this,&ACharacter::StopJumping);
-    }
-	
+	if (IA_Jump)
+	{
+		EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Started, this, &ACharacter::Jump);
+		EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+	}
+
 	if (IA_Shift)
 	{
 		// Started: 버튼을 누르는 순간 즉시 Dodge 발동
-		EnhancedInputComponent->BindAction(IA_Shift, ETriggerEvent::Started, this, &APlayerCharacterBase::ShiftActionStarted);
+		EnhancedInputComponent->BindAction(IA_Shift, ETriggerEvent::Started, this,
+		                                   &APlayerCharacterBase::ShiftActionStarted);
 		// Completed: 버튼을 떼더라도 질주가 유지되게 하려면 여기서 질주를 끄지 않음
 	}
-	
-	
+
+
 	// Skill Mapping
 	if (IA_Skill_1)
 	{
-	    EnhancedInputComponent->BindAction(IA_Skill_1, ETriggerEvent::Started, this, &APlayerCharacterBase::OnSkillInputStarted, DGGameplayTags::Input_Slot_1.GetTag());
-	    EnhancedInputComponent->BindAction(IA_Skill_1, ETriggerEvent::Completed, this,&APlayerCharacterBase::OnSkillInputCompleted, DGGameplayTags::Input_Slot_1.GetTag());
+		EnhancedInputComponent->BindAction(IA_Skill_1, ETriggerEvent::Started, this,
+		                                   &APlayerCharacterBase::OnSkillInputStarted,
+		                                   DGGameplayTags::Input_Slot_1.GetTag());
+		EnhancedInputComponent->BindAction(IA_Skill_1, ETriggerEvent::Completed, this,
+		                                   &APlayerCharacterBase::OnSkillInputCompleted,
+		                                   DGGameplayTags::Input_Slot_1.GetTag());
 	}
 
 	if (IA_Skill_2)
 	{
-	    EnhancedInputComponent->BindAction(IA_Skill_2, ETriggerEvent::Started, this,&APlayerCharacterBase::OnSkillInputStarted, DGGameplayTags::Input_Slot_2.GetTag());
-	    EnhancedInputComponent->BindAction(IA_Skill_2, ETriggerEvent::Completed, this,&APlayerCharacterBase::OnSkillInputCompleted, DGGameplayTags::Input_Slot_2.GetTag());
+		EnhancedInputComponent->BindAction(IA_Skill_2, ETriggerEvent::Started, this,
+		                                   &APlayerCharacterBase::OnSkillInputStarted,
+		                                   DGGameplayTags::Input_Slot_2.GetTag());
+		EnhancedInputComponent->BindAction(IA_Skill_2, ETriggerEvent::Completed, this,
+		                                   &APlayerCharacterBase::OnSkillInputCompleted,
+		                                   DGGameplayTags::Input_Slot_2.GetTag());
 	}
 
 	if (IA_Skill_3)
 	{
-	    EnhancedInputComponent->BindAction(IA_Skill_3, ETriggerEvent::Started, this,&APlayerCharacterBase::OnSkillInputStarted, DGGameplayTags::Input_Slot_3.GetTag());
-	    EnhancedInputComponent->BindAction(IA_Skill_3, ETriggerEvent::Completed, this,&APlayerCharacterBase::OnSkillInputCompleted, DGGameplayTags::Input_Slot_3.GetTag());
+		EnhancedInputComponent->BindAction(IA_Skill_3, ETriggerEvent::Started, this,
+		                                   &APlayerCharacterBase::OnSkillInputStarted,
+		                                   DGGameplayTags::Input_Slot_3.GetTag());
+		EnhancedInputComponent->BindAction(IA_Skill_3, ETriggerEvent::Completed, this,
+		                                   &APlayerCharacterBase::OnSkillInputCompleted,
+		                                   DGGameplayTags::Input_Slot_3.GetTag());
 	}
 
 	if (IA_Skill_4)
 	{
-	    EnhancedInputComponent->BindAction(IA_Skill_4, ETriggerEvent::Started, this,&APlayerCharacterBase::OnSkillInputStarted, DGGameplayTags::Input_Slot_4.GetTag());
-	    EnhancedInputComponent->BindAction(IA_Skill_4, ETriggerEvent::Completed, this,&APlayerCharacterBase::OnSkillInputCompleted, DGGameplayTags::Input_Slot_4.GetTag());
+		EnhancedInputComponent->BindAction(IA_Skill_4, ETriggerEvent::Started, this,
+		                                   &APlayerCharacterBase::OnSkillInputStarted,
+		                                   DGGameplayTags::Input_Slot_4.GetTag());
+		EnhancedInputComponent->BindAction(IA_Skill_4, ETriggerEvent::Completed, this,
+		                                   &APlayerCharacterBase::OnSkillInputCompleted,
+		                                   DGGameplayTags::Input_Slot_4.GetTag());
 	}
 
 	if (IA_Skill_Q)
 	{
-	    EnhancedInputComponent->BindAction(IA_Skill_Q, ETriggerEvent::Started, this,&APlayerCharacterBase::OnSkillInputStarted, DGGameplayTags::Input_Slot_Q.GetTag());
-	    EnhancedInputComponent->BindAction(IA_Skill_Q, ETriggerEvent::Completed, this,&APlayerCharacterBase::OnSkillInputCompleted, DGGameplayTags::Input_Slot_Q.GetTag());
+		EnhancedInputComponent->BindAction(IA_Skill_Q, ETriggerEvent::Started, this,
+		                                   &APlayerCharacterBase::OnSkillInputStarted,
+		                                   DGGameplayTags::Input_Slot_Q.GetTag());
+		EnhancedInputComponent->BindAction(IA_Skill_Q, ETriggerEvent::Completed, this,
+		                                   &APlayerCharacterBase::OnSkillInputCompleted,
+		                                   DGGameplayTags::Input_Slot_Q.GetTag());
 	}
 
 	if (IA_Skill_E)
 	{
-	    EnhancedInputComponent->BindAction(IA_Skill_E, ETriggerEvent::Started, this,&APlayerCharacterBase::OnSkillInputStarted, DGGameplayTags::Input_Slot_E.GetTag());
-	    EnhancedInputComponent->BindAction(IA_Skill_E, ETriggerEvent::Completed, this,&APlayerCharacterBase::OnSkillInputCompleted, DGGameplayTags::Input_Slot_E.GetTag());
+		EnhancedInputComponent->BindAction(IA_Skill_E, ETriggerEvent::Started, this,
+		                                   &APlayerCharacterBase::OnSkillInputStarted,
+		                                   DGGameplayTags::Input_Slot_E.GetTag());
+		EnhancedInputComponent->BindAction(IA_Skill_E, ETriggerEvent::Completed, this,
+		                                   &APlayerCharacterBase::OnSkillInputCompleted,
+		                                   DGGameplayTags::Input_Slot_E.GetTag());
 	}
 
 	// UI 토글 (맵, 인벤토리)
 	if (IA_ToggleMap)
 	{
-		EnhancedInputComponent->BindAction(IA_ToggleMap, ETriggerEvent::Started, this, &APlayerCharacterBase::ToggleMapAction);
+		EnhancedInputComponent->BindAction(IA_ToggleMap, ETriggerEvent::Started, this,
+		                                   &APlayerCharacterBase::ToggleMapAction);
 	}
 	if (IA_ToggleInventory)
 	{
-		EnhancedInputComponent->BindAction(IA_ToggleInventory, ETriggerEvent::Started, this, &APlayerCharacterBase::ToggleInventoryAction);
+		EnhancedInputComponent->BindAction(IA_ToggleInventory, ETriggerEvent::Started, this,
+		                                   &APlayerCharacterBase::ToggleInventoryAction);
 	}
 }
 
@@ -423,16 +445,14 @@ UDG_AttributeSet* APlayerCharacterBase::GetPlayerDGAttributeSet() const
 void APlayerCharacterBase::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
-	
-	// 로그에 "누가" 빙의를 요청하는지 출력 (Warrior에서 GA 및 GE의 이중 적용 문제)
-	// Debug::Print(FString::Printf(TEXT("PossessedBy: Controller: %s, Pawn: %s"), *NewController->GetName(), *GetName()), FColor::Red);
+
 
 	/**
 	 * Controller가 Pawn을 점유한 시점은
 	 * PlayerState 기반 ASC 초기화 재시도 타이밍으로 중요하다.
 	 */
 	InitializePlayerAbilitySystem();
-	
+
 	// 2. 서버에서 기본 GameplayEffect(회복 등) 부여
 	// + 서버 단일 실행 보장
 	if (HasAuthority())
@@ -447,7 +467,7 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 		{
 			GrantDefaultAbilities();
 			GrantClassSkillAbilities();
-			
+
 			ApplyDefaultEffects();
 		}
 	}
@@ -503,9 +523,15 @@ void APlayerCharacterBase::InitializeSkillSlotsFromClassData()
 		return;
 	}
 
+
 	for (const FSkillSlotDefinition& SkillSlot : CharacterClassData->SkillSlots)
 	{
-		if (!SkillSlot.SlotTag.IsValid() || !SkillSlot.SkillData)
+		if (!SkillSlot.SlotTag.IsValid())
+		{
+			continue;
+		}
+
+		if (!SkillSlot.SkillData)
 		{
 			continue;
 		}
@@ -527,13 +553,19 @@ void APlayerCharacterBase::GrantClassSkillAbilities()
 	}
 
 	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
-	if (!ASC || !CharacterClassData)
+	if (!ASC)
+	{
+		return;
+	}
+
+	if (!CharacterClassData)
 	{
 		return;
 	}
 
 	const ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>();
 	const int32 CurrentLevel = PS ? PS->GetCharacterLevel() : 1;
+
 
 	for (const FSkillSlotDefinition& SkillSlot : CharacterClassData->SkillSlots)
 	{
@@ -552,7 +584,14 @@ void APlayerCharacterBase::GrantClassSkillAbilities()
 			continue;
 		}
 
-		ASC->GiveAbility(FGameplayAbilitySpec(SkillSlot.SkillData->AbilityClass, 1));
+		FGameplayAbilitySpec AbilitySpec(
+			SkillSlot.SkillData->AbilityClass,
+			1,
+			INDEX_NONE,
+			SkillSlot.SkillData
+		);
+
+		ASC->GiveAbility(AbilitySpec);
 	}
 }
 
@@ -598,7 +637,7 @@ void APlayerCharacterBase::ApplyDefaultEffects()
 void APlayerCharacterBase::LookAction(const FInputActionValue& InputActionValue)
 {
 	const FVector2D InputValue = InputActionValue.Get<FVector2D>();
-	
+
 	AddControllerPitchInput(-InputValue.Y);
 	AddControllerYawInput(InputValue.X);
 }
@@ -606,13 +645,14 @@ void APlayerCharacterBase::LookAction(const FInputActionValue& InputActionValue)
 void APlayerCharacterBase::MoveAction(const FInputActionValue& InputActionValue)
 {
 	CurrentMoveInput = InputActionValue.Get<FVector2D>();
-	
+
 	if (CurrentMoveInput.IsNearlyZero())
 	{
 		return;
 	}
-	
-	const FVector MoveDirection = GetCameraForwardOnPlane() * CurrentMoveInput.Y + GetCameraRightOnPlane() * CurrentMoveInput.X;
+
+	const FVector MoveDirection = GetCameraForwardOnPlane() * CurrentMoveInput.Y + GetCameraRightOnPlane() *
+		CurrentMoveInput.X;
 	AddMovementInput(MoveDirection.GetSafeNormal());
 }
 
@@ -658,9 +698,8 @@ FVector APlayerCharacterBase::GetCameraForwardOnPlane() const
 {
 	FVector Forward = (FollowCam ? FollowCam->GetForwardVector() : FVector::ForwardVector);
 	Forward.Z = 0.f;
-	
+
 	return Forward.GetSafeNormal();
-	
 }
 
 
@@ -668,14 +707,15 @@ FVector APlayerCharacterBase::GetCameraRightOnPlane() const
 {
 	FVector Right = FollowCam ? FollowCam->GetRightVector() : FVector::RightVector;
 	Right.Z = 0.f;
-	
+
 	return Right.GetSafeNormal();
 }
 
 FVector APlayerCharacterBase::GetDesiredMoveDirection() const
 {
-	const FVector Direction = GetCameraForwardOnPlane() * CurrentMoveInput.Y + GetCameraRightOnPlane() * CurrentMoveInput.X;
-	
+	const FVector Direction = GetCameraForwardOnPlane() * CurrentMoveInput.Y + GetCameraRightOnPlane() *
+		CurrentMoveInput.X;
+
 	if (Direction.IsNearlyZero())
 	{
 		FVector Forward = GetActorForwardVector();
@@ -724,7 +764,8 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 	if (!ASC) return;
 
 	FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
-	
+
+
 	if (SkillTag == DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag())
 	{
 		const FGameplayTag SkillInputEventTag = GetSkillInputEventTag(SkillTag);
@@ -739,23 +780,12 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 
 		return;
 	}
-	
+
 	if (SkillTag.IsValid())
 	{
 		const bool bActivateResult = ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(SkillTag));
-		
-		// Debug::Print(FString::Printf(
-		// 		TEXT("[SharpStrikeInput][%s] OnSkillInputStarted Slot=%s Skill=%s ActivateResult=%s Authority=%s LocalRole=%dRemoteRole=%d Time=%.3f"),
-		// 		*GetNameSafe(this),
-		// 		*SlotTag.ToString(),
-		// 		*SkillTag.ToString(),
-		// 		bActivateResult ? TEXT("true") : TEXT("false"),
-		// 		HasAuthority() ? TEXT("true") : TEXT("false"),
-		// 		static_cast<int32>(GetLocalRole()),
-		// 		static_cast<int32>(GetRemoteRole()),
-		// 		GetWorld() ? GetWorld()->GetTimeSeconds() : -1.f
-		// ), bActivateResult ? FColor::Green : FColor::Red);
-		
+
+
 		const FGameplayTag SkillInputEventTag = GetSkillInputEventTag(SkillTag);
 
 		if (SkillInputEventTag.IsValid())
@@ -767,7 +797,6 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 				ServerSendSkillInputStartedEvent(SkillInputEventTag);
 			}
 		}
-		
 	}
 }
 
@@ -783,23 +812,13 @@ void APlayerCharacterBase::OnSkillInputCompleted(FGameplayTag SlotTag)
 	FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
 	if (SkillTag.IsValid())
 	{
-		FString Msg = FString::Printf(TEXT("Skill Input Completed: %s -> Ability: %s"), *SlotTag.ToString(),*SkillTag.ToString());
-		// Debug::Print(Msg, FColor::Silver);
+		FString Msg = FString::Printf(
+			TEXT("Skill Input Completed: %s -> Ability: %s"), *SlotTag.ToString(), *SkillTag.ToString());
 	}
 }
 
 void APlayerCharacterBase::ServerSendSkillInputStartedEvent_Implementation(FGameplayTag SkillTag)
 {
-	// Debug::Print(FString::Printf(
-	// 			TEXT("[SharpStrikeInput][%s] ServerSendSkillInputStartedEvent Skill=%s Authority=%s LocalRole=%d RemoteRole=%dTime=%.3f"),
-	// 			*GetNameSafe(this),
-	// 			*SkillTag.ToString(),
-	// 			HasAuthority() ? TEXT("true") : TEXT("false"),
-	// 			static_cast<int32>(GetLocalRole()),
-	// 			static_cast<int32>(GetRemoteRole()),
-	// 			GetWorld() ? GetWorld()->GetTimeSeconds() : -1.f
-	// 	), FColor::Orange);
-	
 	SendSkillInputStartedEvent(SkillTag);
 }
 
@@ -814,15 +833,7 @@ void APlayerCharacterBase::SendSkillInputStartedEvent(FGameplayTag SkillTag)
 	Payload.EventTag = SkillTag;
 	Payload.Instigator = this;
 
-	// Debug::Print(FString::Printf(
-	// 	TEXT("[SharpStrikeInput][%s] SendGameplayEventToActor Event=%s Authority=%s LocalRole=%d RemoteRole=%d Time=%.3f"),
-	// 	*GetNameSafe(this),
-	// 	*SkillTag.ToString(),
-	// 	HasAuthority() ? TEXT("true") : TEXT("false"),
-	// 	static_cast<int32>(GetLocalRole()),
-	// 	static_cast<int32>(GetRemoteRole()),
-	// 	GetWorld() ? GetWorld()->GetTimeSeconds() : -1.f), FColor::Cyan);
-	
+
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, SkillTag, Payload);
 }
 
@@ -876,7 +887,7 @@ FGameplayTag APlayerCharacterBase::GetSkillInputEventTag(FGameplayTag SkillTag) 
 	{
 		return DGGameplayTags::Event_Input_Warrior_SharpStrike.GetTag();
 	}
-	
+
 	if (SkillTag == DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag())
 	{
 		return DGGameplayTags::Event_Input_Warrior_LeapingSlam.GetTag();
@@ -927,7 +938,8 @@ AActor* APlayerCharacterBase::ResolveSkillEventTarget(FGameplayTag SkillTag) con
 	return TargetResult.TargetActor;
 }
 
-void APlayerCharacterBase::ClientDrawAttackTraceDebug_Implementation(FVector_NetQuantize Start, FVector_NetQuantize End, float Radius, FColor Color, float Duration)
+void APlayerCharacterBase::ClientDrawAttackTraceDebug_Implementation(FVector_NetQuantize Start, FVector_NetQuantize End,
+                                                                     float Radius, FColor Color, float Duration)
 {
 	UWorld* World = GetWorld();
 	if (!World)
@@ -941,7 +953,8 @@ void APlayerCharacterBase::ClientDrawAttackTraceDebug_Implementation(FVector_Net
 }
 
 void APlayerCharacterBase::ClientDrawAttackBoxDebug_Implementation(FVector_NetQuantize Center,
-	FVector_NetQuantize BoxHalfExtent, FRotator BoxRotation, FColor Color, float Duration)
+                                                                   FVector_NetQuantize BoxHalfExtent,
+                                                                   FRotator BoxRotation, FColor Color, float Duration)
 {
 	UWorld* World = GetWorld();
 	if (!World)
@@ -950,13 +963,13 @@ void APlayerCharacterBase::ClientDrawAttackBoxDebug_Implementation(FVector_NetQu
 	}
 
 	DrawDebugBox(
-			World,
-			Center,
-			BoxHalfExtent,
-			BoxRotation.Quaternion(),
-			Color,
-			false,
-			Duration
+		World,
+		Center,
+		BoxHalfExtent,
+		BoxRotation.Quaternion(),
+		Color,
+		false,
+		Duration
 	);
 }
 
@@ -985,7 +998,8 @@ const FPlayerMovementAnimationSet& APlayerCharacterBase::GetCurrentMovementAnims
 	return CharacterClassData->StandardAnims;
 }
 
-void APlayerCharacterBase::ServerHandleShiftAction_Implementation(FVector_NetQuantizeNormal DodgeDirection, bool bHasInput)
+void APlayerCharacterBase::ServerHandleShiftAction_Implementation(FVector_NetQuantizeNormal DodgeDirection,
+                                                                  bool bHasInput)
 {
 	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
 	if (!ASC) return;
@@ -1014,7 +1028,6 @@ void APlayerCharacterBase::Server_TestApplyDamage_Implementation()
 	UCombatComponent* SourceCombatComponent = GetCombatComponent();
 	if (!SourceCombatComponent)
 	{
-		
 		return;
 	}
 
@@ -1022,7 +1035,7 @@ void APlayerCharacterBase::Server_TestApplyDamage_Implementation()
 	float BestDistanceSq = TNumericLimits<float>::Max();
 
 	TArray<AActor*> FoundActors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseCharacter::StaticClass(),FoundActors);
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseCharacter::StaticClass(), FoundActors);
 
 	for (AActor* Actor : FoundActors)
 	{
@@ -1064,7 +1077,6 @@ void APlayerCharacterBase::Server_TestApplyDamage_Implementation()
 
 	if (!BestTarget)
 	{
-		
 		return;
 	}
 

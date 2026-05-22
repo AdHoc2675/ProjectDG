@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "GAS/Abilities/Base/GA_PlayerSkillBase.h"
 
 #include "Character/Player/PlayerCharacterBase.h"
@@ -13,67 +12,84 @@ UGA_PlayerSkillBase::UGA_PlayerSkillBase()
 
 const UPlayerSkillData* UGA_PlayerSkillBase::GetPlayerSkillData() const
 {
-	return SkillData;
+	if (SkillData)
+	{
+		return SkillData;
+	}
+
+	return Cast<UPlayerSkillData>(GetCurrentSourceObject());
 }
 
 FGameplayTag UGA_PlayerSkillBase::GetSkillTag() const
 {
-	return SkillData ? SkillData->SkillTag : FGameplayTag::EmptyTag;
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	return Data ? Data->SkillTag : FGameplayTag::EmptyTag;
 }
 
 float UGA_PlayerSkillBase::GetSkillRange() const
 {
-	return SkillData ? SkillData->Range : 0.f;
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	return Data ? Data->Range : 0.f;
 }
 
 float UGA_PlayerSkillBase::GetSkillRadius() const
 {
-	return SkillData ? SkillData->Radius : 0.f;
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	return Data ? Data->Radius : 0.f;
 }
 
 float UGA_PlayerSkillBase::GetSkillCooldown() const
 {
-	return SkillData ? SkillData->Cooldown : 0.f;
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	return Data ? Data->Cooldown : 0.f;
 }
 
 float UGA_PlayerSkillBase::GetSkillSpiritCost() const
 {
-	return SkillData ? SkillData->SpiritCost : 0.f;
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	return Data ? Data->SpiritCost : 0.f;
 }
 
 float UGA_PlayerSkillBase::GetSkillSpiritGain() const
 {
-	return SkillData ? SkillData->SpiritGain : 0.f;
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	return Data ? Data->SpiritGain : 0.f;
 }
 
 float UGA_PlayerSkillBase::GetSkillDamageMultiplier() const
 {
-	return SkillData ? SkillData->BaseDamageMultiplier : 1.f;
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	return Data ? Data->BaseDamageMultiplier : 1.f;
 }
 
 float UGA_PlayerSkillBase::GetSkillGroggyDamage() const
 {
-	return SkillData ? SkillData->GroggyDamage : 0.f;
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	return Data ? Data->GroggyDamage : 0.f;
 }
 
 int32 UGA_PlayerSkillBase::GetSkillComboCount() const
 {
-	return SkillData ? FMath::Max(1, SkillData->ComboCount) : 1;
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	return Data ? FMath::Max(1, Data->ComboCount) : 1;
 }
 
 UAnimMontage* UGA_PlayerSkillBase::GetSkillMontage() const
 {
-	return SkillData ? SkillData->Montage : nullptr;
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	return Data ? Data->Montage : nullptr;
 }
 
 bool UGA_PlayerSkillBase::DoesSkillRequireTarget() const
 {
-	return SkillData && SkillData->bRequiresTarget;
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	return Data && Data->bRequiresTarget;
 }
 
 bool UGA_PlayerSkillBase::CanMoveWhileCasting() const
 {
-	return SkillData && SkillData->bCanMoveWhileCasting;
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	return Data && Data->bCanMoveWhileCasting;
 }
 
 bool UGA_PlayerSkillBase::IsSkillInputHeld(FGameplayTag InSkillTag) const

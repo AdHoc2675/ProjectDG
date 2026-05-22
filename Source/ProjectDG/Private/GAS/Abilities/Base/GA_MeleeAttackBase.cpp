@@ -3,10 +3,11 @@
 
 #include "GAS/Abilities/Base/GA_MeleeAttackBase.h"
 #include "GAS/Abilities/Base/GA_PlayerSkillBase.h"
-
+#include "Character/Player/Data/PlayerSkillData.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Core/DG_GameplayTags.h"
+#include "Core/DG_Debug.h"
 
 UGA_MeleeAttackBase::UGA_MeleeAttackBase()
 {
@@ -21,6 +22,8 @@ void UGA_MeleeAttackBase::ActivateAbility(
 	const FGameplayEventData* TriggerEventData
 )
 {
+	
+	
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
