@@ -1,6 +1,5 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Components/Targeting/LockOnComponent.h"
 
 #include "Character/BaseCharacter.h"
@@ -35,10 +34,10 @@ void ULockOnComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 }
 
 void ULockOnComponent::TickComponent(
-		float DeltaTime,
-		ELevelTick TickType,
-		FActorComponentTickFunction* ThisTickFunction
-  )
+	float DeltaTime,
+	ELevelTick TickType,
+	FActorComponentTickFunction* ThisTickFunction
+)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
@@ -143,11 +142,11 @@ bool ULockOnComponent::HasLineOfSightFromLocation(const FVector& StartLocation, 
 
 	FHitResult Hit;
 	const bool bHit = World->LineTraceSingleByChannel(
-			Hit,
-			StartLocation,
-			Candidate->GetActorLocation(),
-			ECC_Visibility,
-			Params
+		Hit,
+		StartLocation,
+		Candidate->GetActorLocation(),
+		ECC_Visibility,
+		Params
 	);
 
 	if (!bHit)
@@ -185,7 +184,7 @@ void ULockOnComponent::ClearCurrentTarget()
 {
 	if (CurrentTargetActor.Get())
 	{
-		ApplyTargetOutline(CurrentTargetActor.Get(), false);
+		ApplyTargetOutline(CurrentTargetActor.Get(), CurrentTargetResult.TargetTags, false);
 		OnLockOnReleased.Broadcast(CurrentTargetResult);
 	}
 
@@ -196,19 +195,25 @@ void ULockOnComponent::ClearCurrentTarget()
 
 bool ULockOnComponent::FindBestTarget(float MaxRangeOverride, FLockOnTargetResult& OutResult) const
 {
-	return FindBestTargetInternal(AllowedTargetTags, MaxRangeOverride > 0.f ? MaxRangeOverride : MaxRange, OutResult);
+	const float UseRange = MaxRangeOverride > 0.f ? MaxRangeOverride : MaxRange;
+	return FindBestTargetInternal(AllowedTargetTags, UseRange, OutResult);
 }
 
 bool ULockOnComponent::FindBestTargetByTags(
-	  const FGameplayTagContainer& RequiredTargetTags,
-	  float MaxRangeOverride,
-	  FLockOnTargetResult& OutResult
+	const FGameplayTagContainer& RequiredTargetTags,
+	float MaxRangeOverride,
+	FLockOnTargetResult& OutResult
 ) const
 {
-	return FindBestTargetInternal(RequiredTargetTags, MaxRangeOverride > 0.f ? MaxRangeOverride : MaxRange, OutResult);
+	const float UseRange = MaxRangeOverride > 0.f ? MaxRangeOverride : MaxRange;
+	return FindBestTargetInternal(RequiredTargetTags, UseRange, OutResult);
 }
 
-bool ULockOnComponent::FindBestTargetInternal(const FGameplayTagContainer& RequiredTargetTags, float Range, FLockOnTargetResult& OutResult) const
+bool ULockOnComponent::FindBestTargetInternal(
+	const FGameplayTagContainer& RequiredTargetTags,
+	float Range,
+	FLockOnTargetResult& OutResult
+) const
 {
 	OutResult = FLockOnTargetResult();
 
@@ -287,12 +292,12 @@ void ULockOnComponent::GatherCandidateActors(float Range, TArray<AActor*>& OutCa
 
 	TArray<FOverlapResult> Overlaps;
 	const bool bAnyOverlap = World->OverlapMultiByObjectType(
-			Overlaps,
-			CamLoc,
-			FQuat::Identity,
-			ObjectParams,
-			FCollisionShape::MakeSphere(Range),
-			QueryParams
+		Overlaps,
+		CamLoc,
+		FQuat::Identity,
+		ObjectParams,
+		FCollisionShape::MakeSphere(Range),
+		QueryParams
 	);
 
 	if (!bAnyOverlap)
@@ -319,13 +324,13 @@ void ULockOnComponent::GatherCandidateActors(float Range, TArray<AActor*>& OutCa
 }
 
 bool ULockOnComponent::EvaluateCandidate(
-		AActor* Candidate,
-		const FVector& CamLoc,
-		const FVector& CamForward,
-		const FGameplayTagContainer& RequiredTargetTags,
-		float Range,
-		FLockOnTargetResult& OutCandidateResult
-  ) const
+	AActor* Candidate,
+	const FVector& CamLoc,
+	const FVector& CamForward,
+	const FGameplayTagContainer& RequiredTargetTags,
+	float Range,
+	FLockOnTargetResult& OutCandidateResult
+) const
 {
 	OutCandidateResult = FLockOnTargetResult();
 
@@ -440,24 +445,8 @@ void ULockOnComponent::RefreshCurrentTarget()
 
 	if (!bFound || !IsValid(NewResult.TargetActor))
 	{
-		if (HasValidCurrentTarget())
-		{
-			UE_LOG(LogTemp, Log,
-					TEXT("[LockOn] Released Target=%s"),
-					*GetNameSafe(CurrentTargetActor.Get()));
-		}
 		ClearCurrentTarget();
 		return;
-	}
-	
-	if (CurrentTargetActor.Get() != NewResult.TargetActor)
-	{
-		UE_LOG(LogTemp, Log,
-				TEXT("[LockOn] Acquired Target=%s Distance=%.1f Angle=%.1f Score=%.2f"),
-				*GetNameSafe(NewResult.TargetActor),
-				NewResult.Distance,
-				NewResult.AngleDegrees,
-				NewResult.Score);
 	}
 
 	SetCurrentTarget(NewResult.TargetActor, NewResult);
@@ -474,7 +463,7 @@ void ULockOnComponent::SetCurrentTarget(AActor* NewTarget, const FLockOnTargetRe
 
 	if (CurrentTargetActor.Get())
 	{
-		ApplyTargetOutline(CurrentTargetActor.Get(), false);
+		ApplyTargetOutline(CurrentTargetActor.Get(), CurrentTargetResult.TargetTags, false);
 	}
 
 	CurrentTargetActor = NewTarget;
@@ -483,15 +472,15 @@ void ULockOnComponent::SetCurrentTarget(AActor* NewTarget, const FLockOnTargetRe
 
 	if (CurrentTargetActor.Get())
 	{
-		ApplyTargetOutline(CurrentTargetActor.Get(), true);
+		ApplyTargetOutline(CurrentTargetActor.Get(), CurrentTargetResult.TargetTags, true);
 		OnLockOnTargetChanged.Broadcast(CurrentTargetResult);
 	}
 }
 
 void ULockOnComponent::ResolveTargetPrimitiveComponents(
-		AActor* TargetActor,
-		TArray<UPrimitiveComponent*>& OutComponents
-  ) const
+	AActor* TargetActor,
+	TArray<UPrimitiveComponent*>& OutComponents
+) const
 {
 	OutComponents.Reset();
 
@@ -505,7 +494,17 @@ void ULockOnComponent::ResolveTargetPrimitiveComponents(
 
 	for (UPrimitiveComponent* PrimitiveComp : PrimitiveComponents)
 	{
-		if (!PrimitiveComp || !PrimitiveComp->IsRegistered() || !PrimitiveComp->IsVisible())
+		if (!PrimitiveComp)
+		{
+			continue;
+		}
+
+		if (!PrimitiveComp->IsRegistered())
+		{
+			continue;
+		}
+
+		if (!PrimitiveComp->IsVisible())
 		{
 			continue;
 		}
@@ -514,7 +513,29 @@ void ULockOnComponent::ResolveTargetPrimitiveComponents(
 	}
 }
 
-void ULockOnComponent::ApplyTargetOutline(AActor* TargetActor, bool bEnable) const
+int32 ULockOnComponent::GetOutlineStencilValueForTarget(const FGameplayTagContainer& TargetTags) const
+{
+	static const FGameplayTag TeamObjectTag = FGameplayTag::RequestGameplayTag(TEXT("Team.Object"), false);
+	static const FGameplayTag TeamEnemyTag = FGameplayTag::RequestGameplayTag(TEXT("Team.Enemy"), false);
+
+	if (TeamObjectTag.IsValid() && TargetTags.HasTag(TeamObjectTag))
+	{
+		return ObjectOutlineStencilValue;
+	}
+
+	if (TeamEnemyTag.IsValid() && TargetTags.HasTag(TeamEnemyTag))
+	{
+		return EnemyOutlineStencilValue;
+	}
+
+	return EnemyOutlineStencilValue;
+}
+
+void ULockOnComponent::ApplyTargetOutline(
+	AActor* TargetActor,
+	const FGameplayTagContainer& TargetTags,
+	bool bEnable
+) const
 {
 	if (!bUseTargetOutline)
 	{
@@ -524,6 +545,13 @@ void ULockOnComponent::ApplyTargetOutline(AActor* TargetActor, bool bEnable) con
 	TArray<UPrimitiveComponent*> TargetComponents;
 	ResolveTargetPrimitiveComponents(TargetActor, TargetComponents);
 
+	if (TargetComponents.Num() == 0)
+	{
+		return;
+	}
+
+	const int32 StencilValue = GetOutlineStencilValueForTarget(TargetTags);
+
 	for (UPrimitiveComponent* PrimitiveComp : TargetComponents)
 	{
 		if (!PrimitiveComp)
@@ -531,10 +559,14 @@ void ULockOnComponent::ApplyTargetOutline(AActor* TargetActor, bool bEnable) con
 			continue;
 		}
 
-		PrimitiveComp->SetRenderCustomDepth(bEnable);
 		if (bEnable)
 		{
-			PrimitiveComp->SetCustomDepthStencilValue(TargetOutlineStencilValue);
+			PrimitiveComp->SetRenderCustomDepth(true);
+			PrimitiveComp->SetCustomDepthStencilValue(StencilValue);
+		}
+		else
+		{
+			PrimitiveComp->SetRenderCustomDepth(false);
 		}
 	}
 }
