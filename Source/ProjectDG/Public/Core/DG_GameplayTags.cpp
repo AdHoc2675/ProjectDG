@@ -5,6 +5,7 @@ namespace DGGameplayTags
 	//Team (아군적군 구분하는태그)
 	UE_DEFINE_GAMEPLAY_TAG(Team_Player, "Team.Player")
 	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy, "Team.Enemy")
+	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Boss, "Team.Enemy.Boss")
 	UE_DEFINE_GAMEPLAY_TAG(Team_Object, "Team.Object")
 
 	// Character Class
@@ -68,7 +69,12 @@ namespace DGGameplayTags
 	// Data
 	UE_DEFINE_GAMEPLAY_TAG(Data_Damage, "Data.Damage")
 
-	// Block       
+	// Block
 	UE_DEFINE_GAMEPLAY_TAG(Block_Movement_Dodge, "Block.Movement.Dodge")
 	UE_DEFINE_GAMEPLAY_TAG(Block_Movement_Sprint, "Block.Movement.Sprint")
+
+	// Boss Phase
+	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Phase_1, "State.Boss.Phase.1")
+	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Phase_2, "State.Boss.Phase.2")
+	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Phase_3, "State.Boss.Phase.3")
 }

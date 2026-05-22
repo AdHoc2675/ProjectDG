@@ -4,7 +4,11 @@
 #include "Character/Enemy/Boss/BossCharacterBase.h"
 
 #include "AbilitySystemComponent.h"
+#include "AIController.h"
+#include "BehaviorTree/BlackboardComponent.h"
 #include "Character/Enemy/Boss/Data/BossCharacterClassData.h"
+#include "Core/DG_GameplayTags.h"
+#include "GAS/Attributes/DG_AttributeSet.h"
 #include "GAS/Attributes/DG_BossAttributeSet.h"
 
 ABossCharacterBase::ABossCharacterBase()
@@ -12,6 +16,7 @@ ABossCharacterBase::ABossCharacterBase()
 	BossAttributeSet = CreateDefaultSubobject<UDG_BossAttributeSet>(TEXT("BossAttributeSet"));
 }
 
+//Boss Class Data로 초기 데이터 설정
 void ABossCharacterBase::InitializeBossTagFromClassData()
 {
 	if (!HasAuthority())
@@ -33,7 +38,12 @@ void ABossCharacterBase::InitializeBossTagFromClassData()
 
 	if (AbilitySystemComponent)
 	{
-		AbilitySystemComponent->AddLooseGameplayTag(BossTag);
+		AbilitySystemComponent->AddLooseGameplayTag(BossTag, 1, EGameplayTagReplicationState::TagOnly);
+
+		if (BossClassData->InitialPhaseTag.IsValid())
+		{
+			AbilitySystemComponent->AddLooseGameplayTag(BossClassData->InitialPhaseTag, 1, EGameplayTagReplicationState::TagOnly);
+		}
 
 		UE_LOG(LogTemp, Warning, TEXT("[BossCharacterBase] InitializeBossTagFromClassData Success. NetMode=%d Name=%s"),
 			static_cast<int32>(GetNetMode()),
@@ -50,6 +60,13 @@ void ABossCharacterBase::PossessedBy(AController* NewController)
 	{
 		InitializeBossTagFromClassData();
 		ApplyBossSpecialEffects();
+
+		if (AbilitySystemComponent)
+		{
+			AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(
+				UDG_AttributeSet::GetHealthAttribute()
+			).AddUObject(this, &ABossCharacterBase::OnHealthChanged);
+		}
 	}
 }
 
@@ -131,5 +148,87 @@ void ABossCharacterBase::ApplyBossSpecialEffects()
 	}
 
 	bBossSpecialEffectsApplied = true;
+}
+
+void ABossCharacterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
+{
+	if (!AbilitySystemComponent || !BossAttributeSet)
+	{
+		return;
+	}
+
+	const float MaxHealth = AbilitySystemComponent->GetNumericAttribute(UDG_AttributeSet::GetMaxHealthAttribute());
+	if (MaxHealth <= 0.f)
+	{
+		return;
+	}
+
+	const float Ratio = Data.NewValue / MaxHealth;
+	UpdateHealthPhaseTags(Ratio);
+}
+
+void ABossCharacterBase::UpdateHealthPhaseTags(float HealthRatio)
+{
+	if (!BossClassData || !AbilitySystemComponent || !BossAttributeSet)
+	{
+		return;
+	}
+
+	// PhaseEntries는 HealthRatioThreshold 내림차순 정렬 가정
+	// (e.g. [{Phase2, 0.66}, {Phase3, 0.33}])
+	// 인덱스 0 → Phase 2, 인덱스 1 → Phase 3, ...
+	for (int32 i = 0; i < BossClassData->PhaseEntries.Num(); ++i)
+	{
+		const FBossPhaseEntry& Entry = BossClassData->PhaseEntries[i];
+
+		const float EntryPhaseIndex = static_cast<float>(i + 2);
+
+		if (!Entry.PhaseTag.IsValid())
+		{
+			continue;
+		}
+
+		// 단방향: 이미 해당 페이즈 이상이면 스킵
+		if (BossAttributeSet->GetCurrentPhase() >= EntryPhaseIndex)
+		{
+			continue;
+		}
+
+		if (HealthRatio <= Entry.HealthRatioThreshold)
+		{
+			// 이전 페이즈 태그 제거 (i==0이면 InitialPhaseTag, 아니면 직전 Entry의 태그)
+			if (i == 0)
+			{
+				if (BossClassData->InitialPhaseTag.IsValid())
+				{
+					AbilitySystemComponent->RemoveLooseGameplayTag(BossClassData->InitialPhaseTag, 1);
+				}
+			}
+			else
+			{
+				const FGameplayTag& PrevTag = BossClassData->PhaseEntries[i - 1].PhaseTag;
+				if (PrevTag.IsValid())
+				{
+					AbilitySystemComponent->RemoveLooseGameplayTag(PrevTag, 1);
+				}
+			}
+
+			AbilitySystemComponent->AddLooseGameplayTag(Entry.PhaseTag, 1, EGameplayTagReplicationState::TagOnly);
+			BossAttributeSet->SetCurrentPhase(EntryPhaseIndex);
+
+			if (AAIController* AIController = Cast<AAIController>(GetController()))
+			{
+				if (UBlackboardComponent* Blackboard = AIController->GetBlackboardComponent())
+				{
+					Blackboard->SetValueAsBool(TEXT("PendingPhaseGimmick"), true);
+				}
+			}
+
+			UE_LOG(LogTemp, Warning, TEXT("[BossCharacterBase] Phase transition → Phase %.0f (HealthRatio=%.2f)"),
+				EntryPhaseIndex, HealthRatio);
+
+			break; // 한 사이클에 하나의 페이즈만 전환
+		}
+	}
 }
 

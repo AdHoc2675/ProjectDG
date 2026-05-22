@@ -3,9 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AbilitySystemComponent.h"
 #include "GameplayTagContainer.h"
 #include "Character/Enemy/EnemyCharacterBase.h"
 #include "BossCharacterBase.generated.h"
+
+struct FOnAttributeChangeData;
 
 class UBossCharacterClassData;
 class UDG_BossAttributeSet;
@@ -45,6 +48,12 @@ protected:
 
 	// 소환 직후 보스 전용 스탯 적용
 	virtual void PossessedBy(AController* NewController) override;
+
+	// Health Attribute 변경 콜백 (ASC Delegate로 바인딩)
+	void OnHealthChanged(const FOnAttributeChangeData& Data);
+
+	// Health 비율에 따라 Phase 태그 갱신 (단방향)
+	void UpdateHealthPhaseTags(float HealthRatio);
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|ASC")
