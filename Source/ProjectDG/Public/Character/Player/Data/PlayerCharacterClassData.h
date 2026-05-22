@@ -8,6 +8,7 @@
 #include "PlayerCharacterClassData.generated.h"
 
 class UPlayerCharacterMovementData;
+class UPlayerSkillData;
 class UGameplayAbility;
 class UGameplayEffect;
 class UAnimMontage;
@@ -25,7 +26,7 @@ struct FPlayerMovementAnimationSet
 	TObjectPtr<UAnimMontage> BackwardDodge;
 };
 
-// 직업별 플레이어가 사용할 수 있는 스킬
+// 직업별 플레이어가 사용할 수 있는 스킬 슬롯 정의
 USTRUCT(BlueprintType)
 struct FSkillSlotDefinition
 {
@@ -35,13 +36,10 @@ struct FSkillSlotDefinition
 	FGameplayTag SlotTag;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
-	FGameplayTag SkillTag;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
 	int32 UnlockLevel = 1;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
-	TSubclassOf<UGameplayAbility> AbilityClass;
+	TObjectPtr<UPlayerSkillData> SkillData = nullptr;
 };
 
 /**

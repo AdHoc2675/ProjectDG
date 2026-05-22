@@ -20,6 +20,7 @@ struct FInputActionValue;
 class UAIPerceptionStimuliSourceComponent;
 class UDGMinimapCaptureComponent;
 class UDGMinimapMarkerComponent;
+class ULockOnComponent;
 
 /**
  * APlayerCharacterBase
