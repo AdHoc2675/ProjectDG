@@ -245,13 +245,14 @@ void UGA_Warrior_DoomStrike::OnAttackHit(FGameplayEventData Payload)
 
       HitActors.Add(HitActor);
 
-      ApplyDamageToTarget(
-              HitActor,
-              Damage,
-              DGGameplayTags::Skill_Warrior_DoomStrike.GetTag(),
-              GetPayloadHitLocationOrActorLocation(Payload, HitActor),
-              true
-      );
+        ApplyDamageToTarget(
+           HitActor,
+           Damage,
+           0.f,
+           DGGameplayTags::Skill_Warrior_DoomStrike.GetTag(),
+           GetPayloadHitLocationOrActorLocation(Payload, HitActor),
+           true
+   );
 }
 
 void UGA_Warrior_DoomStrike::OnMontageCompleted()
