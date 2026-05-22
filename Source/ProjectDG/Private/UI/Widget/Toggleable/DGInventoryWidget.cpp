@@ -8,6 +8,8 @@
 #include "Item/DGItemDefinition.h"
 #include "Core/DG_Debug.h"
 
+#include "Components/UniformGridSlot.h" 
+
 void UDGInventoryWidget::BindToController(UDGInventoryWidgetController* Controller)
 {
 	if (!Controller)
@@ -28,6 +30,59 @@ void UDGInventoryWidget::BindToController(UDGInventoryWidgetController* Controll
 	UE_LOG(LogTemp, Log, TEXT("[DGInventoryWidget] Bound to Controller successfully."));
 }
 
+void UDGInventoryWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	// 10x3 총 30개의 슬롯을 미리 생성하여 배치
+	if (InventoryGrid && SlotWidgetClass)
+	{
+		const int32 MaxSlots = 30; // 탭당 30칸 제한
+		const int32 Columns = 10;  // 가로 10칸
+
+		InventoryGrid->ClearChildren();
+		SlotWidgets.Empty();
+
+		for (int32 Index = 0; Index < MaxSlots; ++Index)
+		{
+			UDGInventorySlotWidget* SlotWidget = CreateWidget<UDGInventorySlotWidget>(this, SlotWidgetClass);
+			if (SlotWidget)
+			{
+				int32 Row = Index / Columns;
+				int32 Col = Index % Columns;
+
+				// Uniform Grid Panel에 행/열 맞춰서 추가
+				UUniformGridSlot* GridSlot = InventoryGrid->AddChildToUniformGrid(SlotWidget, Row, Col);
+
+				// 패딩과 정렬 설정
+				if (GridSlot) {
+					GridSlot->SetHorizontalAlignment(HAlign_Fill);
+					GridSlot->SetVerticalAlignment(VAlign_Fill);
+				}
+
+				SlotWidgets.Add(SlotWidget);
+
+				// 초기상태는 빈 슬롯으로 세팅
+				SlotWidget->UpdateSlot(nullptr);
+			}
+		}
+	}
+
+	// 탭 버튼 클릭 이벤트 바인딩
+	if (EquipmentItemsButton)
+	{
+		EquipmentItemsButton->OnClicked.AddDynamic(this, &UDGInventoryWidget::OnEquipmentTabClicked);
+	}
+	if (ConsumableItemsButton)
+	{
+		ConsumableItemsButton->OnClicked.AddDynamic(this, &UDGInventoryWidget::OnConsumableTabClicked);
+	}
+	if (CraftingMaterialButton)
+	{
+		CraftingMaterialButton->OnClicked.AddDynamic(this, &UDGInventoryWidget::OnMaterialTabClicked);
+	}
+}
+
 void UDGInventoryWidget::CloseInventory()
 {
 	if (APlayerController* PC = GetOwningPlayer())
@@ -41,28 +96,44 @@ void UDGInventoryWidget::CloseInventory()
 
 void UDGInventoryWidget::OnInventoryUpdatedCallback(const TArray<UDGItemInstance*>& InventoryItems)
 {
+	if (SlotWidgets.IsEmpty()) return;
+
 	UE_LOG(LogTemp, Warning, TEXT("[DGInventoryWidget] Inventory Updated, Item Count: %d"), InventoryItems.Num());
 
-	for (int32 Index = 0; Index < InventoryItems.Num(); ++Index)
+	// 갖고 있는 30개의 슬롯 위젯을 순회하며 모델 데이터 매핑
+	for (int32 i = 0; i < SlotWidgets.Num(); ++i)
 	{
-		UDGItemInstance* Item = InventoryItems[Index];
-		if (Item)
-		{
-			// 아이템 원본 데이터(ItemDef)가 지정되어 있다면 이름 가져오기
-			FString ItemName = Item->ItemDef ? Item->ItemDef->ItemName.ToString() : TEXT("NoName");
+		// C++ 인벤토리 모델 배열의 범위를 벗어나지 않게 안전 검사
+		UDGItemInstance* CurrentItem = InventoryItems.IsValidIndex(i) ? InventoryItems[i] : nullptr;
 
-			// 출력할 문자열 포맷 생성
-			FString Message = FString::Printf(TEXT("[DGInventoryWidget] Slot %d: [%s] Lv.%d / MainStat: %.1f"),
-				Index, *ItemName, Item->ItemLevel, Item->MainStatValue);
+		// 각 슬롯에 데이터 주입. (nullptr이 들어가면 빈 이미지 출력 처리됨)
+		SlotWidgets[i]->UpdateSlot(CurrentItem);
+	}
+}
 
-			// 1. 하단 출력 로그창(Output Log)에 노란색으로 출력
-			UE_LOG(LogTemp, Warning, TEXT("%s"), *Message);
+void UDGInventoryWidget::OnEquipmentTabClicked()
+{
+	// 부모(UDGUserWidget)가 가지고 있는 WidgetController 변수를 직접 사용
+	if (UDGInventoryWidgetController* C = Cast<UDGInventoryWidgetController>(WidgetController))
+	{
+		C->SwitchTab(EDGItemType::Equipment);
+	}
+}
 
-			// 2. 인게임 화면 좌측 상단에 5초 동안 초록색으로 텍스트 띄움
-			if (GEngine)
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, Message);
-			}
-		}
+void UDGInventoryWidget::OnConsumableTabClicked()
+{
+	// 부모(UDGUserWidget)가 가지고 있는 WidgetController 변수를 직접 사용
+	if (UDGInventoryWidgetController* C = Cast<UDGInventoryWidgetController>(WidgetController))
+	{
+		C->SwitchTab(EDGItemType::Consumable);
+	}
+}
+
+void UDGInventoryWidget::OnMaterialTabClicked()
+{
+	// 부모(UDGUserWidget)가 가지고 있는 WidgetController 변수를 직접 사용
+	if (UDGInventoryWidgetController* C = Cast<UDGInventoryWidgetController>(WidgetController))
+	{
+		C->SwitchTab(EDGItemType::Material);
 	}
 }
