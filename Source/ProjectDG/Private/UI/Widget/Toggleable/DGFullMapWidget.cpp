@@ -91,10 +91,15 @@ void UDGFullMapWidget::OnMarkerAdded(UDGMinimapMarkerComponent* Marker)
 	if (!Marker || !MarkerWidgetClass || !MapContentCanvas) return;
 	if (ActiveMarkerWidgets.Contains(Marker)) return;
 
+	if (Marker->MarkerType == EMinimapMarkerType::Enemy) return; // Enemy 타입은 표시하지 않음
+
 	UDGMinimapMarkerWidget* NewMarkerWidget = CreateWidget<UDGMinimapMarkerWidget>(this, MarkerWidgetClass);
 	if (NewMarkerWidget)
 	{
 		NewMarkerWidget->SetupMarker(Marker);
+
+		float InverseZoom = 1.0f / CurrentZoom;
+		NewMarkerWidget->SetRenderScale(FVector2D(InverseZoom, InverseZoom));
 
 		UCanvasPanelSlot* CanvasSlot = MapContentCanvas->AddChildToCanvas(NewMarkerWidget);
 		if (CanvasSlot)
@@ -161,6 +166,17 @@ FReply UDGFullMapWidget::NativeOnMouseWheel(const FGeometry& InGeometry, const F
 		CurrentZoom = FMath::Clamp(CurrentZoom - ZoomStep, MinZoom, MaxZoom);
 
 	MapContentCanvas->SetRenderScale(FVector2D(CurrentZoom, CurrentZoom));
+
+	//  줌 조작시 모든 활성화된 마커의 스케일을 역으로 보정 = 줌 레벨에 상관없이 마커가 일정한 크기로 보이도록
+	float InverseZoom = 1.0f / CurrentZoom;
+	for (const auto& Pair : ActiveMarkerWidgets)
+	{
+		if (UDGMinimapMarkerWidget* MarkerWidget = Pair.Value)
+		{
+			MarkerWidget->SetRenderScale(FVector2D(InverseZoom, InverseZoom));
+		}
+	}
+
 	return FReply::Handled();
 }
 
