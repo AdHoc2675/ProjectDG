@@ -19,7 +19,8 @@ public class ProjectDG : ModuleRules
 			"GameplayStateTreeModule",
 			"UMG",
 			"Slate",
-			"GameplayTags",
+            "SlateCore",
+            "GameplayTags",
 			"GameplayTasks",
 			"GameplayAbilities",
 			"HTTP",
@@ -27,7 +28,7 @@ public class ProjectDG : ModuleRules
 			"JsonUtilities"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "GameplayAbilities", "GameplayTags", "GameplayTasks" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "GameplayAbilities", "GameplayTags", "GameplayTasks", "Slate", "SlateCore" });
 
 		PublicIncludePaths.AddRange(new string[] {
 			"ProjectDG"
