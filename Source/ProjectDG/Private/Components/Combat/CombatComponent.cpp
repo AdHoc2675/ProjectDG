@@ -89,8 +89,8 @@ FDGDamageResult UCombatComponent::ApplyDamageRequest(const FDGDamageRequest& Dam
 	}
 
 	AActor* SourceActor = DamageRequest.SourceActor
-		? DamageRequest.SourceActor.Get()
-		: GetOwner();
+		                      ? DamageRequest.SourceActor.Get()
+		                      : GetOwner();
 
 	AActor* TargetActor = DamageRequest.TargetActor.Get();
 
@@ -140,16 +140,29 @@ FDGDamageResult UCombatComponent::ApplyDamageRequest(const FDGDamageRequest& Dam
 	}
 
 	/**
-	 * DGExecCalc_Damage에서 읽을 IncomingDamage.
-	 *
-	 * 약속:
-	 * - Data.Damage = 방어력 적용 전 데미지
-	 * - DGExecCalc_Damage가 Target 방어력으로 최종 피해량 계산
-	 */
+ * DGExecCalc_Damage에서 읽을 데미지 입력값.
+ *
+ * 약속:
+ * - Data.BaseDamage = 고정 피해
+ * - Data.DamageMultiplier = Source AttackPower에 곱할 스킬 계수
+ *
+ * 기존 Data.Damage는 구버전 호환용으로 유지한다.
+ */
+	SpecHandle.Data->SetSetByCallerMagnitude(
+		DGGameplayTags::Data_BaseDamage,
+		DamageRequest.BaseDamage
+	);
+
+	SpecHandle.Data->SetSetByCallerMagnitude(
+		DGGameplayTags::Data_DamageMultiplier,
+		DamageRequest.DamageMultiplier
+	);
+
 	SpecHandle.Data->SetSetByCallerMagnitude(
 		DGGameplayTags::Data_Damage,
 		DamageRequest.BaseDamage
 	);
+
 
 	SourceASC->ApplyGameplayEffectSpecToTarget(
 		*SpecHandle.Data.Get(),
@@ -157,7 +170,7 @@ FDGDamageResult UCombatComponent::ApplyDamageRequest(const FDGDamageRequest& Dam
 	);
 
 	Result.bSuccess = true;
-	Result.FinalDamage = DamageRequest.BaseDamage;
+	Result.FinalDamage = 0.f;
 	Result.Message = TEXT("Damage GameplayEffect applied.");
 
 	// Debug::Print(FString::Printf(
@@ -176,8 +189,8 @@ bool UCombatComponent::ValidateDamageRequest(
 ) const
 {
 	AActor* SourceActor = DamageRequest.SourceActor
-		? DamageRequest.SourceActor.Get()
-		: GetOwner();
+		                      ? DamageRequest.SourceActor.Get()
+		                      : GetOwner();
 
 	AActor* TargetActor = DamageRequest.TargetActor.Get();
 
@@ -199,9 +212,9 @@ bool UCombatComponent::ValidateDamageRequest(
 		return false;
 	}
 
-	if (DamageRequest.BaseDamage <= 0.0f)
+	if (DamageRequest.BaseDamage <= 0.0f && DamageRequest.DamageMultiplier <= 0.0f)
 	{
-		OutFailReason = TEXT("BaseDamage must be greater than 0.");
+		OutFailReason = TEXT("BaseDamage or DamageMultiplier must be greater than 0.");
 		return false;
 	}
 

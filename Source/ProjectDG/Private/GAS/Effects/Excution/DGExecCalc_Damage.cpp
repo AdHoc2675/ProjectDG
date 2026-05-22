@@ -9,11 +9,20 @@
 
 struct FDGDamageExecutionStatics
 {
+	DECLARE_ATTRIBUTE_CAPTUREDEF(AttackPower);
 	DECLARE_ATTRIBUTE_CAPTUREDEF(Defense);
 	DECLARE_ATTRIBUTE_CAPTUREDEF(DefenseCoefficient);
 
 	FDGDamageExecutionStatics()
 	{
+		/**
+		 * Source의 공격력 Attribute를 캡처한다.
+		 *
+		 * bSnapshot = false
+		 * - 데미지 적용 시점의 최신 Source AttackPower 값을 사용한다.
+		 */
+		DEFINE_ATTRIBUTE_CAPTUREDEF(UDG_AttributeSet, AttackPower, Source, false);
+
 		/**
 		 * Target의 방어력 관련 Attribute를 캡처한다.
 		 *
@@ -33,6 +42,7 @@ static const FDGDamageExecutionStatics& DamageExecutionStatics()
 
 UDGExecCalc_Damage::UDGExecCalc_Damage()
 {
+	RelevantAttributesToCapture.Add(DamageExecutionStatics().AttackPowerDef);
 	RelevantAttributesToCapture.Add(DamageExecutionStatics().DefenseDef);
 	RelevantAttributesToCapture.Add(DamageExecutionStatics().DefenseCoefficientDef);
 }
@@ -52,16 +62,56 @@ void UDGExecCalc_Damage::Execute_Implementation(
 	EvaluateParameters.TargetTags = TargetTags;
 
 	/**
-	 * CombatComponent / Skill / Monster Attack 쪽에서 SetByCaller로 넣어줄 값.
-	 *
-	 * 약속:
-	 * - Data.Damage = 방어력 적용 전 IncomingDamage
+	 * Source 공격력 캡처.
 	 */
-	const float IncomingDamage = Spec.GetSetByCallerMagnitude(
+	float SourceAttackPower = 0.0f;
+	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(
+		DamageExecutionStatics().AttackPowerDef,
+		EvaluateParameters,
+		SourceAttackPower
+	);
+	SourceAttackPower = FMath::Max(SourceAttackPower, 0.0f);
+
+	/**
+	 * 새 데미지 입력 구조.
+	 *
+	 * Data.BaseDamage
+	 * - 고정 피해
+	 *
+	 * Data.DamageMultiplier
+	 * - SourceAttackPower에 곱할 스킬 공격력 계수
+	 *
+	 * 기존 Data.Damage
+	 * - 구버전 호환용 IncomingDamage
+	 */
+	const float BaseDamage = Spec.GetSetByCallerMagnitude(
+		DGGameplayTags::Data_BaseDamage,
+		false,
+		0.0f
+	);
+
+	const float DamageMultiplier = Spec.GetSetByCallerMagnitude(
+		DGGameplayTags::Data_DamageMultiplier,
+		false,
+		0.0f
+	);
+
+	const float LegacyIncomingDamage = Spec.GetSetByCallerMagnitude(
 		DGGameplayTags::Data_Damage,
 		false,
 		0.0f
 	);
+
+	float IncomingDamage = 0.0f;
+
+	if (BaseDamage > 0.0f || DamageMultiplier > 0.0f)
+	{
+		IncomingDamage = BaseDamage + SourceAttackPower * DamageMultiplier;
+	}
+	else
+	{
+		IncomingDamage = LegacyIncomingDamage;
+	}
 
 	if (IncomingDamage <= 0.0f)
 	{
@@ -69,7 +119,7 @@ void UDGExecCalc_Damage::Execute_Implementation(
 	}
 
 	/**
-	 * Target 방어력 캡처
+	 * Target 방어력 캡처.
 	 *
 	 * 현재 Attribute 의미:
 	 * - Defense = RawArmor
@@ -106,21 +156,24 @@ void UDGExecCalc_Damage::Execute_Implementation(
 	constexpr float DefenseReductionCoefficient = 0.0001535f;
 
 	const float EffectiveArmor = TargetDefense * TargetDefenseCoefficient;
-	const float DamageDivisor = 1.0f + (DefenseReductionCoefficient * EffectiveArmor);
+	const float DamageDivisor = 1.0f + DefenseReductionCoefficient * EffectiveArmor;
 
 	const float FinalDamageTaken = DamageDivisor > 0.0f
 		? IncomingDamage / DamageDivisor
 		: IncomingDamage;
-	
-	Debug::Print(FString::Printf(
-	TEXT("[DGExecCalc_Damage] Incoming=%.2f Defense=%.2f DefenseCoeff=%.2f EffectiveArmor=%.2f FinalDamage=%.2f"),
-	IncomingDamage,
-	TargetDefense,
-	TargetDefenseCoefficient,
-	EffectiveArmor,
-	FinalDamageTaken
-));
 
+	Debug::Print(FString::Printf(
+		TEXT("[DGExecCalc_Damage] AttackPower=%.2f BaseDamage=%.2f Multiplier=%.2f LegacyDamage=%.2f Incoming=%.2f Defense=%.2f DefenseCoeff=%.2f EffectiveArmor=%.2f FinalDamage=%.2f"),
+		SourceAttackPower,
+		BaseDamage,
+		DamageMultiplier,
+		LegacyIncomingDamage,
+		IncomingDamage,
+		TargetDefense,
+		TargetDefenseCoefficient,
+		EffectiveArmor,
+		FinalDamageTaken
+	));
 
 	if (FinalDamageTaken <= 0.0f)
 	{

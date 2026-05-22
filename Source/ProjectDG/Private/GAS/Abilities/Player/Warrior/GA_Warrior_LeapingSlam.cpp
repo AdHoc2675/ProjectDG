@@ -3,6 +3,7 @@
 
 #include "GAS/Abilities/Player/Warrior/GA_Warrior_LeapingSlam.h"
 
+#include "Abilities/Tasks/AbilityTask_ApplyRootMotionMoveToForce.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Character/BaseCharacter.h"
@@ -56,16 +57,26 @@ void UGA_Warrior_LeapingSlam::ActivateAbility(
     }
 
     FaceTarget(CurrentTarget);
-    StartLeapingTravel(CurrentTarget);
+    
+    MoveBeginTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+        this,
+        DGGameplayTags::Event_Movement_Warrior_LeapingSlam_MoveBegin.GetTag(),
+        nullptr,
+        false,
+        true);
 
-    UAbilityTask_WaitGameplayEvent* AttackHitTask =
-        UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+    if (MoveBeginTask)
+    {
+        MoveBeginTask->EventReceived.AddDynamic(this, &UGA_Warrior_LeapingSlam::OnMoveBegin);
+        MoveBeginTask->ReadyForActivation();
+    }
+
+    AttackHitTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
             this,
             DGGameplayTags::Event_Attack_Hit.GetTag(),
             nullptr,
             false,
-            true
-        );
+            true);
 
     if (AttackHitTask)
     {
@@ -73,13 +84,11 @@ void UGA_Warrior_LeapingSlam::ActivateAbility(
         AttackHitTask->ReadyForActivation();
     }
 
-    UAbilityTask_PlayMontageAndWait* MontageTask =
-        UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+    MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
             this,
             TEXT("LeapingSlamMontageTask"),
             LeapingSlamMontage,
-            MontagePlayRate
-        );
+            MontagePlayRate);
 
     if (!MontageTask)
     {
@@ -102,23 +111,57 @@ void UGA_Warrior_LeapingSlam::EndAbility(
     bool bWasCancelled)
 {
     HitActors.Reset();
-    
-    if (UWorld* World = GetWorld())
-    {
-        World->GetTimerManager().ClearTimer(TravelTickTimerHandle);
-    }
-
-    if (ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
-    {
-        if (UCharacterMovementComponent* Movement = Character->GetCharacterMovement())
-        {
-            Movement->SetMovementMode(MOVE_Walking);
-        }
-    }
 
     CurrentTarget = nullptr;
+    MoveBeginTask = nullptr;
+    AttackHitTask = nullptr;
+    MontageTask = nullptr;
+    MoveToTargetTask = nullptr;
 
     Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+void UGA_Warrior_LeapingSlam::OnMoveBegin(FGameplayEventData Payload)
+{
+    if (!ValidateTargetForActivation(CurrentTarget))
+    {
+        EndLeapingSlamAbility(true);
+        return;
+    }
+
+    FaceTarget(CurrentTarget);
+
+    const float MoveDuration = FMath::Max(Payload.EventMagnitude, 0.01f);
+    StartLeapingMove(MoveDuration);
+}
+
+void UGA_Warrior_LeapingSlam::StartLeapingMove(float Duration)
+{
+    FVector LandingLocation;
+    if (!BuildLandingLocation(CurrentTarget, LandingLocation))
+    {
+        EndLeapingSlamAbility(true);
+        return;
+    }
+
+    MoveToTargetTask = UAbilityTask_ApplyRootMotionMoveToForce::ApplyRootMotionMoveToForce(
+            this,
+            TEXT("LeapingSlamMoveToTarget"),
+            LandingLocation,
+            Duration,
+            true,
+            MOVE_Flying,
+            false,
+            nullptr,
+            ERootMotionFinishVelocityMode::SetVelocity,
+            FVector::ZeroVector,
+            0.f
+    );
+
+    if (MoveToTargetTask)
+    {
+        MoveToTargetTask->ReadyForActivation();
+    }
 }
 
 AActor* UGA_Warrior_LeapingSlam::ResolveTargetFromPayload(const FGameplayEventData* TriggerEventData) const
@@ -245,95 +288,6 @@ void UGA_Warrior_LeapingSlam::FaceTarget(AActor* TargetActor)
     }
 }
 
-void UGA_Warrior_LeapingSlam::StartLeapingTravel(AActor* TargetActor)
-{
-    AActor* AvatarActor = GetAvatarActorFromActorInfo();
-    if (!AvatarActor)
-    {
-        EndLeapingSlamAbility(true);
-        return;
-    }
-
-    if (!BuildLandingLocation(TargetActor, TravelEndLocation))
-    {
-        EndLeapingSlamAbility(true);
-        return;
-    }
-
-    TravelStartLocation = AvatarActor->GetActorLocation();
-    TravelElapsedTime = 0.f;
-
-    if (ACharacter* Character = Cast<ACharacter>(AvatarActor))
-    {
-        if (UCharacterMovementComponent* Movement = Character->GetCharacterMovement())
-        {
-            Movement->StopMovementImmediately();
-            Movement->SetMovementMode(MOVE_Flying);
-        }
-    }
-
-    if (UWorld* World = GetWorld())
-    {
-        TravelStartWorldTime = World->GetTimeSeconds();
-        
-        World->GetTimerManager().SetTimer(
-            TravelTickTimerHandle,
-            this,
-            &UGA_Warrior_LeapingSlam::TickLeapingTravel,
-            TravelTickInterval,
-            true
-        );
-    }
-}
-
-void UGA_Warrior_LeapingSlam::TickLeapingTravel()
-{
-    AActor* AvatarActor = GetAvatarActorFromActorInfo();
-    UWorld* World = GetWorld();
-
-    if (!AvatarActor || !World)
-    {
-        FinishLeapingTravel();
-        return;
-    }
-
-    TravelElapsedTime = World->GetTimeSeconds() - TravelStartWorldTime;
-
-    const float Alpha = FMath::Clamp(TravelElapsedTime / ApproachDuration, 0.f, 1.f);
-
-    const FVector NewLocation = FMath::Lerp(TravelStartLocation, TravelEndLocation, Alpha);
-    AvatarActor->SetActorLocation(NewLocation, true);
-
-    if (Alpha >= 1.f)
-    {
-        FinishLeapingTravel();
-    }
-}
-
-void UGA_Warrior_LeapingSlam::FinishLeapingTravel()
-{
-    if (UWorld* World = GetWorld())
-    {
-        World->GetTimerManager().ClearTimer(TravelTickTimerHandle);
-    }
-
-    AActor* AvatarActor = GetAvatarActorFromActorInfo();
-    if (!AvatarActor)
-    {
-        return;
-    }
-    
-    AvatarActor->SetActorLocation(TravelEndLocation, true);
-
-    if (ACharacter* Character = Cast<ACharacter>(AvatarActor))
-    {
-        if (UCharacterMovementComponent* Movement = Character->GetCharacterMovement())
-        {
-            Movement->SetMovementMode(MOVE_Walking);
-        }
-    }
-}
-
 // 데미지 처리입니다.
 
 void UGA_Warrior_LeapingSlam::OnAttackHit(FGameplayEventData Payload)
@@ -363,6 +317,7 @@ void UGA_Warrior_LeapingSlam::OnAttackHit(FGameplayEventData Payload)
     
     ApplyDamageToTarget(
         HitActor,
+        0.f,
         Damage,
         DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag(),
         GetPayloadHitLocationOrActorLocation(Payload, HitActor),

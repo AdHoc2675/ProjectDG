@@ -4,37 +4,69 @@
 #include "GAS/Abilities/Base/GameplayAbilityBase.h"
 
 #include "Character/BaseCharacter.h"
+#include "Character/Player/PlayerCharacterBase.h"
 #include "Components/Combat/CombatComponent.h"
 
-FDGDamageResult UGameplayAbilityBase::ApplyDamageToTarget(AActor* TargetActor,float BaseDamage,FGameplayTag SourceTag,
-	const FVector& HitLocation,bool bHasHitLocation) const
+AActor* UGameplayAbilityBase::GetAvatarActorFromAbility() const
+{
+	return GetAvatarActorFromActorInfo();
+}
+
+ABaseCharacter* UGameplayAbilityBase::GetAvatarBaseCharacter() const
+{
+	return Cast<ABaseCharacter>(GetAvatarActorFromAbility());
+}
+
+APlayerCharacterBase* UGameplayAbilityBase::GetAvatarPlayerCharacter() const
+{
+	return Cast<APlayerCharacterBase>(GetAvatarActorFromAbility());
+}
+
+UCombatComponent* UGameplayAbilityBase::GetAvatarCombatComponent() const
+{
+	const ABaseCharacter* AvatarCharacter = GetAvatarBaseCharacter();
+	if (!AvatarCharacter)
+	{
+		return nullptr;
+	}
+
+	return AvatarCharacter->GetCombatComponent();
+}
+
+bool UGameplayAbilityBase::HasAuthorityAvatar() const
+{
+	const AActor* AvatarActor = GetAvatarActorFromAbility();
+	return AvatarActor && AvatarActor->HasAuthority();
+}
+
+FDGDamageResult UGameplayAbilityBase::ApplyDamageToTarget(
+	AActor* TargetActor,
+	float BaseDamage,
+	float DamageMultiplier,
+	FGameplayTag SourceTag,
+	FVector HitLocation,
+	bool bHasHitLocation
+) const
 {
 	FDGDamageResult Result;
 
-	AActor* SourceActor = GetAvatarActorFromActorInfo();
+	AActor* SourceActor = GetAvatarActorFromAbility();
 	if (!SourceActor)
 	{
 		Result.Message = TEXT("SourceActor is null.");
 		return Result;
 	}
 
-	if (!SourceActor->HasAuthority())
+	if (!TargetActor)
 	{
-		Result.Message = TEXT("ApplyDamageToTarget rejected. Only server can apply damage.");
+		Result.Message = TEXT("TargetActor is null.");
 		return Result;
 	}
 
-	ABaseCharacter* SourceCharacter = Cast<ABaseCharacter>(SourceActor);
-	if (!SourceCharacter)
+	UCombatComponent* SourceCombatComponent = GetAvatarCombatComponent();
+	if (!SourceCombatComponent)
 	{
-		Result.Message = TEXT("SourceActor is not BaseCharacter.");
-		return Result;
-	}
-
-	UCombatComponent* CombatComponent = SourceCharacter->GetCombatComponent();
-	if (!CombatComponent)
-	{
-		Result.Message = TEXT("CombatComponent is null.");
+		Result.Message = TEXT("Source CombatComponent is null.");
 		return Result;
 	}
 
@@ -42,10 +74,10 @@ FDGDamageResult UGameplayAbilityBase::ApplyDamageToTarget(AActor* TargetActor,fl
 	DamageRequest.SourceActor = SourceActor;
 	DamageRequest.TargetActor = TargetActor;
 	DamageRequest.BaseDamage = BaseDamage;
+	DamageRequest.DamageMultiplier = DamageMultiplier;
 	DamageRequest.SourceTag = SourceTag;
 	DamageRequest.HitLocation = HitLocation;
 	DamageRequest.bHasHitLocation = bHasHitLocation;
 
-	return CombatComponent->ApplyDamageRequest(DamageRequest);
+	return SourceCombatComponent->ApplyDamageRequest(DamageRequest);
 }
-
