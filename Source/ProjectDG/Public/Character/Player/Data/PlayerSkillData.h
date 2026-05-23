@@ -81,6 +81,10 @@ public:
 	/** 스킬 태그. 예: Skill.Warrior.SharpStrike */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Identity")
 	FGameplayTag SkillTag;
+	
+	/** 입력 이벤트 태그. 예: Event.Input.Warrior.SharpStrike : 콤보입력을 받는 Skill의 경우 콤보입력 ANS에서 tapping Event가 들어왔는지 확인하기 위한 태그*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Input")
+	FGameplayTag InputEventTag;
 
 	/** 스킬 이름 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Identity")

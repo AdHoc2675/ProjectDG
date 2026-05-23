@@ -61,6 +61,9 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> AttackHitTask = nullptr;
+	
+	UPROPERTY()
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillInputEventTask = nullptr;
 
 protected:
 	int32 CurrentComboIndex = 1;
@@ -103,6 +106,9 @@ protected:
 
 	UFUNCTION()
 	void OnAttackHit(FGameplayEventData Payload);
+	
+	UFUNCTION()
+	void OnSkillInputEventReceived(FGameplayEventData Payload);
 
 	UFUNCTION()
 	void OnMontageCompleted();

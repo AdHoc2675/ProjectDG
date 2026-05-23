@@ -916,19 +916,22 @@ FGameplayTag APlayerCharacterBase::GetSkillTagForSlot(FGameplayTag SlotTag) cons
 
 FGameplayTag APlayerCharacterBase::GetSkillInputEventTag(FGameplayTag SkillTag) const
 {
-	if (SkillTag == DGGameplayTags::Skill_Warrior_SharpStrike.GetTag())
+	if (!SkillTag.IsValid() || !CharacterClassData)
 	{
-		return DGGameplayTags::Event_Input_Warrior_SharpStrike.GetTag();
+		return FGameplayTag::EmptyTag;
 	}
 
-	if (SkillTag == DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag())
+	for (const FSkillSlotDefinition& SkillSlot : CharacterClassData->SkillSlots)
 	{
-		return DGGameplayTags::Event_Input_Warrior_LeapingSlam.GetTag();
-	}
+		if (!SkillSlot.SkillData)
+		{
+			continue;
+		}
 
-	if (SkillTag == DGGameplayTags::Skill_Warrior_DoomStrike.GetTag())
-	{
-		return DGGameplayTags::Event_Input_Warrior_DoomStrike.GetTag();
+		if (SkillSlot.SkillData->SkillTag == SkillTag)
+		{
+			return SkillSlot.SkillData->InputEventTag;
+		}
 	}
 
 	return FGameplayTag::EmptyTag;

@@ -37,6 +37,9 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
 	FGameplayTag GetSkillTag() const;
+	
+	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
+	FGameplayTag GetSkillInputEventTag() const;
 
 	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
 	float GetSkillRange() const;

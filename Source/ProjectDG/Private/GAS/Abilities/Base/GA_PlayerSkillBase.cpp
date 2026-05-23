@@ -26,6 +26,12 @@ FGameplayTag UGA_PlayerSkillBase::GetSkillTag() const
 	return Data ? Data->SkillTag : FGameplayTag::EmptyTag;
 }
 
+FGameplayTag UGA_PlayerSkillBase::GetSkillInputEventTag() const
+{
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	return Data ? Data->InputEventTag : FGameplayTag::EmptyTag;
+}
+
 float UGA_PlayerSkillBase::GetSkillRange() const
 {
 	const UPlayerSkillData* Data = GetPlayerSkillData();
