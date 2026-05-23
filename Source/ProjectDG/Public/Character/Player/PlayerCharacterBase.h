@@ -246,9 +246,9 @@ protected:
 	
 	// (추가) Hold가 아닌 Tap으로 스킬 활성화
 	UFUNCTION(Server, Reliable)
-	void ServerSendSkillInputStartedEvent(FGameplayTag SkillTag);
+	void ServerSendSkillInputStartedEvent(FGameplayTag SkillInputEventTag);
 
-	void SendSkillInputStartedEvent(FGameplayTag SkillTag);
+	void SendSkillInputStartedEvent(FGameplayTag SkillInputEventTag);
 	
 public:
 	/** 특정 슬롯 키가 현재 눌려 있는지 확인 */
