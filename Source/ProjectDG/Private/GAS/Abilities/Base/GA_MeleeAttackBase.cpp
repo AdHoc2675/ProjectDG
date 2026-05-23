@@ -240,10 +240,10 @@ void UGA_MeleeAttackBase::TryJumpToNextComboSection(int32 BranchComboIndex)
 
 	bComboInputBuffered = false;
 
-	const int32 NextComboIndex = BranchComboIndex + 1;
+	int32 NextComboIndex = BranchComboIndex + 1;
 	if (NextComboIndex > ComboCount)
 	{
-		return;
+		NextComboIndex = 1;
 	}
 
 	CurrentComboIndex = NextComboIndex;
