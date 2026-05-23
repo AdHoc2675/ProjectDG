@@ -856,23 +856,23 @@ void APlayerCharacterBase::OnSkillInputCompleted(FGameplayTag SlotTag)
 	}
 }
 
-void APlayerCharacterBase::ServerSendSkillInputStartedEvent_Implementation(FGameplayTag SkillTag)
+void APlayerCharacterBase::ServerSendSkillInputStartedEvent_Implementation(FGameplayTag SkillInputEventTag)
 {
-	SendSkillInputStartedEvent(SkillTag);
+	SendSkillInputStartedEvent(SkillInputEventTag);
 }
 
-void APlayerCharacterBase::SendSkillInputStartedEvent(FGameplayTag SkillTag)
+void APlayerCharacterBase::SendSkillInputStartedEvent(FGameplayTag SkillInputEventTag)
 {
-	if (!SkillTag.IsValid())
+	if (!SkillInputEventTag.IsValid())
 	{
 		return;
 	}
 
 	FGameplayEventData Payload;
-	Payload.EventTag = SkillTag;
+	Payload.EventTag = SkillInputEventTag;
 	Payload.Instigator = this;
 
-	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, SkillTag, Payload);
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, SkillInputEventTag, Payload);
 }
 
 void APlayerCharacterBase::ServerSetSkillInputHeld_Implementation(FGameplayTag SlotTag, bool bHeld)
