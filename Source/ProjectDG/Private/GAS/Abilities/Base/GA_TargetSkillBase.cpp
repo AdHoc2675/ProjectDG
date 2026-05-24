@@ -90,12 +90,13 @@ FGameplayTagContainer UGA_TargetSkillBase::GetRequiredTargetTags() const
 {
 	FGameplayTagContainer RequiredTags;
 
-	if (!SkillData)
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	if (!Data)
 	{
 		return RequiredTags;
 	}
 
-	switch (SkillData->TargetPolicy)
+	switch (Data->TargetPolicy)
 	{
 	case EPlayerSkillTargetPolicy::EnemyTarget:
 		RequiredTags.AddTag(DGGameplayTags::Team_Enemy.GetTag());
