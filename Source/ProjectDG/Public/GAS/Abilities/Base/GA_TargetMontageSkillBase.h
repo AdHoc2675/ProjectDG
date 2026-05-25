@@ -74,6 +74,8 @@ protected:
 
 private:
       bool bEndingTargetMontageAbility = false;
+      
+      bool bWaitingForRemoteTargetData = false;
 
 protected:
       /** 스킬 실행 중 사용하는 타겟 결과, 히트 기록, 종료 플래그를 초기화한다. */
@@ -102,6 +104,22 @@ protected:
 
       /** 몽타주 기반 타겟 스킬을 중복 종료 없이 종료한다. */
       virtual void EndTargetMontageAbility(bool bWasCancelled);
+      
+      /** 로컬 플레이어가 타겟을 획득하고, 원격 클라이언트라면 서버에 TargetData를 전송한다. */
+      virtual bool AcquireLocalTargetAndSendTargetData();
+
+      /** 서버에서 원격 클라이언트가 보낸 TargetData를 기다린다. */
+      virtual void WaitForRemoteTargetData();
+
+      /** TargetData가 준비된 뒤 Commit, 회전, 몽타주 재생 흐름을 이어간다. */
+      virtual void ContinueTargetMontageAbility();
+
+      /** 로컬 예측 클라이언트가 확정 타겟을 서버에 전달한다. */
+      virtual void SendTargetDataToServer(const FGameplayAbilityTargetDataHandle& TargetDataHandle);
+
+      /** 서버가 클라이언트에서 전달된 TargetData를 수신했을 때 호출된다. */
+      virtual void OnTargetDataReadyCallback(const FGameplayAbilityTargetDataHandle& TargetDataHandle, FGameplayTag
+ActivationTag);
 
 protected:
       /** 새로운 공격 판정 구간이 시작될 때 중복 히트 기록을 초기화한다. */

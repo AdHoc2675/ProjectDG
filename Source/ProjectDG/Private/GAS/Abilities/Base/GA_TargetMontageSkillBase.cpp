@@ -22,39 +22,27 @@ void UGA_TargetMontageSkillBase::ActivateAbility(
       const FGameplayEventData* TriggerEventData
 )
 {
-      ResetTargetMontageState();
+        ResetTargetMontageState();
+        
+        if (ActorInfo && ActorInfo->IsLocallyControlled())
+        {
+                if (!AcquireLocalTargetAndSendTargetData())
+                {
+                        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+                        return;
+                }
 
-      if (!TryAcquireSkillTarget(CurrentTargetResult))
-      {
-              EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-              return;
-      }
+                ContinueTargetMontageAbility();
+                return;
+        }
 
-      if (!IsCurrentTargetStillValid())
-      {
-              EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-              return;
-      }
+        if (HasAuthorityAvatar())
+        {
+                WaitForRemoteTargetData();
+                return;
+        }
 
-      if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-      {
-              EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-              return;
-      }
-
-      if (!GetSkillMontage())
-      {
-              EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-              return;
-      }
-
-      if (bFaceTargetOnActivate)
-      {
-              FaceCurrentTarget();
-      }
-
-      StartTargetMontageEventTasks();
-      PlayTargetSkillMontage();
+        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 }
 
 void UGA_TargetMontageSkillBase::EndAbility(
@@ -83,45 +71,46 @@ void UGA_TargetMontageSkillBase::EndAbility(
 void UGA_TargetMontageSkillBase::ResetTargetMontageState()
 {
       bEndingTargetMontageAbility = false;
+      bWaitingForRemoteTargetData = false;
       CurrentTargetResult = FDGSkillTargetResult();
       HitActors.Reset();
 }
 
 void UGA_TargetMontageSkillBase::StartTargetMontageEventTasks()
 {
-      AttackHitWindowBeginTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-              this,
-              DGGameplayTags::Event_Attack_HitWindow_Begin.GetTag(),
-              nullptr,
-              false,
-              true
-      );
+        AttackHitWindowBeginTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+                this,
+                DGGameplayTags::Event_Attack_HitWindow_Begin.GetTag(),
+                nullptr,
+                false,
+                true
+        );
 
-      if (AttackHitWindowBeginTask)
-      {
-              AttackHitWindowBeginTask->EventReceived.AddDynamic(
-                      this,
-                      &UGA_TargetMontageSkillBase::OnAttackHitWindowBegin
-              );
-              AttackHitWindowBeginTask->ReadyForActivation();
-      }
+        if (AttackHitWindowBeginTask)
+        {
+                AttackHitWindowBeginTask->EventReceived.AddDynamic(
+                        this,
+                        &UGA_TargetMontageSkillBase::OnAttackHitWindowBegin
+                );
+                AttackHitWindowBeginTask->ReadyForActivation();
+        }
 
-      AttackHitTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-              this,
-              DGGameplayTags::Event_Attack_Hit.GetTag(),
-              nullptr,
-              false,
-              true
-      );
+        AttackHitTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+                this,
+                DGGameplayTags::Event_Attack_Hit.GetTag(),
+                nullptr,
+                false,
+                true
+        );
 
-      if (AttackHitTask)
-      {
-              AttackHitTask->EventReceived.AddDynamic(
-                      this,
-                      &UGA_TargetMontageSkillBase::OnAttackHit
-              );
-              AttackHitTask->ReadyForActivation();
-      }
+        if (AttackHitTask)
+        {
+                AttackHitTask->EventReceived.AddDynamic(
+                        this,
+                        &UGA_TargetMontageSkillBase::OnAttackHit
+                );
+                AttackHitTask->ReadyForActivation();
+        }
 }
 
 void UGA_TargetMontageSkillBase::PlayTargetSkillMontage()
@@ -310,6 +299,133 @@ void UGA_TargetMontageSkillBase::EndTargetMontageAbility(bool bWasCancelled)
 
       bEndingTargetMontageAbility = true;
       K2_EndAbility();
+}
+
+bool UGA_TargetMontageSkillBase::AcquireLocalTargetAndSendTargetData()
+{
+        if (!TryAcquireSkillTarget(CurrentTargetResult))
+        {
+                return false;
+        }
+
+        if (!IsCurrentTargetStillValid())
+        {
+                return false;
+        }
+
+        if (!HasAuthorityAvatar())
+        {
+                const FGameplayAbilityTargetDataHandle TargetDataHandle =
+                        MakeTargetDataFromTargetResult(CurrentTargetResult);
+
+                SendTargetDataToServer(TargetDataHandle);
+        }
+
+        return true;
+}
+
+void UGA_TargetMontageSkillBase::WaitForRemoteTargetData()
+{
+        UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+        if (!ASC)
+        {
+                EndTargetMontageAbility(true);
+                return;
+        }
+
+        bWaitingForRemoteTargetData = true;
+
+        const FGameplayAbilitySpecHandle SpecHandle = GetCurrentAbilitySpecHandle();
+        const FPredictionKey ActivationPredictionKey = GetCurrentActivationInfo().GetActivationPredictionKey();
+
+        ASC->AbilityTargetDataSetDelegate(SpecHandle, ActivationPredictionKey).AddUObject(
+                this,
+                &UGA_TargetMontageSkillBase::OnTargetDataReadyCallback
+        );
+
+        if (!ASC->CallReplicatedTargetDataDelegatesIfSet(SpecHandle, ActivationPredictionKey))
+        {
+                return;
+        }
+}
+
+void UGA_TargetMontageSkillBase::ContinueTargetMontageAbility()
+{
+        if (!IsCurrentTargetStillValid())
+        {
+                EndTargetMontageAbility(true);
+                return;
+        }
+
+        if (!CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo))
+        {
+                EndTargetMontageAbility(true);
+                return;
+        }
+
+        if (!GetSkillMontage())
+        {
+                EndTargetMontageAbility(true);
+                return;
+        }
+
+        if (bFaceTargetOnActivate)
+        {
+                FaceCurrentTarget();
+        }
+
+        StartTargetMontageEventTasks();
+        PlayTargetSkillMontage();
+}
+
+void UGA_TargetMontageSkillBase::SendTargetDataToServer(const FGameplayAbilityTargetDataHandle& TargetDataHandle)
+{
+        UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+        if (!ASC)
+        {
+                return;
+        }
+
+        FScopedPredictionWindow ScopedPrediction(ASC, true);
+
+        ASC->ServerSetReplicatedTargetData(
+                GetCurrentAbilitySpecHandle(),
+                GetCurrentActivationInfo().GetActivationPredictionKey(),
+                TargetDataHandle,
+                FGameplayTag(),
+                ASC->ScopedPredictionKey
+        );
+}
+
+void UGA_TargetMontageSkillBase::OnTargetDataReadyCallback(const FGameplayAbilityTargetDataHandle& TargetDataHandle,
+        FGameplayTag ActivationTag)
+{
+        UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+        if (!ASC)
+        {
+                EndTargetMontageAbility(true);
+                return;
+        }
+
+        bWaitingForRemoteTargetData = false;
+
+        const bool bMadeTargetResult = TryMakeTargetResultFromTargetData(
+                TargetDataHandle,
+                CurrentTargetResult
+        );
+
+        ASC->ConsumeClientReplicatedTargetData(
+                GetCurrentAbilitySpecHandle(),
+                GetCurrentActivationInfo().GetActivationPredictionKey()
+        );
+
+        if (!bMadeTargetResult)
+        {
+                EndTargetMontageAbility(true);
+                return;
+        }
+
+        ContinueTargetMontageAbility();
 }
 
 void UGA_TargetMontageSkillBase::OnAttackHitWindowBegin(FGameplayEventData Payload)

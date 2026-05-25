@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GAS/Abilities/Base/GA_PlayerSkillBase.h"
+#include "Abilities/GameplayAbilityTargetTypes.h"
 #include "GameplayTagContainer.h"
 #include "GA_TargetSkillBase.generated.h"
 
@@ -64,4 +65,10 @@ protected:
 
 	/** 현재 플레이어의 LockOnComponent를 가져온다. */
 	ULockOnComponent* GetAvatarLockOnComponent() const;
+	
+	/** 확정된 타겟 결과를 서버로 보낼 TargetData로 변환한다. */
+	virtual FGameplayAbilityTargetDataHandle MakeTargetDataFromTargetResult(const FDGSkillTargetResult& TargetResult) const;
+
+	/** 서버가 받은 TargetData에서 타겟 결과를 복원한다. */
+	virtual bool TryMakeTargetResultFromTargetData(const FGameplayAbilityTargetDataHandle& TargetDataHandle, FDGSkillTargetResult& OutTargetResult) const;
 };
