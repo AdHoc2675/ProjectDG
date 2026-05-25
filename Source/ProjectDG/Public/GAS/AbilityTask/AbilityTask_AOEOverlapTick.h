@@ -48,5 +48,8 @@ private:
 
 	void PerformOverlap();
 	
+	// 디버그라인 관련
+	bool bEnableDebugDraw = true;
+	float DebugDrawDuration = 0.1f;
 	
 };

@@ -198,7 +198,7 @@ void UGA_AOESkillBase::OnAOETargetFound(AActor* TargetActor)
 
       if (SourceCharacter && SourceCharacter->IsFriendlyTo(TargetCharacter))
       {
-              return;
+              // return;
       }
 
       ApplyDamageToTarget(

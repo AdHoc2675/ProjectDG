@@ -74,6 +74,20 @@ void UAbilityTask_AOEOverlapTick::PerformOverlap()
               FCollisionShape::MakeCapsule(Radius, HalfHeight),
               QueryParams
       );
+	  
+	  if (bEnableDebugDraw)
+	  {
+		  DrawDebugCapsule(
+				World,
+				AvatarActor->GetActorLocation(),
+				HalfHeight,
+				Radius,
+				FQuat::Identity,
+				OverlapResults.Num() > 0 ? FColor::Green : FColor::Red,
+				false,
+				DebugDrawDuration
+		  );
+	  }
 
       for (const FOverlapResult& OverlapResult : OverlapResults)
       {
