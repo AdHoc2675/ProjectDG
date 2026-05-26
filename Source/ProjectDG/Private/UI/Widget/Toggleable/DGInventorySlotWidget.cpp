@@ -8,6 +8,8 @@
 #include "Item/DGItemDragDropOperation.h"
 
 #include "Engine/Texture2D.h" 
+#include <UI/Widget/Toggleable/DGEquipmentSlotWidget.h>
+#include <UI/WidgetController/DGInventoryWidgetController.h>
 
 void UDGInventorySlotWidget::UpdateSlot(UDGItemInstance* ItemInstance)
 {
@@ -82,4 +84,31 @@ void UDGInventorySlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, c
 	DragDropOp->Pivot = EDragPivot::MouseDown;
 
 	OutOperation = DragDropOp;
+}
+
+bool UDGInventorySlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+{
+	Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
+
+	UDGItemDragDropOperation* DragDropOp = Cast<UDGItemDragDropOperation>(InOperation);
+	if (DragDropOp && DragDropOp->DraggedItem)
+	{
+		// 드래그 해 온 출발지가 '장비 슬롯' 인가 판별 (장비를 벗으려고 끌고온 상황 확인)
+		if (UDGEquipmentSlotWidget* EquipSlot = Cast<UDGEquipmentSlotWidget>(DragDropOp->SourceWidget))
+		{
+			// 부모/컨트롤러로부터 중개자 권한 호출
+			if (UDGInventoryWidgetController* Controller = Cast<UDGInventoryWidgetController>(WidgetController))
+			{
+				UE_LOG(LogTemp, Log, TEXT("[DGInventorySlotWidget] 아이템 드래그 드롭으로 장착 해제 요청 수신"));
+
+				// 컨트롤러에 장비 해제 명령 전달
+				Controller->UnequipItemFromUI(EquipSlot->SlotType);
+
+				// 드래그해서 가져온 원래 장비 슬롯 아이콘 모양 비우기
+				EquipSlot->UpdateSlot(nullptr);
+				return true;
+			}
+		}
+	}
+	return false;
 }

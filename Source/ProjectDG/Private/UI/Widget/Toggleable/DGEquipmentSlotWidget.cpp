@@ -17,7 +17,16 @@ void UDGEquipmentSlotWidget::UpdateSlot(UDGItemInstance* EquippedItem)
 			ItemIcon->SetBrushFromTexture(IconTexture, false);
 		}
 
-		// TODO: 장갑/무기/투구 등 부위에 맞는 툴팁 위젯 생성 및 연결 (인벤토리 슬롯과 동일한 방식 적용)
+		// 툴팁 설정
+		if (!CachedToolTipWidget && ToolTipClass)
+		{
+			CachedToolTipWidget = CreateWidget<UDGItemToolTipWidget>(this, ToolTipClass);
+		}
+		if (CachedToolTipWidget)
+		{
+			CachedToolTipWidget->UpdateToolTip(EquippedItem);
+			SetToolTip(CachedToolTipWidget);
+		}
 	}
 	else
 	{
@@ -67,4 +76,45 @@ bool UDGEquipmentSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDr
 
 	// 장착 타입이 안 맞거나 장비가 아닌 소모품을 올린 경우 실패
 	return false;
+}
+
+FReply UDGEquipmentSlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	if (EquippedItemInstance)
+	{
+		// 우클릭 발생 시 즉시 장착 해제
+		if (InMouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
+		{
+			if (UDGInventoryWidgetController* Controller = Cast<UDGInventoryWidgetController>(WidgetController))
+			{
+				// 장착 해제 실행
+				Controller->UnequipItemFromUI(SlotType);
+				UpdateSlot(nullptr); // 장비 슬롯 UI 비우기
+
+				UE_LOG(LogTemp, Log, TEXT("[DGEquipmentSlotWidget] 우클릭으로 아이템 장착 해제"));
+			}
+			return FReply::Handled();
+		}
+		// 좌클릭 발생 시 드래그 준비
+		else if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+		{
+			return FReply::Handled().DetectDrag(TakeWidget(), EKeys::LeftMouseButton);
+		}
+	}
+	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+}
+
+void UDGEquipmentSlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation)
+{
+	Super::NativeOnDragDetected(InGeometry, InMouseEvent, OutOperation);
+
+	if (!EquippedItemInstance) return;
+
+	UDGItemDragDropOperation* DragDropOp = NewObject<UDGItemDragDropOperation>();
+	DragDropOp->DraggedItem = EquippedItemInstance;
+	DragDropOp->SourceWidget = this; // '장비 슬롯'에서 출발했음을 명시
+	DragDropOp->DefaultDragVisual = this;
+	DragDropOp->Pivot = EDragPivot::MouseDown;
+
+	OutOperation = DragDropOp;
 }

@@ -35,7 +35,7 @@ void ADG_HUD::UpdateInputMode()
 		FInputModeGameAndUI InputMode;
 
 		// 마우스가 뷰포트 밖으로 나가는 것을 방지 (선택사항)
-		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+		//InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
 
 		// 클릭 앤 드래그 시 마우스 커서가 사라지며 게임 시점이 돌아가는 것을 방지
 		InputMode.SetHideCursorDuringCapture(false);

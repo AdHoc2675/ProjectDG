@@ -33,6 +33,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void EquipItemFromUI(UDGItemInstance* ItemToEquip);
 
+	// UI에서 전달된 장비 해제 명령 처리
+	UFUNCTION(BlueprintCallable, Category = "DG|Inventory")
+	void UnequipItemFromUI(EDGEquipmentType SlotType);
+
 	// UI에서 탭이 전환되었을 때 호출되는 함수
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void SwitchTab(EDGItemType TabType);

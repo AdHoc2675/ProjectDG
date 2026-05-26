@@ -115,6 +115,24 @@ void UDGInventoryWidgetController::EquipItemFromUI(UDGItemInstance* ItemToEquip)
 	}
 }
 
+void UDGInventoryWidgetController::UnequipItemFromUI(EDGEquipmentType SlotType)
+{
+	if (!PlayerController) return;
+
+	APawn* PlayerPawn = PlayerController->GetPawn();
+	if (!PlayerPawn) return;
+
+	UDGInventoryComponent* InventoryComp = PlayerPawn->FindComponentByClass<UDGInventoryComponent>();
+	if (InventoryComp)
+	{
+		// 모델에서 장착 해제 (GAS 버프 해제 & 스탯 원상복구됨)
+		InventoryComp->UnequipItem(SlotType);
+
+		// 인벤토리 목록 갱신 (벗은 아이템이 다시 인벤토리로 들어왔으므로 UI 갱신)
+		SwitchTab(EDGItemType::Equipment);
+	}
+}
+
 void UDGInventoryWidgetController::SwitchTab(EDGItemType TabType)
 {
 	if (!PlayerController) return;

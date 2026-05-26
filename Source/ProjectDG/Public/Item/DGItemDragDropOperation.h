@@ -19,5 +19,5 @@ public:
 
 	// 어디서 드래그를 시작했는지 원본 슬롯 (나중에 자리 교환 기능 등에 쓰임)
 	UPROPERTY(BlueprintReadWrite, Category = "DragDrop", meta = (ExposeOnSpawn = "true"))
-	TObjectPtr<UDGInventorySlotWidget> SourceWidget;
+	TObjectPtr<UUserWidget> SourceWidget;
 };
