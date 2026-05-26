@@ -3,101 +3,59 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GAS/Abilities/Base/GA_TargetMontageSkillBase.h"
 #include "GAS/Abilities/Player/Warrior/GA_WarriorBase.h"
 #include "GA_Warrior_LeapingSlam.generated.h"
 
 class UAbilityTask_ApplyRootMotionMoveToForce;
-class UAbilityTask_PlayMontageAndWait;
 class UAbilityTask_WaitGameplayEvent;
 
 /**
- * 
+ * 전사 3번 스킬: 도약찍기
+ *
+ * 타겟 획득 / Commit / 몽타주 재생 / Hit 이벤트 / 데미지 처리는
+ * UGA_TargetMontageSkillBase를 사용하고,
+ * 몽타주 Notify 기반 도약 이동만 이 클래스에서 처리한다.
  */
 UCLASS()
-class PROJECTDG_API UGA_Warrior_LeapingSlam : public UGA_WarriorBase
+class PROJECTDG_API UGA_Warrior_LeapingSlam : public UGA_TargetMontageSkillBase
 {
 	GENERATED_BODY()
-	
-public:
-    UGA_Warrior_LeapingSlam();
-	
-	virtual void ActivateAbility(
-      const FGameplayAbilitySpecHandle Handle,
-      const FGameplayAbilityActorInfo* ActorInfo,
-      const FGameplayAbilityActivationInfo ActivationInfo,
-      const FGameplayEventData* TriggerEventData
-    ) override;
 
-    virtual void EndAbility(
-      const FGameplayAbilitySpecHandle Handle,
-      const FGameplayAbilityActorInfo* ActorInfo,
-      const FGameplayAbilityActivationInfo ActivationInfo,
-      bool bReplicateEndAbility,
-      bool bWasCancelled
-    ) override;
+public:
+	UGA_Warrior_LeapingSlam();
+
+	virtual void EndAbility(
+			const FGameplayAbilitySpecHandle Handle,
+			const FGameplayAbilityActorInfo* ActorInfo,
+			const FGameplayAbilityActivationInfo ActivationInfo,
+			bool bReplicateEndAbility,
+			bool bWasCancelled
+	) override;
 
 protected:
-	UPROPERTY(EditDefaultsOnly, Category = "LeapingSlam|Targeting")
-	float MaxTargetingDistance = 2000.f;
-
-    UPROPERTY(EditDefaultsOnly, Category = "LeapingSlam|Movement")
-    float StopDistanceFromTarget = 180.f;
-
-    UPROPERTY(EditDefaultsOnly, Category = "LeapingSlam|Animation")
-    TObjectPtr<UAnimMontage> LeapingSlamMontage;
-
-    UPROPERTY(EditDefaultsOnly, Category = "LeapingSlam|Animation")
-    float MontagePlayRate = 1.f;
-
-    UPROPERTY(EditDefaultsOnly, Category = "LeapingSlam|Damage")
-    float Damage = 90.f;
-
-private:
-    UPROPERTY()
-    TObjectPtr<AActor> CurrentTarget;
-	
-	UPROPERTY()
-	TSet<TWeakObjectPtr<AActor>> HitActors;
-	
-	UPROPERTY()
-	TObjectPtr<UAbilityTask_WaitGameplayEvent> MoveBeginTask;
+	UPROPERTY(EditDefaultsOnly, Category = "LeapingSlam|Movement")
+	float StopDistanceFromTarget = 180.f;
 
 	UPROPERTY()
-	TObjectPtr<UAbilityTask_WaitGameplayEvent> AttackHitTask;
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> MoveBeginTask = nullptr;
 
 	UPROPERTY()
-	TObjectPtr<UAbilityTask_PlayMontageAndWait> MontageTask;
+	TObjectPtr<UAbilityTask_ApplyRootMotionMoveToForce> MoveToTargetTask = nullptr;
 
-	UPROPERTY()
-	TObjectPtr<UAbilityTask_ApplyRootMotionMoveToForce> MoveToTargetTask;
-	
-	UFUNCTION()
-	void OnMoveBegin(FGameplayEventData Payload);
+protected:
+	virtual void ResetTargetMontageState() override;
+
+	virtual void StartTargetMontageEventTasks() override;
+
+	virtual bool IsHitActorAcceptable(AActor* HitActor) const override;
+
+	virtual void ExecuteTargetSkill(AActor* TargetActor, const FGameplayEventData& Payload) override;
+
+	bool BuildLandingLocation(AActor* TargetActor, FVector& OutLocation) const;
 
 	void StartLeapingMove(float Duration);
 
-    AActor* ResolveTargetFromPayload(const FGameplayEventData* TriggerEventData) const;
-    bool ValidateTargetForActivation(AActor* TargetActor) const;
-    bool BuildLandingLocation(AActor* TargetActor, FVector& OutLocation) const;
-
-    void FaceTarget(AActor* TargetActor);;
-
 	UFUNCTION()
-	void OnAttackHit(FGameplayEventData Payload);
-
-	UFUNCTION()
-	void OnMontageCompleted();
-
-	UFUNCTION()
-	void OnMontageInterrupted();
-
-	UFUNCTION()
-	void OnMontageCancelled();
-
-	UFUNCTION()
-	void OnMontageBlendOut();
-
-	void EndLeapingSlamAbility(bool bWasCancelled);
-	
-	
+	void OnMoveBegin(FGameplayEventData Payload);
 };

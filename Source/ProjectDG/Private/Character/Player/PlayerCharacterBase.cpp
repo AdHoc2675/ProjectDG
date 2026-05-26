@@ -780,7 +780,7 @@ void APlayerCharacterBase::ToggleInventoryAction()
 	{
 		if (ADG_HUD* HUD = Cast<ADG_HUD>(PC->GetHUD()))
 		{
-			HUD->ToggleInventoryWidget();
+			HUD->ToggleCharacterProfileWidget();
 		}
 	}
 }
@@ -801,22 +801,6 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 	}
 
 	const FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
-
-	if (SkillTag == DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag() ||
-		SkillTag == DGGameplayTags::Skill_Warrior_DoomStrike.GetTag())
-	{
-		const FGameplayTag SkillInputEventTag = GetSkillInputEventTag(SkillTag);
-		AActor* TargetActor = ResolveSkillEventTarget(SkillTag);
-
-		SendTargetedSkillInputStartedEvent(SkillInputEventTag, TargetActor);
-
-		if (!HasAuthority())
-		{
-			ServerSendTargetedSkillInputStartedEvent(SkillInputEventTag, TargetActor);
-		}
-
-		return;
-	}
 
 	if (SkillTag.IsValid())
 	{
@@ -937,52 +921,6 @@ FGameplayTag APlayerCharacterBase::GetSkillInputEventTag(FGameplayTag SkillTag) 
 	return FGameplayTag::EmptyTag;
 }
 
-void APlayerCharacterBase::ServerSendTargetedSkillInputStartedEvent_Implementation(
-	FGameplayTag SkillEventTag,
-	AActor* TargetActor
-)
-{
-	SendTargetedSkillInputStartedEvent(SkillEventTag, TargetActor);
-}
-
-void APlayerCharacterBase::SendTargetedSkillInputStartedEvent(FGameplayTag SkillEventTag, AActor* TargetActor)
-{
-	if (!SkillEventTag.IsValid())
-	{
-		return;
-	}
-
-	FGameplayEventData Payload;
-	Payload.EventTag = SkillEventTag;
-	Payload.Instigator = this;
-	Payload.Target = TargetActor;
-
-	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, SkillEventTag, Payload);
-}
-
-AActor* APlayerCharacterBase::ResolveSkillEventTarget(FGameplayTag SkillTag) const
-{
-	if (SkillTag != DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag() &&
-		SkillTag != DGGameplayTags::Skill_Warrior_DoomStrike.GetTag())
-	{
-		return nullptr;
-	}
-
-	if (!LockOnComponent)
-	{
-		return nullptr;
-	}
-
-	constexpr float TargetingDistance = 2000.f;
-
-	FLockOnTargetResult TargetResult;
-	if (!LockOnComponent->FindBestTarget(TargetingDistance, TargetResult))
-	{
-		return nullptr;
-	}
-
-	return TargetResult.TargetActor;
-}
 
 void APlayerCharacterBase::ClientDrawAttackTraceDebug_Implementation(
 	FVector_NetQuantize Start,
