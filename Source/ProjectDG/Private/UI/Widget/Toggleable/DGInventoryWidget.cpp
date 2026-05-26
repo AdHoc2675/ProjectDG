@@ -89,7 +89,7 @@ void UDGInventoryWidget::CloseInventory()
 	{
 		if (ADG_HUD* HUD = Cast<ADG_HUD>(PC->GetHUD()))
 		{
-			HUD->ToggleInventoryWidget();
+			HUD->ToggleCharacterProfileWidget();
 		}
 	}
 }
