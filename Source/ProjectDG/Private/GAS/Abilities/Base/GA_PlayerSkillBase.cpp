@@ -98,6 +98,12 @@ bool UGA_PlayerSkillBase::CanMoveWhileCasting() const
 	return Data && Data->bCanMoveWhileCasting;
 }
 
+float UGA_PlayerSkillBase::GetSkillAOETickInterval() const
+{
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	return Data ? Data->AOETickInterval : 0.05f;
+}
+
 bool UGA_PlayerSkillBase::IsSkillInputHeld(FGameplayTag InSkillTag) const
 {
 	if (!InSkillTag.IsValid())

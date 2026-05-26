@@ -6,6 +6,10 @@
 #include "GAS/Abilities/Base/GA_PlayerSkillBase.h"
 #include "GA_AOESkillBase.generated.h"
 
+class UAbilityTask_AOEOverlapTick;
+class UAbilityTask_PlayMontageAndWait;
+class UAbilityTask_WaitGameplayEvent;
+
 /**
  * 장판 / 범위형 스킬 공통 Base.
  *
@@ -29,4 +33,68 @@ class PROJECTDG_API UGA_AOESkillBase : public UGA_PlayerSkillBase
 
 public:
 	UGA_AOESkillBase();
+	
+	virtual void ActivateAbility(
+			 const FGameplayAbilitySpecHandle Handle,
+			 const FGameplayAbilityActorInfo* ActorInfo,
+			 const FGameplayAbilityActivationInfo ActivationInfo,
+			 const FGameplayEventData* TriggerEventData
+	 ) override;
+
+	virtual void EndAbility(
+			const FGameplayAbilitySpecHandle Handle,
+			const FGameplayAbilityActorInfo* ActorInfo,
+			const FGameplayAbilityActivationInfo ActivationInfo,
+			bool bReplicateEndAbility,
+			bool bWasCancelled
+	) override;
+
+protected:
+	UPROPERTY()
+	TObjectPtr<UAbilityTask_PlayMontageAndWait> MontageTask = nullptr;
+
+	UPROPERTY()
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> AOEWindowBeginTask = nullptr;
+
+	UPROPERTY()
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> AOEWindowEndTask = nullptr;
+
+	UPROPERTY()
+	TObjectPtr<UAbilityTask_AOEOverlapTick> AOEOverlapTask = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "DG|AOE")
+	float AOEHalfHeight = 150.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "DG|AOE")
+	TEnumAsByte<ECollisionChannel> AOETraceChannel = ECC_Pawn;
+
+	bool bEndingAOEAbility = false;
+
+protected:
+	void StartAOEEventTasks();
+	void PlayAOEMontage();
+	void StartAOEOverlap();
+	void StopAOEOverlap();
+	void EndAOEAbility();
+
+	UFUNCTION()
+	void OnAOEWindowBegin(FGameplayEventData Payload);
+
+	UFUNCTION()
+	void OnAOEWindowEnd(FGameplayEventData Payload);
+
+	UFUNCTION()
+	void OnAOETargetFound(AActor* TargetActor);
+
+	UFUNCTION()
+	void OnMontageCompleted();
+
+	UFUNCTION()
+	void OnMontageInterrupted();
+
+	UFUNCTION()
+	void OnMontageBlendOut();
+
+	UFUNCTION()
+	void OnMontageCancelled();
 };
