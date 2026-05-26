@@ -9,6 +9,9 @@
 #include "UI/Widget/Toggleable/DGInventoryWidget.h"
 #include "UI/Widget/Toggleable/DGCharacterProfileWidget.h"
 
+#include "GameFramework/DG_PlayerState.h"
+#include "GAS/Attributes/DG_AttributeSet.h"
+
 #include "Blueprint/UserWidget.h"
 
 
@@ -177,13 +180,21 @@ void ADG_HUD::ToggleCharacterProfileWidget()
 			if (CharacterProfileWidget)
 			{
 				APlayerController* PC = GetOwningPlayerController();
-				APlayerState* PS = PC ? PC->PlayerState : nullptr;
-				const FWidgetControllerParams WCParams(PC, PS, nullptr, nullptr);
+
+				// ADG_PlayerState로 캐스팅하여 값을 가져옴
+				ADG_PlayerState* PS = PC ? Cast<ADG_PlayerState>(PC->PlayerState) : nullptr;
+
+				// ASC와 AttributeSet을 실제 PlayerState에서 가져옴.
+				UAbilitySystemComponent* ASC = PS ? PS->GetAbilitySystemComponent() : nullptr;
+				UAttributeSet* AS = PS ? PS->GetDGAttributeSet() : nullptr;
+
+				// 컨트롤러에 값 전달
+				const FWidgetControllerParams WCParams(PC, PS, ASC, AS);
 
 				UDGInventoryWidgetController* WidgetController = GetInventoryWidgetController(WCParams);
 
-				// 최상위 모듈에 컨트롤러를 넘겨주면, 자식(Info, Inventory)들에게 자동으로 전파됨
 				CharacterProfileWidget->BindToController(WidgetController);
+
 			}
 		}
 

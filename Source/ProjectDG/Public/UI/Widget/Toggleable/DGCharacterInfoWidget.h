@@ -33,10 +33,35 @@ protected:
 
 	// 기획에 따라 Head, Hand, Feet 추가...
 
-	// --- 상세 스탯 텍스트 ---
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> CombatPowerText;
+	// --- 컨트롤러의 델리게이트와 바인딩될 스탯 콜백 함수들 ---
+	UFUNCTION()
+	void OnHealthChangedCallback(float Health, float MaxHealth);
 
+	UFUNCTION()
+	void OnMentalChangedCallback(float Mental, float MaxMental);
+
+	UFUNCTION()
+	void OnMainStatChangedCallback(float MainStat);
+
+	UFUNCTION()
+	void OnAttackPowerChangedCallback(float AttackPower);
+
+	UFUNCTION()
+	void OnDefenseChangedCallback(float Defense);
+
+	// --- 상세 스탯 텍스트 위젯 ---
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> HPText;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> MPText;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> MainStatText;     // 힘/민첩/지능 등 주스탯
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> AttackPowerText;  // 전투력 or 공격력
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> DefenseText;      // 방어도
 };
