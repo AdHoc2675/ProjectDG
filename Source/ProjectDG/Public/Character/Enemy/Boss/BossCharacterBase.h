@@ -49,6 +49,9 @@ protected:
 	// 소환 직후 보스 전용 스탯 적용
 	virtual void PossessedBy(AController* NewController) override;
 
+	// BT 시작 후 Blackboard 초기값 설정
+	virtual void BeginPlay() override;
+
 	// Health Attribute 변경 콜백 (ASC Delegate로 바인딩)
 	void OnHealthChanged(const FOnAttributeChangeData& Data);
 

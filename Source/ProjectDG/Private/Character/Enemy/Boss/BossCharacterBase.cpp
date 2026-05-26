@@ -16,7 +16,7 @@ ABossCharacterBase::ABossCharacterBase()
 	BossAttributeSet = CreateDefaultSubobject<UDG_BossAttributeSet>(TEXT("BossAttributeSet"));
 }
 
-//Boss Class Data로 초기 데이터 설정
+//Boss Class Data 초기 태그 설정
 void ABossCharacterBase::InitializeBossTagFromClassData()
 {
 	if (!HasAuthority())
@@ -45,11 +45,16 @@ void ABossCharacterBase::InitializeBossTagFromClassData()
 			AbilitySystemComponent->AddLooseGameplayTag(BossClassData->InitialPhaseTag, 1, EGameplayTagReplicationState::TagOnly);
 		}
 
-		UE_LOG(LogTemp, Warning, TEXT("[BossCharacterBase] InitializeBossTagFromClassData Success. NetMode=%d Name=%s"),
-			static_cast<int32>(GetNetMode()),
-			*GetName());
+		// UE_LOG(LogTemp, Warning, TEXT("[BossCharacterBase] InitializeBossTagFromClassData Success. NetMode=%d Name=%s"),
+		// 	static_cast<int32>(GetNetMode()),
+		// 	*GetName());
 	}
 	
+}
+
+void ABossCharacterBase::BeginPlay()
+{
+	Super::BeginPlay();
 }
 
 void ABossCharacterBase::PossessedBy(AController* NewController)
@@ -70,6 +75,7 @@ void ABossCharacterBase::PossessedBy(AController* NewController)
 	}
 }
 
+// 보스 전용 효과 적용 (보스 전용 AttributeSet과 연동된 GE)
 void ABossCharacterBase::ApplyDefaultEffects()
 {
 	if (!HasAuthority() || !AbilitySystemComponent)
@@ -215,14 +221,6 @@ void ABossCharacterBase::UpdateHealthPhaseTags(float HealthRatio)
 
 			AbilitySystemComponent->AddLooseGameplayTag(Entry.PhaseTag, 1, EGameplayTagReplicationState::TagOnly);
 			BossAttributeSet->SetCurrentPhase(EntryPhaseIndex);
-
-			if (AAIController* AIController = Cast<AAIController>(GetController()))
-			{
-				if (UBlackboardComponent* Blackboard = AIController->GetBlackboardComponent())
-				{
-					Blackboard->SetValueAsBool(TEXT("PendingPhaseGimmick"), true);
-				}
-			}
 
 			UE_LOG(LogTemp, Warning, TEXT("[BossCharacterBase] Phase transition → Phase %.0f (HealthRatio=%.2f)"),
 				EntryPhaseIndex, HealthRatio);

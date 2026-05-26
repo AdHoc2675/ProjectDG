@@ -7,11 +7,10 @@ class UGameplayAbility;
 
 /**
  * 페이즈 전환 기믹 어빌리티를 발동하고 완료까지 대기한 뒤
- * Blackboard의 PendingPhaseGimmick 키를 클리어한다.
+ * Blackboard의 PendingPhaseSkill 키를 클리어한다.
  *
- * PhaseGimmickAbilities 배열:
- *   Index 0 → Phase 2 기믹
- *   Index 1 → Phase 3 기믹
+ * 브랜치마다 Task 인스턴스를 따로 두고, 각 인스턴스에
+ * GimmickAbility 하나씩만 설정하면 된다.
  */
 UCLASS()
 class PROJECTDG_API UBTTask_KashapaPhaseGimmick : public UBTTaskNode
@@ -26,11 +25,11 @@ public:
 	virtual uint16 GetInstanceMemorySize() const override;
 
 protected:
-	// 페이즈 순서에 맞춰 기믹 어빌리티 등록 (Index 0 = Phase2, Index 1 = Phase3)
+	// 이 브랜치에서 발동할 기믹 어빌리티
 	UPROPERTY(EditAnywhere, Category = "Phase Gimmick")
-	TArray<TSubclassOf<UGameplayAbility>> PhaseGimmickAbilities;
+	TSubclassOf<UGameplayAbility> GimmickAbility;
 
-	// Blackboard Key 이름 (BB_Kashapa에 추가한 키와 일치해야 함)
+	// Blackboard Key 이름 (BB_Kashapa의 PendingPhaseSkill 키와 일치해야 함)
 	UPROPERTY(EditAnywhere, Category = "Phase Gimmick")
-	FName PendingPhaseGimmickKeyName = TEXT("PendingPhaseGimmick");
+	FName PendingPhaseSkillKeyName = TEXT("PendingPhaseSkill");
 };

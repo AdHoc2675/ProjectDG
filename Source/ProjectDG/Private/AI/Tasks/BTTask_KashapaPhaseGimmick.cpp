@@ -4,12 +4,12 @@
 #include "AbilitySystemComponent.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Character/BaseCharacter.h"
-#include "GAS/Attributes/DG_BossAttributeSet.h"
 
 struct FBTPhaseGimmickMemory
 {
 	TWeakObjectPtr<UAbilitySystemComponent> ASC;
 	TSubclassOf<UGameplayAbility> ActivatedAbilityClass;
+	int32 ActivatedPhaseValue = 0; // 실행 시점의 BB PendingPhaseSkill 값
 };
 
 UBTTask_KashapaPhaseGimmick::UBTTask_KashapaPhaseGimmick()
@@ -25,6 +25,11 @@ uint16 UBTTask_KashapaPhaseGimmick::GetInstanceMemorySize() const
 
 EBTNodeResult::Type UBTTask_KashapaPhaseGimmick::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
+	if (!GimmickAbility)
+	{
+		return EBTNodeResult::Failed;
+	}
+
 	AAIController* AIController = OwnerComp.GetAIOwner();
 	if (!AIController)
 	{
@@ -43,27 +48,14 @@ EBTNodeResult::Type UBTTask_KashapaPhaseGimmick::ExecuteTask(UBehaviorTreeCompon
 		return EBTNodeResult::Failed;
 	}
 
-	// BossAttributeSet에서 현재 페이즈를 읽어 어빌리티 인덱스 결정
-	// CurrentPhase: 2 → Index 0, 3 → Index 1, ...
-	const UDG_BossAttributeSet* BossAS = ASC->GetSet<UDG_BossAttributeSet>();
-	if (!BossAS)
-	{
-		return EBTNodeResult::Failed;
-	}
-
-	const int32 AbilityIndex = FMath::RoundToInt(BossAS->GetCurrentPhase()) - 2;
-	if (!PhaseGimmickAbilities.IsValidIndex(AbilityIndex) || !PhaseGimmickAbilities[AbilityIndex])
-	{
-		return EBTNodeResult::Failed;
-	}
-
-	TSubclassOf<UGameplayAbility> GimmickAbility = PhaseGimmickAbilities[AbilityIndex];
+	UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
 
 	if (ASC->TryActivateAbilityByClass(GimmickAbility))
 	{
 		FBTPhaseGimmickMemory* Memory = reinterpret_cast<FBTPhaseGimmickMemory*>(NodeMemory);
 		Memory->ASC = ASC;
 		Memory->ActivatedAbilityClass = GimmickAbility;
+		Memory->ActivatedPhaseValue = Blackboard ? Blackboard->GetValueAsInt(PendingPhaseSkillKeyName) : 0;
 
 		return EBTNodeResult::InProgress;
 	}
@@ -93,10 +85,13 @@ void UBTTask_KashapaPhaseGimmick::TickTask(UBehaviorTreeComponent& OwnerComp, ui
 
 	if (!bIsActive)
 	{
-		// 기믹 어빌리티 완료 → PendingPhaseGimmick 클리어
 		if (UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent())
 		{
-			Blackboard->ClearValue(PendingPhaseGimmickKeyName);
+			// 실행 중 다음 페이즈가 전환됐다면 클리어하지 않고 남겨둠
+			if (Blackboard->GetValueAsInt(PendingPhaseSkillKeyName) == Memory->ActivatedPhaseValue)
+			{
+				Blackboard->ClearValue(PendingPhaseSkillKeyName);
+			}
 		}
 
 		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
