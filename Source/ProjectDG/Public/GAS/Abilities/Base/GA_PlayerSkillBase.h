@@ -37,6 +37,9 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
 	FGameplayTag GetSkillTag() const;
+	
+	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
+	FGameplayTag GetSkillInputEventTag() const;
 
 	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
 	float GetSkillRange() const;
@@ -70,6 +73,9 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
 	bool CanMoveWhileCasting() const;
+	
+	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
+	float GetSkillAOETickInterval() const;
 
 protected:
 	/** 현재 SkillTag가 할당된 입력 슬롯이 눌려 있는지 확인 */

@@ -5,6 +5,7 @@ namespace DGGameplayTags
 	//Team (아군적군 구분하는태그)
 	UE_DEFINE_GAMEPLAY_TAG(Team_Player, "Team.Player")
 	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy, "Team.Enemy")
+	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Boss, "Team.Enemy.Boss")
 	UE_DEFINE_GAMEPLAY_TAG(Team_Object, "Team.Object")
 
 	// Character Class
@@ -25,6 +26,9 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_InputWindow_Open, "Event.Combo.InputWindow.Open")
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_InputWindow_Close, "Event.Combo.InputWindow.Close")
 	
+	UE_DEFINE_GAMEPLAY_TAG(Event_AOE_OverlapWindow_Begin, "Event.AOE.OverlapWindow.Begin")
+	UE_DEFINE_GAMEPLAY_TAG(Event_AOE_OverlapWindow_End, "Event.AOE.OverlapWindow.End")
+	
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_Branch, "Event.Combo.Branch")
 	
 	UE_DEFINE_GAMEPLAY_TAG(Event_Attack_Hit, "Event.Attack.Hit")
@@ -40,7 +44,9 @@ namespace DGGameplayTags
 	
 	// 전사스킬 예리한일격 탭으로 전달 시 필요 태그
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Warrior_SharpStrike, "Event.Input.Warrior.SharpStrike")
+	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Warrior_CuttingSmash, "Event.Input.Warrior.CuttingSmash")
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Warrior_LeapingSlam, "Event.Input.Warrior.LeapingSlam")
+	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Warrior_AnkleSlash, "Event.Input.Warrior.AnkleSlash")
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Warrior_DoomStrike, "Event.Input.Warrior.DoomStrike")
 	
 	
@@ -78,7 +84,12 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Data_BaseDamage, "Data_BaseDamage")
 	UE_DEFINE_GAMEPLAY_TAG(Data_DamageMultiplier, "Data_DamageMultiplier")
 
-	// Block       
+	// Block
 	UE_DEFINE_GAMEPLAY_TAG(Block_Movement_Dodge, "Block.Movement.Dodge")
 	UE_DEFINE_GAMEPLAY_TAG(Block_Movement_Sprint, "Block.Movement.Sprint")
+
+	// Boss Phase
+	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Phase_1, "State.Boss.Phase.1")
+	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Phase_2, "State.Boss.Phase.2")
+	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Phase_3, "State.Boss.Phase.3")
 }

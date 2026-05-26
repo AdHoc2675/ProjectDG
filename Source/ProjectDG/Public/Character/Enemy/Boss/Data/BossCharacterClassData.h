@@ -9,6 +9,20 @@
 
 class UGameplayEffect;
 
+USTRUCT(BlueprintType)
+struct FBossPhaseEntry
+{
+	GENERATED_BODY()
+
+	// 이 페이즈를 나타내는 태그 (e.g. State.Boss.Phase.2)
+	UPROPERTY(EditDefaultsOnly, Category = "Phase")
+	FGameplayTag PhaseTag;
+
+	// 이 비율 이하로 떨어지면 해당 페이즈 진입 (0.0 ~ 1.0)
+	UPROPERTY(EditDefaultsOnly, Category = "Phase", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float HealthRatioThreshold = 0.5f;
+};
+
 /**
  * UBossCharacterClassData
  * 보스 전용 초기 스탯/효과를 관리하는 데이터 에셋
@@ -23,6 +37,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Boss")
 	FGameplayTag BossTag;
 
+	// 초기 페이즈 태그 (소환 시점에 부여, e.g. State.Boss.Phase.1)
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Phase")
+	FGameplayTag InitialPhaseTag;
+
 	// 기본 AttributeSet(UDG_AttributeSet) 초기화용 GE
 	UPROPERTY(EditDefaultsOnly, Category = "GAS")
 	TArray<TSubclassOf<UGameplayEffect>> StartupEffects;
@@ -30,4 +48,9 @@ public:
 	// 보스 전용 AttributeSet(UDG_BossAttributeSet) 초기화용 GE
 	UPROPERTY(EditDefaultsOnly, Category = "GAS")
 	TArray<TSubclassOf<UGameplayEffect>> BossStartupEffects;
+
+	// 페이즈 전환 설정 (HealthRatioThreshold 내림차순으로 입력할 것)
+	// e.g. [{Phase2, 0.66}, {Phase3, 0.33}]
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Phase")
+	TArray<FBossPhaseEntry> PhaseEntries;
 };
