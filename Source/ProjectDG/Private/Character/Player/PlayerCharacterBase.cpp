@@ -802,8 +802,7 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 
 	const FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
 
-	if (SkillTag == DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag() ||
-		SkillTag == DGGameplayTags::Skill_Warrior_DoomStrike.GetTag())
+	if (SkillTag == DGGameplayTags::Skill_Warrior_DoomStrike.GetTag())
 	{
 		const FGameplayTag SkillInputEventTag = GetSkillInputEventTag(SkillTag);
 		AActor* TargetActor = ResolveSkillEventTarget(SkillTag);
@@ -962,8 +961,7 @@ void APlayerCharacterBase::SendTargetedSkillInputStartedEvent(FGameplayTag Skill
 
 AActor* APlayerCharacterBase::ResolveSkillEventTarget(FGameplayTag SkillTag) const
 {
-	if (SkillTag != DGGameplayTags::Skill_Warrior_LeapingSlam.GetTag() &&
-		SkillTag != DGGameplayTags::Skill_Warrior_DoomStrike.GetTag())
+	if (SkillTag != DGGameplayTags::Skill_Warrior_DoomStrike.GetTag())
 	{
 		return nullptr;
 	}
