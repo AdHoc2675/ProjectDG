@@ -1,8 +1,12 @@
 
 #include "Character/Enemy/EnemyCharacterBase.h"
 
+#include "AI/Controller/AIControllerBase.h"
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
 #include "AbilitySystemComponent.h"
 #include "AttributeSet.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GAS/Attributes/DG_AttributeSet.h"
 #include "Core/DG_Debug.h"
 #include "Core/DG_GameplayTags.h"
@@ -33,6 +37,13 @@ void AEnemyCharacterBase::PossessedBy(AController* NewController)
     {
         GrantDefaultAbilities();
         ApplyDefaultEffects();
+
+        if (AbilitySystemComponent)
+        {
+            AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(
+                UDG_AttributeSet::GetHealthAttribute()
+            ).AddUObject(this, &AEnemyCharacterBase::OnHealthChanged_DeathCheck);
+        }
     }
 }
 
@@ -90,6 +101,67 @@ void AEnemyCharacterBase::ApplyDefaultEffects()
                 AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
             }
         }
+    }
+}
+
+void AEnemyCharacterBase::HandleDeath()
+{
+    if (HasAuthority())
+    {
+        if (AbilitySystemComponent)
+        {
+            AbilitySystemComponent->AddLooseGameplayTag(
+                DGGameplayTags::State_Enemy_Dead,
+                1,
+                EGameplayTagReplicationState::TagOnly
+            );
+        }
+
+        if (AAIControllerBase* AIController = Cast<AAIControllerBase>(GetController()))
+        {
+            AIController->StopAIOnDeath();
+        }
+    }
+
+    if (HasAuthority())
+    {
+        MulticastPlayDeathMontage();
+    }
+
+    Super::HandleDeath();
+}
+
+void AEnemyCharacterBase::MulticastPlayDeathMontage_Implementation()
+{
+    if (!DeathMontage)
+    {
+        return;
+    }
+
+    if (USkeletalMeshComponent* MeshComp = GetMesh())
+    {
+        if (UAnimInstance* AnimInstance = MeshComp->GetAnimInstance())
+        {
+            AnimInstance->Montage_Play(DeathMontage);
+        }
+    }
+}
+
+void AEnemyCharacterBase::OnHealthChanged_DeathCheck(const FOnAttributeChangeData& Data)
+{
+    if (!HasAuthority())
+    {
+        return;
+    }
+
+    if (bIsDead)
+    {
+        return;
+    }
+
+    if (Data.NewValue <= 0.f)
+    {
+        Die();
     }
 }
 
