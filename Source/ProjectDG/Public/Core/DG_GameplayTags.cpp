@@ -79,10 +79,20 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_DoomStrike_Active, "State.Skill.Warrior.DoomStrike.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_LeapingSlam_Active, "State.Skill.Warrior.LeapingSlam.Active")
 	
+	// Cooldown.Warrior
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_SharpStrike, "Cooldown.Skill.Warrior.SharpStrike")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_CuttingSmash, "Cooldown.Skill.Warrior.CuttingSmash")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_AnkleSlash, "Cooldown.Skill.Warrior.AnkleSlash")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_ShockWave, "Cooldown.Skill.Warrior.ShockWave")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_DoomStrike, "Cooldown.Skill.Warrior.DoomStrike")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_LeapingSlam, "Cooldown.Skill.Warrior.LeapingSlam")
+	
 	// Data
 	UE_DEFINE_GAMEPLAY_TAG(Data_Damage, "Data.Damage")
 	UE_DEFINE_GAMEPLAY_TAG(Data_BaseDamage, "Data_BaseDamage")
 	UE_DEFINE_GAMEPLAY_TAG(Data_DamageMultiplier, "Data_DamageMultiplier")
+	
+	UE_DEFINE_GAMEPLAY_TAG(Data_Cooldown, "Data.Cooldown")
 
 	// Block
 	UE_DEFINE_GAMEPLAY_TAG(Block_Movement_Dodge, "Block.Movement.Dodge")

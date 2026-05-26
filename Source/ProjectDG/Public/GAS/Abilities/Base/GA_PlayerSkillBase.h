@@ -30,6 +30,23 @@ protected:
 	/** 이 GA가 사용할 스킬 데이터 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DG|Skill")
 	TObjectPtr<UPlayerSkillData> SkillData = nullptr;
+	
+	//쿨타임 관련 스킬 공통 로직
+public:
+	virtual const FGameplayTagContainer* GetCooldownTags() const override;
+
+protected:
+	virtual void ApplyCooldown(
+			const FGameplayAbilitySpecHandle Handle,
+			const FGameplayAbilityActorInfo* ActorInfo,
+			const FGameplayAbilityActivationInfo ActivationInfo
+	) const override;
+
+	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
+	FGameplayTag GetSkillCooldownTag() const;
+
+private:
+	mutable FGameplayTagContainer TempCooldownTags;
 
 protected:
 	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
