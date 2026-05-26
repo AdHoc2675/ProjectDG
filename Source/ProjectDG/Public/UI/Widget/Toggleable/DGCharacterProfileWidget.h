@@ -27,9 +27,9 @@ protected:
 
 	// 좌상단/우상단에 배치될 캐릭터 스탯 및 장비 창
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UDGCharacterInfoWidget> WBP_DGCharaterInfoWidget;
+	TObjectPtr<UDGCharacterInfoWidget> DGCharaterInfoWidget;
 
 	// 하단에 배치될 인벤토리 창
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UDGInventoryWidget> WBP_DGInventoryWidget;
+	TObjectPtr<UDGInventoryWidget> DGInventoryWidget;
 };

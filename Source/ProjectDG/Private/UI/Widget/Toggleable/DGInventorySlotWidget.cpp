@@ -55,15 +55,15 @@ void UDGInventorySlotWidget::UpdateSlot(UDGItemInstance* ItemInstance)
 
 FReply UDGInventorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	FReply Reply = Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
-
-	// 왼쪽 마우스 클릭이고 빈 칸이 아니면(아이템이 존재하면) 드래그 감지 활성화
+	// 왼쪽 마우스 클릭이고 빈 칸이 아니면(아이템이 존재하면) 드래그 감지
 	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && CurrentItemInstance)
 	{
-		Reply.DetectDrag(TakeWidget(), EKeys::LeftMouseButton);
+		// Handled()를 리턴하여 인벤토리 UI가 아닌 곳에 클릭 이벤트가 전달되는 것을 차단 -> 플레이어 공격 방지
+		return FReply::Handled().DetectDrag(TakeWidget(), EKeys::LeftMouseButton);
 	}
 
-	return Reply;
+	// 아이템이 없거나 우클릭 등 다른 입력이면 부모(Unhandled)에게 넘김
+	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
 }
 
 void UDGInventorySlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation)

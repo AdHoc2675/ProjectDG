@@ -35,10 +35,12 @@ bool UDGEquipmentSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDr
 	UDGItemDragDropOperation* ItemDragOp = Cast<UDGItemDragDropOperation>(InOperation);
 	if (!ItemDragOp || !ItemDragOp->DraggedItem || !ItemDragOp->DraggedItem->ItemDef)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[DGEquipmentSlotWidget] 드롭 실패: 유효하지 않은 드래그 오퍼레이션 또는 아이템 인스턴스"));
+
 		return false; // 본인들 아이템이 아니라면 무시
 	}
 
-	// 끌고 온 아이템이 "장비"이고, 현재 이 슬롯(무기/방어구 등)의 타입과 일치하는지 체스!
+	// 끌고 온 아이템이 "장비"이고, 현재 이 슬롯(무기/방어구 등)의 타입과 일치하는지 체크
 	if (ItemDragOp->DraggedItem->ItemDef->ItemType == EDGItemType::Equipment &&
 		ItemDragOp->DraggedItem->ItemDef->EquipmentType == SlotType)
 	{
@@ -46,15 +48,21 @@ bool UDGEquipmentSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDr
 		UDGInventoryWidgetController* Controller = Cast<UDGInventoryWidgetController>(WidgetController);
 		if (Controller)
 		{
-			// 장착 실행! (장착 시 스탯 버프 적용 -> 컨트롤러 감지 -> InfoWidget UI 업데이트의 연쇄 트리거 부팅)
+			// 장착 실행 (장착 시 스탯 버프 적용 -> 컨트롤러 감지 -> InfoWidget UI 업데이트의 연쇄 트리거 부팅)
 			Controller->EquipItemFromUI(ItemDragOp->DraggedItem);
 
 			// 뷰 화면 즉시 갱신 (슬롯 안에 무기 아이콘 표기)
 			UpdateSlot(ItemDragOp->DraggedItem);
 			EquippedItemInstance = ItemDragOp->DraggedItem;
 
-			return true; // 성공적으로 드롭 완료!
+			UE_LOG(LogTemp, Log, TEXT("[DGEquipmentSlotWidget] 장착 성공: 아이템 '%s'이(가) 슬롯 '%s'에 장착됨"), *ItemDragOp->DraggedItem->ItemDef->ItemName.ToString(), *GetName());
+
+			return true; // 성공적으로 드롭 완료
 		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[DGEquipmentSlotWidget] 장착 실패: 아이템 부위'%s'와 슬롯 부위'%s'가 불일치"), *ItemDragOp->DraggedItem->ItemDef->ItemName.ToString(), *GetName());
 	}
 
 	// 장착 타입이 안 맞거나 장비가 아닌 소모품을 올린 경우 실패

@@ -10,14 +10,14 @@ void UDGCharacterProfileWidget::BindToController(UDGInventoryWidgetController* C
 	SetWidgetController(Controller);
 
 	// 1. 캐릭터 장비/스탯 창에 컨트롤러 전달
-	if (WBP_DGCharaterInfoWidget)
+	if (DGCharaterInfoWidget)
 	{
-		WBP_DGCharaterInfoWidget->BindToController(Controller);
+		DGCharaterInfoWidget->BindToController(Controller);
 	}
 
 	// 2. 인벤토리 창에 컨트롤러 전달
-	if (WBP_DGInventoryWidget)
+	if (DGInventoryWidget)
 	{
-		WBP_DGInventoryWidget->BindToController(Controller);
+		DGInventoryWidget->BindToController(Controller);
 	}
 }

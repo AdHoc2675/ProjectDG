@@ -9,6 +9,16 @@ void UDGCharacterInfoWidget::BindToController(UDGInventoryWidgetController* Cont
 	{
 		SetWidgetController(Controller);
 
+		// 컨트롤러를 장비 슬롯 위젯에도 전달하여, 슬롯에서 장착/해제 시 컨트롤러의 장비 변경 함수가 호출될 수 있도록 함
+		if (WeaponSlot)
+		{
+			WeaponSlot->SetWidgetController(Controller);
+		}
+		if (ArmorSlot)
+		{
+			ArmorSlot->SetWidgetController(Controller);
+		}
+
 		// TODO: Controller->OnEquipmentUpdated 바인딩
 		// TODO: 스탯 변경 델리게이트(ASC 의존성 등) 바인딩
 		
