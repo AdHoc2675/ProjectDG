@@ -34,4 +34,14 @@ private:
 	UPROPERTY()
 	TObjectPtr<UDGItemToolTipWidget> CachedToolTipWidget;
 
+
+protected:
+	// 드래그 앤 드롭 구현을 위한 UMG 네이티브 이벤트 오버라이드
+	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+	virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
+
+private:
+	// 이 슬롯이 현재 보유 중인 아이템 데이터 저장용
+	UPROPERTY()
+	TObjectPtr<UDGItemInstance> CurrentItemInstance;
 };

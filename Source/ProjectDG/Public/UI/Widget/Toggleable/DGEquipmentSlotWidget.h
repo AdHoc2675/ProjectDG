@@ -27,9 +27,14 @@ public:
 	void UpdateSlot(UDGItemInstance* EquippedItem);
 
 protected:
+	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+
+
 	// 장착된 실제 아이템 아이콘
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> ItemIcon;
 
-	// (나중에 추가) 드롭 받았을 때 장착을 처리할 NativeOnDrop 오버라이드 예정
+	// 현재 슬롯에 껴 있는 아이템 (이후 장비 해제 로직 구현 시 필요)
+	UPROPERTY()
+	TObjectPtr<UDGItemInstance> EquippedItemInstance;
 };

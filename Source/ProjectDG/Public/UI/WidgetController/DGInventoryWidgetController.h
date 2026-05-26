@@ -29,6 +29,9 @@ public:
 	virtual void BroadcastInitialValues() override;
 	virtual void BindCallbacksToDependencies() override;
 
+	// UI에서 장착 요청이 들어왔을 때 모델(Component)로 넘기는 중개자 함수
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void EquipItemFromUI(UDGItemInstance* ItemToEquip);
 
 	// UI에서 탭이 전환되었을 때 호출되는 함수
 	UFUNCTION(BlueprintCallable, Category = "Inventory")

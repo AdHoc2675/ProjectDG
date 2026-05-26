@@ -97,6 +97,24 @@ void UDGInventoryWidgetController::BindCallbacksToDependencies()
 	}
 }
 
+void UDGInventoryWidgetController::EquipItemFromUI(UDGItemInstance* ItemToEquip)
+{
+	if (!PlayerController) return;
+
+	APawn* PlayerPawn = PlayerController->GetPawn();
+	if (!PlayerPawn) return;
+
+	UDGInventoryComponent* InventoryComp = PlayerPawn->FindComponentByClass<UDGInventoryComponent>();
+	if (InventoryComp)
+	{
+		// 1. 모델에서 장착 (이때 GAS 동적 버프로 인해 HP 등 스탯들도 변경됨)
+		InventoryComp->EquipItem(ItemToEquip);
+
+		// 2. 장착했으니 인벤토리가 한 칸 비었음 -> UI에 남아있는 인벤토리 배열 화면 갱신
+		OnInventoryUpdated.Broadcast(InventoryComp->GetInventoryEquipmentItems());
+	}
+}
+
 void UDGInventoryWidgetController::SwitchTab(EDGItemType TabType)
 {
 	if (!PlayerController) return;

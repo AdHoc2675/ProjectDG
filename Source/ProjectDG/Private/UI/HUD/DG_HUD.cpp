@@ -32,9 +32,24 @@ void ADG_HUD::UpdateInputMode()
 	{
 		PC->bShowMouseCursor = true;
 
-		// 마우스 클릭 시 UI와 게임 모두 반응하게 할 것인지, UI만 반응하게 할 것인지 결정
 		FInputModeGameAndUI InputMode;
-		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+
+		// 마우스가 뷰포트 밖으로 나가는 것을 방지 (선택사항)
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+
+		// 클릭 앤 드래그 시 마우스 커서가 사라지며 게임 시점이 돌아가는 것을 방지
+		InputMode.SetHideCursorDuringCapture(false);
+
+		// UI가 열렸을 때 현재 열린 위젯에 즉시 포커스를 줌
+		if (bIsCharacterProfileOpen && CharacterProfileWidget)
+		{
+			InputMode.SetWidgetToFocus(CharacterProfileWidget->TakeWidget());
+		}
+		else if (bIsMapOpen && FullMapWidget)
+		{
+			InputMode.SetWidgetToFocus(FullMapWidget->TakeWidget());
+		}
+
 		PC->SetInputMode(InputMode);
 	}
 	else
