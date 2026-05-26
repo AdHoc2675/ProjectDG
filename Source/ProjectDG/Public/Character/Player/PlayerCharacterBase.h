@@ -268,22 +268,13 @@ protected:
 	/** 슬롯 태그별 입력 유지 상태 */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "PlayerCharacterBase|Input|Skill")
 	TMap<FGameplayTag, bool> HeldSkillSlots;
-	
 
-protected:
 	
 protected:
 	// 서버 권한 데미지 파이프라인 테스트용.
 	// 임시 진입점이며, 나중에 실제 GA/Skill 구조로 이전 예정.
 	UFUNCTION(Server, Reliable)
 	void Server_TestApplyDamage();
-	
-	UFUNCTION(Server, Reliable)
-	void ServerSendTargetedSkillInputStartedEvent(FGameplayTag SkillEventTag, AActor* TargetActor);
-
-	void SendTargetedSkillInputStartedEvent(FGameplayTag SkillEventTag, AActor* TargetActor);
-
-	AActor* ResolveSkillEventTarget(FGameplayTag SkillTag) const;
 	
 public:
 	// Skill Debug : GA 실행 및 충돌 판정 등은 서버에서만 실행되며 해당 로직에 따른 디버그라인 그리기 로직 또한 서버에서만 실행됐었음 
