@@ -7,6 +7,7 @@
 
 #include "UI/WidgetController/DGInventoryWidgetController.h"
 #include "UI/Widget/Toggleable/DGInventoryWidget.h"
+#include "UI/Widget/Toggleable/DGCharacterProfileWidget.h"
 
 #include "Blueprint/UserWidget.h"
 
@@ -24,7 +25,7 @@ void ADG_HUD::UpdateInputMode()
 	if (!PC) return;
 
 	// 맵이나 인벤토리가 하나라도 열려있으면 마우스 활성화 및 UI 입력 전환
-	if (bIsMapOpen || bIsInventoryOpen)
+	if (bIsMapOpen || bIsCharacterProfileOpen)
 	{
 		PC->bShowMouseCursor = true;
 
@@ -142,7 +143,7 @@ void ADG_HUD::ToggleMapWidget()
 #pragma endregion FullMap
 
 
-#pragma region Inventory
+#pragma region CharacterProfile
 
 UDGInventoryWidgetController* ADG_HUD::GetInventoryWidgetController(const FWidgetControllerParams& WCParams)
 {
@@ -161,58 +162,57 @@ UDGInventoryWidgetController* ADG_HUD::GetInventoryWidgetController(const FWidge
 	return InventoryWidgetController;
 }
 
-void ADG_HUD::ToggleInventoryWidget()
+
+void ADG_HUD::ToggleCharacterProfileWidget()
 {
-	bIsInventoryOpen = !bIsInventoryOpen;
+	bIsCharacterProfileOpen = !bIsCharacterProfileOpen;
 
-	if (bIsInventoryOpen)
+	if (bIsCharacterProfileOpen)
 	{
-		if (InventoryWidget == nullptr && InventoryWidgetClass != nullptr)
+		// 1. 위젯이 없으면 생성
+		if (CharacterProfileWidget == nullptr && CharacterProfileWidgetClass != nullptr)
 		{
-			// 위젯이 UDGInventoryWidget 타입인지 확인하며 캐스팅
-			InventoryWidget = CreateWidget<UDGInventoryWidget>(GetWorld(), InventoryWidgetClass);
+			CharacterProfileWidget = CreateWidget<UDGCharacterProfileWidget>(GetWorld(), CharacterProfileWidgetClass);
 
-			if (InventoryWidget)
+			if (CharacterProfileWidget)
 			{
 				APlayerController* PC = GetOwningPlayerController();
 				APlayerState* PS = PC ? PC->PlayerState : nullptr;
-				// ASC, AS는 임시로 nullptr 처리 (나중에 연동 시 찾아오도록 수정)
-				const FWidgetControllerParams WidgetControllerParams(PC, PS, nullptr, nullptr);
+				const FWidgetControllerParams WCParams(PC, PS, nullptr, nullptr);
 
-				UDGInventoryWidgetController* WidgetController = GetInventoryWidgetController(WidgetControllerParams);
+				UDGInventoryWidgetController* WidgetController = GetInventoryWidgetController(WCParams);
 
-				// UDGUserWidget 레벨의 함수 대신, 방금 만든 함수로 컨트롤러 바인딩
-				if (UDGInventoryWidget* DGInventory = Cast<UDGInventoryWidget>(InventoryWidget))
-				{
-					DGInventory->BindToController(WidgetController);
-				}
+				// 최상위 모듈에 컨트롤러를 넘겨주면, 자식(Info, Inventory)들에게 자동으로 전파됨
+				CharacterProfileWidget->BindToController(WidgetController);
 			}
 		}
 
-		if (InventoryWidget)
+		// 2. 화면에 띄우기
+		if (CharacterProfileWidget)
 		{
-			InventoryWidget->AddToViewport();
+			CharacterProfileWidget->AddToViewport();
 			UpdateInputMode();
 
-			// 창이 열릴 때마다 컨트롤러에게 초기값을 다시 방송해달라고 요청
+			// 창이 열릴 때마다 컨트롤러에 최신화 요청
 			if (InventoryWidgetController)
 			{
 				InventoryWidgetController->BroadcastInitialValues();
 			}
 
-			UE_LOG(LogTemp, Log, TEXT("[DG_HUD] Inventory Widget opened."));
+			UE_LOG(LogTemp, Log, TEXT("[DG_HUD] Character Profile Widget opened."));
 		}
 	}
 	else
 	{
-		if (InventoryWidget)
+		// 3. 화면에서 내리기
+		if (CharacterProfileWidget)
 		{
-			InventoryWidget->RemoveFromParent();
+			CharacterProfileWidget->RemoveFromParent();
 			UpdateInputMode();
 
-			UE_LOG(LogTemp, Log, TEXT("[DG_HUD] Inventory Widget closed."));
+			UE_LOG(LogTemp, Log, TEXT("[DG_HUD] Character Profile Widget closed."));
 		}
 	}
 }
 
-#pragma endregion Inventory
+#pragma endregion CharacterProfile

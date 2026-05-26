@@ -85,29 +85,31 @@ private:
 #pragma endregion FullMap
 
 
-#pragma region Inventory
+#pragma region CharacterProfile
 public:
-	void ToggleInventoryWidget();
+	void ToggleCharacterProfileWidget();
 
 private:
 	// 인벤토리 컨트롤러를 가져오거나 생성하는 헬퍼 함수
 	UDGInventoryWidgetController* GetInventoryWidgetController(const FWidgetControllerParams& WCParams);
 
-	UPROPERTY(EditDefaultsOnly, Category = "DG|UI|Inventory")
-	TSubclassOf<class UDGUserWidget> InventoryWidgetClass;
+	// 캐릭터 프로필 위젯 클래스
+	UPROPERTY(EditDefaultsOnly, Category = "DG|UI|Profile")
+	TSubclassOf<class UDGCharacterProfileWidget> CharacterProfileWidgetClass;
 
+	// 화면에 띄워질 캐릭터 프로필 위젯 인스턴스
 	UPROPERTY()
-	TObjectPtr<class UDGUserWidget> InventoryWidget;
+	TObjectPtr<class UDGCharacterProfileWidget> CharacterProfileWidget;
 
-	bool bIsInventoryOpen = false;
+	bool bIsCharacterProfileOpen = false;
 
 	// 인벤토리 컨트롤러 클래스 지정 속성
-	UPROPERTY(EditAnywhere, Category = "DG|UI|Inventory")
+	UPROPERTY(EditAnywhere, Category = "DG|UI|Profile")
 	TSubclassOf<UDGInventoryWidgetController> InventoryWidgetControllerClass;
 
 	// 인벤토리 컨트롤러 인스턴스
 	UPROPERTY()
 	TObjectPtr<UDGInventoryWidgetController> InventoryWidgetController;
-#pragma endregion Inventory
+#pragma endregion CharacterProfile
 
 };
