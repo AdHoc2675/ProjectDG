@@ -7,7 +7,6 @@
 #include "GameplayTagContainer.h"
 #include "LockOnComponent.generated.h"
 
-
 class UPrimitiveComponent;
 
 USTRUCT(BlueprintType)
@@ -16,7 +15,7 @@ struct PROJECTDG_API FLockOnTargetResult
 	GENERATED_BODY()
 
 	UPROPERTY(BlueprintReadOnly)
-	TObjectPtr<AActor> TargetActor = nullptr; 
+	TObjectPtr<AActor> TargetActor = nullptr;
 
 	UPROPERTY(BlueprintReadOnly)
 	FGameplayTagContainer TargetTags;
@@ -40,19 +39,19 @@ UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PROJECTDG_API ULockOnComponent : public UActorComponent
 {
 	GENERATED_BODY()
-	
+
 public:
 	ULockOnComponent();
-        
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:
 	virtual void TickComponent(
-			float DeltaTime,
-			ELevelTick TickType,
-			FActorComponentTickFunction* ThisTickFunction
+		float DeltaTime,
+		ELevelTick TickType,
+		FActorComponentTickFunction* ThisTickFunction
 	) override;
 
 public:
@@ -61,9 +60,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "DG|LockOn")
 	bool FindBestTargetByTags(
-			const FGameplayTagContainer& RequiredTargetTags,
-			float MaxRangeOverride,
-			FLockOnTargetResult& OutResult
+		const FGameplayTagContainer& RequiredTargetTags,
+		float MaxRangeOverride,
+		FLockOnTargetResult& OutResult
 	) const;
 
 	UFUNCTION(BlueprintCallable, Category = "DG|LockOn")
@@ -86,7 +85,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "DG|LockOn")
 	bool IsValidTarget(AActor* TargetActor, float MaxRangeOverride) const;
-	
+
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DG|LockOn|Tuning")
 	float MaxRange = 2000.f;
@@ -121,16 +120,20 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DG|LockOn|Filter")
 	FGameplayTagContainer AllowedTargetTags;
 
+public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DG|LockOn|Outline")
 	bool bUseTargetOutline = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DG|LockOn|Outline", meta = (ClampMin = "0", ClampMax = "255"))
-	int32 TargetOutlineStencilValue = 111;
-	
+	int32 EnemyOutlineStencilValue = 111;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DG|LockOn|Outline", meta = (ClampMin = "0", ClampMax = "255"))
+	int32 ObjectOutlineStencilValue = 112;
+
 public:
 	FOnLockOnTargetChanged OnLockOnTargetChanged;
 	FOnLockOnTargetChanged OnLockOnReleased;
-	
+
 private:
 	bool ShouldRunRealtimeTargeting() const;
 	bool GetCameraView(FVector& OutCamLoc, FVector& OutCamForward) const;
@@ -140,29 +143,39 @@ private:
 	void RefreshCurrentTarget();
 
 	bool FindBestTargetInternal(
-			const FGameplayTagContainer& RequiredTargetTags,
-			float Range,
-			FLockOnTargetResult& OutResult
+		const FGameplayTagContainer& RequiredTargetTags,
+		float Range,
+		FLockOnTargetResult& OutResult
 	) const;
 
 	void GatherCandidateActors(float Range, TArray<AActor*>& OutCandidates) const;
 
 	bool EvaluateCandidate(
-			AActor* Candidate,
-			const FVector& CamLoc,
-			const FVector& CamForward,
-			const FGameplayTagContainer& RequiredTargetTags,
-			float Range,
-			FLockOnTargetResult& OutCandidateResult
+		AActor* Candidate,
+		const FVector& CamLoc,
+		const FVector& CamForward,
+		const FGameplayTagContainer& RequiredTargetTags,
+		float Range,
+		FLockOnTargetResult& OutCandidateResult
 	) const;
 
 	bool ResolveCandidateTags(AActor* Candidate, FGameplayTagContainer& OutCandidateTags) const;
 
 	void SetCurrentTarget(AActor* NewTarget, const FLockOnTargetResult& NewResult);
 
-	void ApplyTargetOutline(AActor* TargetActor, bool bEnable) const;
-	void ResolveTargetPrimitiveComponents(AActor* TargetActor, TArray<UPrimitiveComponent*>& OutComponents) const;
-	
+	void ApplyTargetOutline(
+		AActor* TargetActor,
+		const FGameplayTagContainer& TargetTags,
+		bool bEnable
+	) const;
+
+	void ResolveTargetPrimitiveComponents(
+		AActor* TargetActor,
+		TArray<UPrimitiveComponent*>& OutComponents
+	) const;
+
+	int32 GetOutlineStencilValueForTarget(const FGameplayTagContainer& TargetTags) const;
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> CurrentTargetActor = nullptr;
@@ -175,5 +188,4 @@ private:
 
 	UPROPERTY(Transient)
 	float TimeSinceLastRefresh = 0.f;
-  
 };
