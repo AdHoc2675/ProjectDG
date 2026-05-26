@@ -13,9 +13,10 @@ void UDGItemToolTipWidget::UpdateToolTip_Implementation(UDGItemInstance* ItemIns
 	// 1. 아이템 이름
 	if (ItemNameText) ItemNameText->SetText(ItemInstance->ItemDef->ItemName);
 
+	FString TypeString = TEXT("알 수 없음");
 	if (ItemTypeText)
 	{
-		FString TypeString = TEXT("알 수 없음");
+		
 		switch (ItemInstance->ItemDef->ItemType)
 		{
 		case EDGItemType::Equipment:
@@ -34,7 +35,6 @@ void UDGItemToolTipWidget::UpdateToolTip_Implementation(UDGItemInstance* ItemIns
 	// 2. 파밍/장비 타입
 	if (ItemTypeText)
 	{
-		FString TypeString = (ItemInstance->ItemDef->EquipmentType == EDGEquipmentType::Weapon) ? TEXT("무기") : TEXT("방어구");
 		TypeString += (ItemInstance->Grade == EDGItemGrade::Hero) ? TEXT(" (영웅)") :
 					  (ItemInstance->Grade == EDGItemGrade::Legendary) ? TEXT(" (전설)") :
 					  (ItemInstance->Grade == EDGItemGrade::Ancient) ? TEXT(" (고대)") : TEXT("");

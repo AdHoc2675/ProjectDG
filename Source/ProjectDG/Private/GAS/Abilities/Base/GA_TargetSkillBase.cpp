@@ -5,6 +5,7 @@
 
 #include "Character/Player/Data/PlayerSkillData.h"
 #include "Character/Player/PlayerCharacterBase.h"
+#include "Character/BaseCharacter.h"
 #include "Components/Targeting/LockOnComponent.h"
 #include "Core/DG_GameplayTags.h"
 
@@ -78,7 +79,29 @@ bool UGA_TargetSkillBase::IsValidSkillTarget(AActor* TargetActor) const
 		return false;
 	}
 
-	return true;
+	const ABaseCharacter* TargetCharacter = Cast<ABaseCharacter>(TargetActor);
+	if (!TargetCharacter || TargetCharacter->IsDead())
+	{
+		return false;
+	}
+
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	if (!Data)
+	{
+		return true;
+	}
+
+	switch (Data->TargetPolicy)
+	{
+	case EPlayerSkillTargetPolicy::EnemyTarget:
+		return TargetCharacter->HasTeamTag(DGGameplayTags::Team_Enemy.GetTag());
+
+	case EPlayerSkillTargetPolicy::AllyTarget:
+		return TargetCharacter->HasTeamTag(DGGameplayTags::Team_Player.GetTag());
+
+	default:
+		return true;
+	}
 }
 
 bool UGA_TargetSkillBase::ShouldFailWhenNoTarget() const
@@ -90,12 +113,13 @@ FGameplayTagContainer UGA_TargetSkillBase::GetRequiredTargetTags() const
 {
 	FGameplayTagContainer RequiredTags;
 
-	if (!SkillData)
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	if (!Data)
 	{
 		return RequiredTags;
 	}
 
-	switch (SkillData->TargetPolicy)
+	switch (Data->TargetPolicy)
 	{
 	case EPlayerSkillTargetPolicy::EnemyTarget:
 		RequiredTags.AddTag(DGGameplayTags::Team_Enemy.GetTag());
@@ -121,4 +145,62 @@ ULockOnComponent* UGA_TargetSkillBase::GetAvatarLockOnComponent() const
 	}
 
 	return PlayerCharacter->GetLockOnComponent();
+}
+
+FGameplayAbilityTargetDataHandle UGA_TargetSkillBase::MakeTargetDataFromTargetResult(
+	const FDGSkillTargetResult& TargetResult) const
+{
+	FGameplayAbilityTargetDataHandle TargetDataHandle;
+
+	if (!TargetResult.bHasTarget || !TargetResult.TargetActor)
+	{
+		return TargetDataHandle;
+	}
+
+	FGameplayAbilityTargetData_ActorArray* ActorArrayData = new FGameplayAbilityTargetData_ActorArray();
+	ActorArrayData->TargetActorArray.Add(TargetResult.TargetActor);
+	TargetDataHandle.Add(ActorArrayData);
+
+	return TargetDataHandle;
+}
+
+bool UGA_TargetSkillBase::TryMakeTargetResultFromTargetData(const FGameplayAbilityTargetDataHandle& TargetDataHandle,
+	FDGSkillTargetResult& OutTargetResult) const
+{
+	OutTargetResult = FDGSkillTargetResult();
+
+	for (int32 DataIndex = 0; DataIndex < TargetDataHandle.Num(); ++DataIndex)
+	{
+		const FGameplayAbilityTargetData* TargetData = TargetDataHandle.Get(DataIndex);
+		if (!TargetData)
+		{
+			continue;
+		}
+
+		const TArray<TWeakObjectPtr<AActor>> TargetActors = TargetData->GetActors();
+		for (const TWeakObjectPtr<AActor>& TargetActorPtr : TargetActors)
+		{
+			AActor* TargetActor = TargetActorPtr.Get();
+			if (!TargetActor)
+			{
+				continue;
+			}
+
+			OutTargetResult.TargetActor = TargetActor;
+			OutTargetResult.AimPoint = TargetActor->GetActorLocation();
+			OutTargetResult.bHasTarget = true;
+
+			if (const AActor* AvatarActor = GetAvatarActorFromAbility())
+			{
+				OutTargetResult.Distance = FVector::Dist(
+						AvatarActor->GetActorLocation(),
+						TargetActor->GetActorLocation()
+				);
+			}
+
+			return true;
+		}
+	}
+
+	return false;
 }

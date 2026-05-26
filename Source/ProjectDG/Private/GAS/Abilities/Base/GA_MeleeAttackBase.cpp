@@ -72,6 +72,27 @@ void UGA_MeleeAttackBase::ResetMeleeState()
 
 void UGA_MeleeAttackBase::StartMeleeEventTasks()
 {
+	const FGameplayTag SkillInputEventTag = GetSkillInputEventTag();
+	if (SkillInputEventTag.IsValid())
+	{
+		SkillInputEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+				this,
+				SkillInputEventTag,
+				nullptr,
+				false,
+				true
+		);
+
+		if (SkillInputEventTask)
+		{
+			SkillInputEventTask->EventReceived.AddDynamic(
+					this,
+					&UGA_MeleeAttackBase::OnSkillInputEventReceived
+			);
+			SkillInputEventTask->ReadyForActivation();
+		}
+	}
+	
 	ComboInputWindowOpenTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this,
 		DGGameplayTags::Event_Combo_InputWindow_Open.GetTag(),
@@ -219,10 +240,10 @@ void UGA_MeleeAttackBase::TryJumpToNextComboSection(int32 BranchComboIndex)
 
 	bComboInputBuffered = false;
 
-	const int32 NextComboIndex = BranchComboIndex + 1;
+	int32 NextComboIndex = BranchComboIndex + 1;
 	if (NextComboIndex > ComboCount)
 	{
-		return;
+		NextComboIndex = 1;
 	}
 
 	CurrentComboIndex = NextComboIndex;
@@ -318,6 +339,21 @@ void UGA_MeleeAttackBase::OnAttackHit(FGameplayEventData Payload)
 	FVector::ZeroVector,
 	false
 );
+}
+
+void UGA_MeleeAttackBase::OnSkillInputEventReceived(FGameplayEventData Payload)
+{
+	if (Payload.EventTag != GetSkillInputEventTag())
+	{
+		return;
+	}
+	
+	if (!bComboInputWindowOpen)
+	{
+		return;
+	}
+
+	bComboInputBuffered = true;
 }
 
 void UGA_MeleeAttackBase::OnMontageCompleted()
