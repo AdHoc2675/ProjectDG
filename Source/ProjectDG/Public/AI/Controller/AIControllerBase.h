@@ -22,7 +22,16 @@ class PROJECTDG_API AAIControllerBase : public AAIController
 public:
 	AAIControllerBase();
 
+	UFUNCTION(BlueprintCallable, Category = "AI|State")
+	void StopAIOnDeath();
+
+	UFUNCTION(BlueprintCallable, Category = "AI|State")
+	bool IsAIStoppedByDeath() const { return bAIStoppedByDeath; }
+
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|State")
+	bool bAIStoppedByDeath = false;
+
 	// AI 인지 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI|Perception")
 	TObjectPtr<UAIPerceptionComponent> EnemyPerceptionComponent;

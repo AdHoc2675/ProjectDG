@@ -11,6 +11,8 @@ class UAttributeSet;
 class UDG_AttributeSet;
 class UGameplayAbility;
 class UGameplayEffect;
+class UAnimMontage;
+struct FOnAttributeChangeData;
 
 /**
  * AEnemyCharacterBase
@@ -46,6 +48,10 @@ protected:
 	//Attribute도 직접 소유
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|ASC")
 	TObjectPtr<UDG_AttributeSet> AttributeSet = nullptr;
+
+	// 사망 몽타주 (BP에서 지정)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemyCharacterBase|Animation")
+	TObjectPtr<UAnimMontage> DeathMontage = nullptr;
 	
 protected:
 	//ASC초기화
@@ -56,6 +62,15 @@ protected:
 	
 	// 서버 측 기본 이펙트 부여 로직 (초기 스탯 등)
 	virtual void ApplyDefaultEffects();
+
+	// 공통 적 사망 처리 (태그 부여 등)
+	virtual void HandleDeath() override;
+
+	// Health Attribute 변경 콜백 (죽음 체크)
+	void OnHealthChanged_DeathCheck(const FOnAttributeChangeData& Data);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayDeathMontage();
 
 	/** 서버에서 부여할 기본 어빌리티 목록 */
 	UPROPERTY(EditDefaultsOnly, Category = "EnemyCharacterBase|GAS")

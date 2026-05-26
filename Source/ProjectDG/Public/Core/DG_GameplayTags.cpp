@@ -88,8 +88,15 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Block_Movement_Dodge, "Block.Movement.Dodge")
 	UE_DEFINE_GAMEPLAY_TAG(Block_Movement_Sprint, "Block.Movement.Sprint")
 
+	// Enemy State
+	UE_DEFINE_GAMEPLAY_TAG(State_Enemy_Dead, "State.Enemy.Dead")
+
 	// Boss Phase
 	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Phase_1, "State.Boss.Phase.1")
 	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Phase_2, "State.Boss.Phase.2")
 	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Phase_3, "State.Boss.Phase.3")
+	
+	// Boss State
+	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Groggy, "State.Boss.Groggy")
+	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Dead, "State.Boss.Dead")
 }

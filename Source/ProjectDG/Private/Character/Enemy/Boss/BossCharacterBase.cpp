@@ -230,3 +230,17 @@ void ABossCharacterBase::UpdateHealthPhaseTags(float HealthRatio)
 	}
 }
 
+void ABossCharacterBase::HandleDeath()
+{
+	Super::HandleDeath();
+
+	if (HasAuthority() && AbilitySystemComponent)
+	{
+		AbilitySystemComponent->AddLooseGameplayTag(
+			DGGameplayTags::State_Boss_Dead,
+			1,
+			EGameplayTagReplicationState::TagOnly
+		);
+	}
+}
+
