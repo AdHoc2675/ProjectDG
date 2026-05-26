@@ -56,9 +56,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DG|Inventory")
 	void EquipItem(UDGItemInstance* ItemToEquip);
 
+	// 클라이언트가 서버에 장착을 요청하는 Server RPC
+	UFUNCTION(Server, Reliable)
+	void ServerEquipItem(int32 ItemIndex);
+
 	// 장비 해제 함수
 	UFUNCTION(BlueprintCallable, Category = "DG|Inventory")
 	void UnequipItem(EDGEquipmentType SlotType);
+
+	// 클라이언트가 서버에 해제를 요청하는 Server RPC
+	UFUNCTION(Server, Reliable)
+	void ServerUnequipItem(EDGEquipmentType SlotType);
 
 	// 장착된 아이템 정보 가져오기
 	UFUNCTION(BlueprintCallable, Category = "DG|Inventory")
