@@ -85,7 +85,7 @@ void ABaseCharacter::SetTeamTag(FGameplayTag InTeamTag)
 
 bool ABaseCharacter::HasTeamTag(FGameplayTag InTeamTag) const
 {
-	return TeamTag.IsValid() && TeamTag == InTeamTag;
+	return TeamTag.IsValid() && TeamTag.MatchesTag(InTeamTag);
 }
 
 bool ABaseCharacter::IsFriendlyTo(const ABaseCharacter* OtherCharacter) const
