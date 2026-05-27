@@ -63,6 +63,14 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Warrior_ShockWave, "Skill.Warrior.ShockWave")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Warrior_DoomStrike, "Skill.Warrior.DoomStrike")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Warrior_LeapingSlam, "Skill.Warrior.LeapingSlam")
+	
+	// Skill.Warrior.Cooldown
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_SharpStrike, "Cooldown.Skill.Warrior.SharpStrike")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_CuttingSmash, "Cooldown.Skill.Warrior.CuttingSmash")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_AnkleSlash, "Cooldown.Skill.Warrior.AnkleSlash")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_ShockWave, "Cooldown.Skill.Warrior.ShockWave")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_DoomStrike, "Cooldown.Skill.Warrior.DoomStrike")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_LeapingSlam, "Cooldown.Skill.Warrior.LeapingSlam")
 
 	// Skill.Archer
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Archer_Snipe, "Skill.Archer.Snipe")
