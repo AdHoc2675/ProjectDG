@@ -98,8 +98,7 @@ namespace DGGameplayTags
 	// Data
 	UE_DEFINE_GAMEPLAY_TAG(Data_Damage, "Data.Damage")
 	UE_DEFINE_GAMEPLAY_TAG(Data_BaseDamage, "Data_BaseDamage")
-	UE_DEFINE_GAMEPLAY_TAG(Data_DamageMultiplier, "Data_DamageMultiplier")
-	
+	UE_DEFINE_GAMEPLAY_TAG(Data_DamageMultiplier, "Data_DamageMultiplier")	
 	UE_DEFINE_GAMEPLAY_TAG(Data_Cooldown, "Data.Cooldown")
 
 	// Block
