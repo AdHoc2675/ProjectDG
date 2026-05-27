@@ -2,7 +2,7 @@
 
 
 #include "GAS/Abilities/Player/Archer/GA_Archer_PiercingArrow.h"
-
+#include "Core/DG_Debug.h"
 #include "Core/DG_GameplayTags.h"
 
 
@@ -32,6 +32,11 @@ void UGA_Archer_PiercingArrow::ExecuteRangedSkill(const FDGSkillTargetResult& Ta
 		TargetResult.AimPoint,
 		true
 	);
+	
+	Debug::Print(FString::Printf(
+	TEXT("[Archer_PiercingArrow] Damage Applied. Target=%s"),
+	*GetNameSafe(TargetResult.TargetActor)
+));
 
 	// 후속 연결 예정:
 	// - 치명타 판정

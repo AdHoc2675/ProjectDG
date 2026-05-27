@@ -4,6 +4,7 @@
 
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "Core/DG_Debug.h"
 #include "Core/DG_GameplayTags.h"
 
 UGA_RangedSkillBase::UGA_RangedSkillBase()
@@ -45,6 +46,12 @@ void UGA_RangedSkillBase::ActivateAbility(
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
+	
+	Debug::Print(FString::Printf(
+	TEXT("[RangedSkillBase] Begin. Skill=%s Target=%s"),
+	*GetSkillTag().ToString(),
+	*GetNameSafe(CurrentTargetResult.TargetActor)
+));
 
 	if (bFaceTargetOnActivate)
 	{
@@ -98,6 +105,13 @@ void UGA_RangedSkillBase::ExecuteRangedSkill(const FDGSkillTargetResult& TargetR
 		TargetResult.AimPoint,
 		true
 	);
+	
+	Debug::Print(FString::Printf(
+	TEXT("[RangedSkillBase] Damage Applied. Skill=%s Target=%s Combo=%d"),
+	*GetSkillTag().ToString(),
+	*GetNameSafe(TargetResult.TargetActor),
+	CurrentComboIndex
+));
 }
 
 float UGA_RangedSkillBase::GetRangedSkillDamage() const

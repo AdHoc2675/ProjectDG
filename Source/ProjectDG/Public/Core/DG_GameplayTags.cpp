@@ -49,6 +49,7 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Warrior_AnkleSlash, "Event.Input.Warrior.AnkleSlash")
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Warrior_DoomStrike, "Event.Input.Warrior.DoomStrike")
 
+	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Archer_Snipe, "Event.Input.Archer.Snipe")
 
 	// Skill.Common
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Common_Dodge, "Skill.Common.Dodge")
@@ -67,6 +68,8 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Archer_Snipe, "Skill.Archer.Snipe")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Archer_RapidShot, "Skill.Archer.RapidShot")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Archer_PiercingArrow, "Skill.Archer.PiercingArrow")
+	UE_DEFINE_GAMEPLAY_TAG(Skill_Archer_GaleArrow, "Skill.Archer.GaleArrow")
+	UE_DEFINE_GAMEPLAY_TAG(Skill_Archer_AimedArrow, "Skill.Archer.AimedArrow")
 
 
 	// Skill.Boss
@@ -88,6 +91,8 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Archer_Snipe_Active, "State.Skill.Archer.Snipe.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Archer_RapidShot_Active, "State.Skill.Archer.RapidShot.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Archer_PiercingArrow_Active, "State.Skill.Archer.PiercingArrow.Active")
+	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Archer_GaleArrow_Active, "State.Skill.Archer.GaleArrow.Active")
+	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Archer_AimedArrow_Active, "State.Skill.Archer.AimedArrow.Active")
 
 
 	// Data

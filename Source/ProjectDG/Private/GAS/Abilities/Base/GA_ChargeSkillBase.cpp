@@ -4,6 +4,7 @@
 
 #include "Abilities/Tasks/AbilityTask_WaitInputRelease.h"
 #include "Character/Player/Data/PlayerSkillData.h"
+#include "Core//DG_Debug.h"
 #include "Engine/World.h"
 
 UGA_ChargeSkillBase::UGA_ChargeSkillBase()
@@ -30,6 +31,11 @@ void UGA_ChargeSkillBase::ActivateAbility(
 	}
 
 	ChargeStartWorldTime = World->GetTimeSeconds();
+	
+	Debug::Print(FString::Printf(
+	TEXT("[ChargeSkillBase] Begin. Skill=%s"),
+	*GetSkillTag().ToString()
+));
 
 	InputReleaseTask = UAbilityTask_WaitInputRelease::WaitInputRelease(
 		this,
@@ -159,6 +165,14 @@ void UGA_ChargeSkillBase::OnInputReleased(float TimeHeld)
 		EndChargeAbility(true);
 		return;
 	}
+	
+	Debug::Print(FString::Printf(
+	TEXT("[ChargeSkillBase] Released. Skill=%s Level=%d Time=%.2f"),
+	*GetSkillTag().ToString(),
+	CurrentChargeLevel,
+	CurrentChargeTime
+));
+
 
 	ExecuteChargedSkill(CurrentChargeLevel, CurrentChargeTime);
 

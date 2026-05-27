@@ -164,6 +164,10 @@ public:
 	/** 차지 단계 시간. 예: 0.5 / 1.0 / 1.5 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Charge")
 	TArray<float> ChargeLevelTimes;
+	
+	/** 차지 단계별 버프 GameplayEffect. Index 0 = 1단, Index 1 = 2단, Index 2 = 3단 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Charge")
+	TArray<TSubclassOf<UGameplayEffect>> ChargeLevelBuffEffects;
 
 public:
 	/** 전방 Box 판정 크기 */

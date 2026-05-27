@@ -2,6 +2,7 @@
 
 
 #include "GAS/Abilities/Player/Archer/GA_Archer_RapidShot.h"
+#include "Core/DG_Debug.h"
 #include "Core/DG_GameplayTags.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/World.h"
@@ -66,7 +67,8 @@ void UGA_Archer_RapidShot::ExecuteRangedSkill(const FDGSkillTargetResult& Target
 	}
 
 	TSet<TWeakObjectPtr<AActor>> DamagedActors;
-
+	int32 AppliedDamageCount = 0;
+	
 	for (const FOverlapResult& OverlapResult : OverlapResults)
 	{
 		AActor* HitActor = OverlapResult.GetActor();
@@ -95,5 +97,7 @@ void UGA_Archer_RapidShot::ExecuteRangedSkill(const FDGSkillTargetResult& Target
 			HitActor->GetActorLocation(),
 			true
 		);
+		
+		++AppliedDamageCount;
 	}
 }
