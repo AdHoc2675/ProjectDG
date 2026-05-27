@@ -94,7 +94,8 @@ void UGA_Warrior_DoomStrike::ExecuteTargetSkill(AActor* TargetActor, const FGame
               GetSkillDamageMultiplier(),
               GetSkillTag(),
               TargetActor->GetActorLocation(),
-              true
+              true,
+              GetSkillGroggyDamage()
       );
 
       ApplyStatusEffectToTarget(TargetActor);

@@ -6,12 +6,17 @@
 #include "Core/DG_GameplayTags.h"
 #include "Core/DG_Debug.h"
 #include "GAS/Attributes/DG_AttributeSet.h"
+#include "GAS/Attributes/DG_EnemyAttributeSet.h"
 
 struct FDGDamageExecutionStatics
 {
 	DECLARE_ATTRIBUTE_CAPTUREDEF(AttackPower);
 	DECLARE_ATTRIBUTE_CAPTUREDEF(Defense);
 	DECLARE_ATTRIBUTE_CAPTUREDEF(DefenseCoefficient);
+	DECLARE_ATTRIBUTE_CAPTUREDEF(GroggyDamage);
+	DECLARE_ATTRIBUTE_CAPTUREDEF(GroggyDamageIncreaseRate);
+	DECLARE_ATTRIBUTE_CAPTUREDEF(GroggyGauge);
+	DECLARE_ATTRIBUTE_CAPTUREDEF(MaxGroggyGauge);
 
 	FDGDamageExecutionStatics()
 	{
@@ -31,6 +36,18 @@ struct FDGDamageExecutionStatics
 		 */
 		DEFINE_ATTRIBUTE_CAPTUREDEF(UDG_AttributeSet, Defense, Target, false);
 		DEFINE_ATTRIBUTE_CAPTUREDEF(UDG_AttributeSet, DefenseCoefficient, Target, false);
+
+		/**
+		 * Source의 그로기 공격력 관련 Attribute를 캡처한다.
+		 */
+		DEFINE_ATTRIBUTE_CAPTUREDEF(UDG_AttributeSet, GroggyDamage, Source, false);
+		DEFINE_ATTRIBUTE_CAPTUREDEF(UDG_AttributeSet, GroggyDamageIncreaseRate, Source, false);
+
+		/**
+		 * Target의 그로기 관련 Attribute를 캡처한다.
+		 */
+		DEFINE_ATTRIBUTE_CAPTUREDEF(UDG_EnemyAttributeSet, GroggyGauge, Target, false);
+		DEFINE_ATTRIBUTE_CAPTUREDEF(UDG_EnemyAttributeSet, MaxGroggyGauge, Target, false);
 	}
 };
 
@@ -45,6 +62,10 @@ UDGExecCalc_Damage::UDGExecCalc_Damage()
 	RelevantAttributesToCapture.Add(DamageExecutionStatics().AttackPowerDef);
 	RelevantAttributesToCapture.Add(DamageExecutionStatics().DefenseDef);
 	RelevantAttributesToCapture.Add(DamageExecutionStatics().DefenseCoefficientDef);
+	RelevantAttributesToCapture.Add(DamageExecutionStatics().GroggyDamageDef);
+	RelevantAttributesToCapture.Add(DamageExecutionStatics().GroggyDamageIncreaseRateDef);
+	RelevantAttributesToCapture.Add(DamageExecutionStatics().GroggyGaugeDef);
+	RelevantAttributesToCapture.Add(DamageExecutionStatics().MaxGroggyGaugeDef);
 }
 
 void UDGExecCalc_Damage::Execute_Implementation(
@@ -195,4 +216,63 @@ void UDGExecCalc_Damage::Execute_Implementation(
 			FinalDamageTaken
 		)
 	);
+
+	/**
+	 * 그로기 데미지 계산 및 반영.
+	 */
+	const float BaseGroggyDamage = Spec.GetSetByCallerMagnitude(
+		DGGameplayTags::Data_GroggyDamage,
+		false,
+		0.0f
+	);
+
+	if (BaseGroggyDamage > 0.0f)
+	{
+		float TargetGroggyGauge = 0.0f;
+		bool bHasGroggyGauge = ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(
+			DamageExecutionStatics().GroggyGaugeDef,
+			EvaluateParameters,
+			TargetGroggyGauge
+		);
+
+		if (bHasGroggyGauge)
+		{
+			float SourceGroggyDamage = 0.0f;
+			ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(
+				DamageExecutionStatics().GroggyDamageDef,
+				EvaluateParameters,
+				SourceGroggyDamage
+			);
+			SourceGroggyDamage = FMath::Max(SourceGroggyDamage, 0.0f);
+
+			float SourceGroggyDamageIncreaseRate = 0.0f;
+			ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(
+				DamageExecutionStatics().GroggyDamageIncreaseRateDef,
+				EvaluateParameters,
+				SourceGroggyDamageIncreaseRate
+			);
+			SourceGroggyDamageIncreaseRate = FMath::Max(SourceGroggyDamageIncreaseRate, 0.0f);
+
+			const float FinalGroggyDamage = (BaseGroggyDamage + SourceGroggyDamage) * (1.0f + SourceGroggyDamageIncreaseRate);
+
+			if (FinalGroggyDamage > 0.0f)
+			{
+				OutExecutionOutput.AddOutputModifier(
+					FGameplayModifierEvaluatedData(
+						UDG_EnemyAttributeSet::GetGroggyGaugeAttribute(),
+						EGameplayModOp::Additive,
+						FinalGroggyDamage
+					)
+				);
+
+				Debug::Print(FString::Printf(
+					TEXT("[DGExecCalc_Damage] BaseGroggy=%.2f SourceGroggy=%.2f IncRate=%.2f FinalGroggy=%.2f"),
+					BaseGroggyDamage,
+					SourceGroggyDamage,
+					SourceGroggyDamageIncreaseRate,
+					FinalGroggyDamage
+				));
+			}
+		}
+	}
 }

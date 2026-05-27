@@ -4,17 +4,11 @@
 #include "Character/Enemy/Boss/BossCharacterBase.h"
 
 #include "AbilitySystemComponent.h"
-#include "AIController.h"
-#include "Animation/AnimInstance.h"
-#include "Animation/AnimMontage.h"
-#include "BehaviorTree/BlackboardComponent.h"
-#include "BrainComponent.h"
 #include "Character/Enemy/Boss/Data/BossCharacterClassData.h"
 #include "Core/DG_GameplayTags.h"
 #include "GAS/Attributes/DG_AttributeSet.h"
 #include "GAS/Attributes/DG_BossAttributeSet.h"
 #include "GAS/Attributes/DG_EnemyAttributeSet.h"
-#include "GameFramework/CharacterMovementComponent.h"
 
 ABossCharacterBase::ABossCharacterBase()
 {
@@ -39,7 +33,7 @@ void ABossCharacterBase::InitializeBossTagFromClassData()
 	{
 		return;
 	}
-	
+
 	BossTag = BossClassData->BossTag;
 
 	if (AbilitySystemComponent)
@@ -50,12 +44,8 @@ void ABossCharacterBase::InitializeBossTagFromClassData()
 		{
 			AbilitySystemComponent->AddLooseGameplayTag(BossClassData->InitialPhaseTag, 1, EGameplayTagReplicationState::TagOnly);
 		}
-
-		// UE_LOG(LogTemp, Warning, TEXT("[BossCharacterBase] InitializeBossTagFromClassData Success. NetMode=%d Name=%s"),
-		// 	static_cast<int32>(GetNetMode()),
-		// 	*GetName());
 	}
-	
+
 }
 
 void ABossCharacterBase::BeginPlay()
@@ -172,7 +162,6 @@ void ABossCharacterBase::ApplyBossSpecialEffects()
 
 	if (BossAttributeSet)
 	{
-		// 보스 전용 AttributeSet 값이 적용됐는지 확인용 로그
 		UE_LOG(
 			LogTemp,
 			Log,
@@ -212,7 +201,7 @@ void ABossCharacterBase::OnGroggyGaugeChanged(const FOnAttributeChangeData& Data
 		return;
 	}
 
-	if (bIsGroggy || IsDead())
+	if (AbilitySystemComponent->HasMatchingGameplayTag(DGGameplayTags::State_Boss_Groggy) || IsDead())
 	{
 		return;
 	}
@@ -228,116 +217,8 @@ void ABossCharacterBase::OnGroggyGaugeChanged(const FOnAttributeChangeData& Data
 		return;
 	}
 
-	StartGroggy();
-}
-
-void ABossCharacterBase::StartGroggy()
-{
-	if (!HasAuthority() || bIsGroggy || !AbilitySystemComponent)
-	{
-		return;
-	}
-
-	bIsGroggy = true;
-
-	AbilitySystemComponent->AddLooseGameplayTag(
-		DGGameplayTags::State_Boss_Groggy,
-		1,
-		EGameplayTagReplicationState::TagOnly
-	);
-
-	AbilitySystemComponent->CancelAllAbilities();
-
-	if (USkeletalMeshComponent* MeshComp = GetMesh())
-	{
-		if (UAnimInstance* AnimInstance = MeshComp->GetAnimInstance())
-		{
-			AnimInstance->StopAllMontages(0.1f);
-		}
-	}
-
-	if (AAIController* AIController = Cast<AAIController>(GetController()))
-	{
-		AIController->StopMovement();
-
-		if (UBrainComponent* BrainComp = AIController->GetBrainComponent())
-		{
-			BrainComp->StopLogic(TEXT("Groggy"));
-		}
-	}
-
-	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
-	{
-		MoveComp->StopMovementImmediately();
-		MoveComp->DisableMovement();
-	}
-
-	AbilitySystemComponent->SetNumericAttributeBase(
-		UDG_EnemyAttributeSet::GetGroggyGaugeAttribute(),
-		0.f
-	);
-
-	if (GroggyMontage)
-	{
-		MulticastPlayGroggyMontage();
-	}
-
-	if (GroggyDuration > 0.f)
-	{
-		GetWorldTimerManager().SetTimer(
-			GroggyTimerHandle,
-			this,
-			&ABossCharacterBase::EndGroggy,
-			GroggyDuration,
-			false
-		);
-	}
-}
-
-void ABossCharacterBase::EndGroggy()
-{
-	if (!bIsGroggy)
-	{
-		return;
-	}
-
-	bIsGroggy = false;
-
-	GetWorldTimerManager().ClearTimer(GroggyTimerHandle);
-
-	if (AbilitySystemComponent)
-	{
-		AbilitySystemComponent->RemoveLooseGameplayTag(DGGameplayTags::State_Boss_Groggy, 1);
-	}
-
-	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
-	{
-		MoveComp->SetMovementMode(MOVE_Walking);
-	}
-
-	if (AAIController* AIController = Cast<AAIController>(GetController()))
-	{
-		if (UBrainComponent* BrainComp = AIController->GetBrainComponent())
-		{
-			BrainComp->RestartLogic();
-		}
-	}
-}
-
-void ABossCharacterBase::MulticastPlayGroggyMontage_Implementation()
-{
-	if (!GroggyMontage)
-	{
-		return;
-	}
-
-	if (USkeletalMeshComponent* MeshComp = GetMesh())
-	{
-		if (UAnimInstance* AnimInstance = MeshComp->GetAnimInstance())
-		{
-			AnimInstance->Montage_Play(GroggyMontage);
-		}
-	}
+	FGameplayEventData Payload;
+	AbilitySystemComponent->HandleGameplayEvent(DGGameplayTags::Event_Boss_Groggy, &Payload);
 }
 
 void ABossCharacterBase::UpdateHealthPhaseTags(float HealthRatio)
@@ -410,4 +291,3 @@ void ABossCharacterBase::HandleDeath()
 		);
 	}
 }
-
