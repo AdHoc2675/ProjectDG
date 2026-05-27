@@ -7,6 +7,8 @@
 
 #include "GameFramework/DG_GameState.h"
 #include "GameFramework/DG_PlayerState.h"
+#include "GAS/Attributes/DG_EnemyAttributeSet.h"
+
 
 void UDGOverlayWidgetController::BroadcastInitialValues()
 {
@@ -128,11 +130,7 @@ void UDGOverlayWidgetController::SetEnemyTarget(UAbilitySystemComponent* InEnemy
 	if (!EnemyDGAS) return;
 
 	// 기존에 타겟팅하던 적이 있다면 델리게이트 해제 (메모리 누수 및 오작동 방지)
-	if (CurrentEnemyASC && CurrentEnemyAS)
-	{
-		CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(CurrentEnemyAS->GetHealthAttribute()).Remove(EnemyHealthChangedDelegateHandle);
-		CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(CurrentEnemyAS->GetMaxHealthAttribute()).Remove(EnemyMaxHealthChangedDelegateHandle);
-	}
+	ClearCurrentEnemyTarget();
 
 	// 새 타겟 설정
 	CurrentEnemyASC = InEnemyASC;
@@ -153,8 +151,57 @@ void UDGOverlayWidgetController::SetEnemyTarget(UAbilitySystemComponent* InEnemy
 		}
 	);
 
+	// 대상 ASC에서 그로기를 담당하는 UDG_EnemyAttributeSet 직접 찾기 (주로 2번째 배열 등에 존재)
+	UDG_EnemyAttributeSet* GroggyAS = nullptr;
+	for (UAttributeSet* AS : CurrentEnemyASC->GetSpawnedAttributes())
+	{
+		if (UDG_EnemyAttributeSet* EnemyTypeAS = Cast<UDG_EnemyAttributeSet>(AS))
+		{
+			GroggyAS = EnemyTypeAS;
+			UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] Found Groggy AttributeSet for enemy: %s"), *EnemyName);
+			break;
+		}
+	}
+
+	// 찾은 그로기 AttributeSet으로 이벤트 연결
+	if (GroggyAS)
+	{
+		EnemyGroggyChangedDelegateHandle = CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(GroggyAS->GetStaggerGaugeAttribute()).AddLambda(
+			[this, GroggyAS](const FOnAttributeChangeData& Data)
+			{
+				OnEnemyGroggyChanged.Broadcast(Data.NewValue, GroggyAS->GetMaxStaggerGauge());
+			}
+		);
+		EnemyMaxGroggyChangedDelegateHandle = CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(GroggyAS->GetMaxStaggerGaugeAttribute()).AddLambda(
+			[this, GroggyAS](const FOnAttributeChangeData& Data)
+			{
+				OnEnemyGroggyChanged.Broadcast(GroggyAS->GetStaggerGauge(), Data.NewValue);
+			}
+		);
+	}
+
+	// 임시로 MaxHealth 1000당 1줄, 최소 1줄로 계산하도록 처리 (필요 시 수정)
+	float CurrentMaxHealth = CurrentEnemyAS->GetMaxHealth();
+	int32 CalculatedMaxBars = 1;
+
+	OnEnemyTargetSet.Broadcast(EnemyName, CalculatedMaxBars);
+
+	// MaxHealth에 따라 UI에서 보여줄 체력바 줄 수 계산 (예시 로직, 필요에 따라 조정)
+	if (CurrentMaxHealth > 0.0f)
+	{
+		CalculatedMaxBars = FMath::Max(1, FMath::FloorToInt(CurrentMaxHealth / 1000.0f));
+	}
+
+	// 타겟 설정 방송 (이름과 계산된 최대 줄 수)
+	OnEnemyTargetSet.Broadcast(EnemyName, CalculatedMaxBars);
+
 	// 즉시 초기값 방송하여 UI를 띄움
 	OnEnemyHealthChanged.Broadcast(CurrentEnemyAS->GetHealth(), CurrentEnemyAS->GetMaxHealth());
+
+	if (GroggyAS)
+	{
+		OnEnemyGroggyChanged.Broadcast(GroggyAS->GetStaggerGauge(), GroggyAS->GetMaxStaggerGauge());
+	}
 }
 
 void UDGOverlayWidgetController::NotifyBossEncountered(AActor* BossActor)
@@ -187,10 +234,19 @@ void UDGOverlayWidgetController::ClearCurrentEnemyTarget()
 	{
 		CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(CurrentEnemyAS->GetHealthAttribute()).Remove(EnemyHealthChangedDelegateHandle);
 		CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(CurrentEnemyAS->GetMaxHealthAttribute()).Remove(EnemyMaxHealthChangedDelegateHandle);
+
+		if (UDG_EnemyAttributeSet* GroggyAS = Cast<UDG_EnemyAttributeSet>(CurrentEnemyAS))
+		{
+			CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(GroggyAS->GetStaggerGaugeAttribute()).Remove(EnemyGroggyChangedDelegateHandle);
+			CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(GroggyAS->GetMaxStaggerGaugeAttribute()).Remove(EnemyMaxGroggyChangedDelegateHandle);
+		}
 	}
 
 	CurrentEnemyASC = nullptr;
 	CurrentEnemyAS = nullptr;
+
+	// 타겟 초기화 방송
+	OnEnemyTargetCleared.Broadcast();
 }
 
 

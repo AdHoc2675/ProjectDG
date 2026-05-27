@@ -15,10 +15,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxStaminaChangedSignature, float
 // 추가로 Mental 관련 델리게이트도 여기에 선언할 수 있음
 
 
-// 적 체력 갱신 델리게이트
+// 적 정보 갱신 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyHealthChangedSignature, float, CurrentHealth, float, MaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyGroggyChangedSignature, float, CurrentGroggy, float, MaxGroggy);
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyTargetSetSignature, const FString&, EnemyName, int32, MaxHealthBars);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyTargetClearedSignature);
 
 // 미니맵 마커 전방 선언
 class UDGMinimapMarkerComponent;
@@ -69,6 +70,12 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Enemy Attributes")
 	FOnEnemyGroggyChangedSignature OnEnemyGroggyChanged;
 
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Enemy Attributes")
+	FOnEnemyTargetSetSignature OnEnemyTargetSet;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Enemy Attributes")
+	FOnEnemyTargetClearedSignature OnEnemyTargetCleared;
+
 protected:
 	UPROPERTY()
 	TObjectPtr<UAbilitySystemComponent> CurrentEnemyASC;
@@ -78,10 +85,10 @@ protected:
 	// 이전 바인딩 해제를 위한 델리게이트 핸들
 	FDelegateHandle EnemyHealthChangedDelegateHandle;
 	FDelegateHandle EnemyMaxHealthChangedDelegateHandle;
-	// FDelegateHandle EnemyGroggyChangedDelegateHandle; // 필요시 사용
+	FDelegateHandle EnemyGroggyChangedDelegateHandle;
+	FDelegateHandle EnemyMaxGroggyChangedDelegateHandle;
 
-
-protected:
+public:
 	// 우선순위에 의해 결정된 최종 적 타겟팅 적용
 	void SetEnemyTarget(class UAbilitySystemComponent* InEnemyASC, class UAttributeSet* InEnemyAS, const FString& EnemyName);
 

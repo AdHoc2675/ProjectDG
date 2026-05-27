@@ -13,9 +13,18 @@ void UDGEnemyStatusWidget::BindToController(UDGOverlayWidgetController* Controll
 	// 상속받은 DGUserWidget의 캐싱 변수에 저장 (혹시 블루프린트에서 필요할 수 있으므로)
 	SetWidgetController(Controller);
 
+	// 초기에 UI 숨김
+	SetVisibility(ESlateVisibility::Collapsed);
+
 	// 컨트롤러의 이벤트에 Dynamic 바인딩
 	Controller->OnEnemyHealthChanged.AddDynamic(this, &UDGEnemyStatusWidget::UpdateHealth);
 	Controller->OnEnemyGroggyChanged.AddDynamic(this, &UDGEnemyStatusWidget::UpdateGroggyGauge);
+
+	// 이름과 체력줄 갱신 & UI 켜기 바인딩
+	Controller->OnEnemyTargetSet.AddDynamic(this, &UDGEnemyStatusWidget::InitEnemyStatus);
+	// 델리게이트 해제 시 UI 강제 종료 바인딩
+	Controller->OnEnemyTargetCleared.AddDynamic(this, &UDGEnemyStatusWidget::HideEnemyStatus);
+
 
 	Debug::Print(FString::Printf(TEXT("[DGEnemyStatusWidget] successfully bound to controller: %s"), *Controller->GetName()));
 }
@@ -41,11 +50,15 @@ void UDGEnemyStatusWidget::UpdateHealth(float CurrentHealth, float MaxHealth) {
 
 	// 체력줄 1개가 담당하는 체력량(HealthPerBar)을 구한 뒤, 현재 체력이 몇 번째 줄인지 알아냄
 	float HealthPerBar = MaxHealth / FMath::Max(1, MaxHealthBars);
-	int32 CurrentBarIndex = FMath::CeilToInt(CurrentHealth / HealthPerBar); // 현재 남은 체력줄 개수
+
+	// 소수점 연산 오차로 인해 발생할 수 있는 다음 줄로 넘어가는 현상을 방지
+	int32 CurrentBarIndex = FMath::CeilToInt(CurrentHealth / HealthPerBar);
+	CurrentBarIndex = FMath::Clamp(CurrentBarIndex, 1, MaxHealthBars); // 최대 줄 수를 넘지 못하도록 고정!
 
 	// 현재 줄의 진척도 (0.0 ~ 1.0)
 	float CurrentBarHealth = CurrentHealth - (HealthPerBar * (CurrentBarIndex - 1));
 	float BarPercent = CurrentBarHealth / HealthPerBar;
+	BarPercent = FMath::Clamp(BarPercent, 0.0f, 1.0f); // 퍼센트도 1.0(100%)을 넘지 않게 고정
 
 	if (HealthProgressBar)
 	{
