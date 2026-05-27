@@ -49,6 +49,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "GAS")
 	TArray<TSubclassOf<UGameplayEffect>> BossStartupEffects;
 
+	// 적 공통 AttributeSet(UDG_EnemyAttributeSet) 초기화용 GE
+	UPROPERTY(EditDefaultsOnly, Category = "GAS")
+	TArray<TSubclassOf<UGameplayEffect>> EnemyStartupEffects;
+
 	// 페이즈 전환 설정 (HealthRatioThreshold 내림차순으로 입력할 것)
 	// e.g. [{Phase2, 0.66}, {Phase3, 0.33}]
 	UPROPERTY(EditDefaultsOnly, Category = "Boss|Phase")

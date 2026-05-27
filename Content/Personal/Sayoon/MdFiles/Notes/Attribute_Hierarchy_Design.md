@@ -36,7 +36,7 @@
   * **안전한 밸런싱**: 일반 몬스터의 스탯을 조정하더라도 보스의 치명적인 패턴이나 특수 기믹 수치에 의도치 않은 사이드 이펙트(Side Effect)가 발생하지 않도록 분리합니다.
 * **적용 Attribute 예시**:
   * `PhaseThreshold` (페이즈 전환 체력 임계점)
-  * `StaggerGauge` / `RageGauge` (무력화 또는 분노 수치)
+  * `GroggyGauge` / `RageGauge` (무력화 또는 분노 수치)
   * `UltimateSkillCooldown` (특수/궁극기 쿨타임)
 
 ---

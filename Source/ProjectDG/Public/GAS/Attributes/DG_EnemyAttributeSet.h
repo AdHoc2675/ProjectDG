@@ -31,13 +31,13 @@ public:
 
 public:
 	// 무력화 (그로기) 스탯
-	UPROPERTY(BlueprintReadOnly, Category = "Attributes|Stagger", ReplicatedUsing = OnRep_StaggerGauge)
-	FGameplayAttributeData StaggerGauge;
-	ATTRIBUTE_ACCESSORS(UDG_EnemyAttributeSet, StaggerGauge)
+	UPROPERTY(BlueprintReadOnly, Category = "Attributes|Groggy", ReplicatedUsing = OnRep_GroggyGauge)
+	FGameplayAttributeData GroggyGauge;
+	ATTRIBUTE_ACCESSORS(UDG_EnemyAttributeSet, GroggyGauge)
 
-	UPROPERTY(BlueprintReadOnly, Category = "Attributes|Stagger", ReplicatedUsing = OnRep_MaxStaggerGauge)
-	FGameplayAttributeData MaxStaggerGauge;
-	ATTRIBUTE_ACCESSORS(UDG_EnemyAttributeSet, MaxStaggerGauge)
+	UPROPERTY(BlueprintReadOnly, Category = "Attributes|Groggy", ReplicatedUsing = OnRep_MaxGroggyGauge)
+	FGameplayAttributeData MaxGroggyGauge;
+	ATTRIBUTE_ACCESSORS(UDG_EnemyAttributeSet, MaxGroggyGauge)
 
 	// AI 및 시스템 스탯
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes|AI", ReplicatedUsing = OnRep_DetectionRadius)
@@ -49,8 +49,8 @@ public:
 	ATTRIBUTE_ACCESSORS(UDG_EnemyAttributeSet, ProvideExp)
 
 protected:
-	UFUNCTION() virtual void OnRep_StaggerGauge(const FGameplayAttributeData& OldStaggerGauge);
-	UFUNCTION() virtual void OnRep_MaxStaggerGauge(const FGameplayAttributeData& OldMaxStaggerGauge);
+	UFUNCTION() virtual void OnRep_GroggyGauge(const FGameplayAttributeData& OldGroggyGauge);
+	UFUNCTION() virtual void OnRep_MaxGroggyGauge(const FGameplayAttributeData& OldMaxGroggyGauge);
 	UFUNCTION() virtual void OnRep_DetectionRadius(const FGameplayAttributeData& OldDetectionRadius);
 	UFUNCTION() virtual void OnRep_ProvideExp(const FGameplayAttributeData& OldProvideExp);
 };
