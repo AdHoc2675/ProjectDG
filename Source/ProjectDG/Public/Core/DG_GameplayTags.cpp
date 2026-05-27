@@ -13,14 +13,14 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Character_Class_Archer, "Character.Class.Archer")
 	UE_DEFINE_GAMEPLAY_TAG(Character_Class_Mage, "Character.Class.Mage")
 	UE_DEFINE_GAMEPLAY_TAG(Character_Class_Assassin, "Character.Class.Assassin")
-
+	
 	// Input
-	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_1, "Input.Slot.1")
-	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_2, "Input.Slot.2")
-	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_3, "Input.Slot.3")
-	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_4, "Input.Slot.4")
-	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_Q, "Input.Slot.Q")
-	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_E, "Input.Slot.E")
+	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_LeftMouse, "Input.SkillSlot.LeftMouse")
+	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_RightMouse, "Input.SkillSlot.RightMouse")
+	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_Key1, "Input.SkillSlot.Key1")
+	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_Key2, "Input.SkillSlot.Key2")
+	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_Key3, "Input.SkillSlot.Key3")
+	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_Key4, "Input.SkillSlot.Key4")
 
 	// Event
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_InputWindow_Open, "Event.Combo.InputWindow.Open")
@@ -63,6 +63,14 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Warrior_ShockWave, "Skill.Warrior.ShockWave")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Warrior_DoomStrike, "Skill.Warrior.DoomStrike")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Warrior_LeapingSlam, "Skill.Warrior.LeapingSlam")
+	
+	// Skill.Warrior.Cooldown
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_SharpStrike, "Cooldown.Skill.Warrior.SharpStrike")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_CuttingSmash, "Cooldown.Skill.Warrior.CuttingSmash")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_AnkleSlash, "Cooldown.Skill.Warrior.AnkleSlash")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_ShockWave, "Cooldown.Skill.Warrior.ShockWave")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_DoomStrike, "Cooldown.Skill.Warrior.DoomStrike")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_LeapingSlam, "Cooldown.Skill.Warrior.LeapingSlam")
 
 	// Skill.Archer
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Archer_Snipe, "Skill.Archer.Snipe")

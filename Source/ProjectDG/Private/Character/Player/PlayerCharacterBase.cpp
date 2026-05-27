@@ -349,60 +349,60 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	{
 		EnhancedInputComponent->BindAction(IA_Skill_1, ETriggerEvent::Started, this,
 			&APlayerCharacterBase::OnSkillInputStarted,
-			DGGameplayTags::Input_Slot_1.GetTag());
+			DGGameplayTags::Input_SkillSlot_LeftMouse.GetTag());
 		EnhancedInputComponent->BindAction(IA_Skill_1, ETriggerEvent::Completed, this,
 			&APlayerCharacterBase::OnSkillInputCompleted,
-			DGGameplayTags::Input_Slot_1.GetTag());
+			DGGameplayTags::Input_SkillSlot_LeftMouse.GetTag());
 	}
 
 	if (IA_Skill_2)
 	{
 		EnhancedInputComponent->BindAction(IA_Skill_2, ETriggerEvent::Started, this,
 			&APlayerCharacterBase::OnSkillInputStarted,
-			DGGameplayTags::Input_Slot_2.GetTag());
+			DGGameplayTags::Input_SkillSlot_RightMouse.GetTag());
 		EnhancedInputComponent->BindAction(IA_Skill_2, ETriggerEvent::Completed, this,
 			&APlayerCharacterBase::OnSkillInputCompleted,
-			DGGameplayTags::Input_Slot_2.GetTag());
+			DGGameplayTags::Input_SkillSlot_RightMouse.GetTag());
 	}
 
 	if (IA_Skill_3)
 	{
 		EnhancedInputComponent->BindAction(IA_Skill_3, ETriggerEvent::Started, this,
 			&APlayerCharacterBase::OnSkillInputStarted,
-			DGGameplayTags::Input_Slot_3.GetTag());
+			DGGameplayTags::Input_SkillSlot_Key1.GetTag());
 		EnhancedInputComponent->BindAction(IA_Skill_3, ETriggerEvent::Completed, this,
 			&APlayerCharacterBase::OnSkillInputCompleted,
-			DGGameplayTags::Input_Slot_3.GetTag());
+			DGGameplayTags::Input_SkillSlot_Key1.GetTag());
 	}
 
 	if (IA_Skill_4)
 	{
 		EnhancedInputComponent->BindAction(IA_Skill_4, ETriggerEvent::Started, this,
 			&APlayerCharacterBase::OnSkillInputStarted,
-			DGGameplayTags::Input_Slot_4.GetTag());
+			DGGameplayTags::Input_SkillSlot_Key2.GetTag());
 		EnhancedInputComponent->BindAction(IA_Skill_4, ETriggerEvent::Completed, this,
 			&APlayerCharacterBase::OnSkillInputCompleted,
-			DGGameplayTags::Input_Slot_4.GetTag());
+			DGGameplayTags::Input_SkillSlot_Key2.GetTag());
 	}
 
 	if (IA_Skill_Q)
 	{
 		EnhancedInputComponent->BindAction(IA_Skill_Q, ETriggerEvent::Started, this,
 			&APlayerCharacterBase::OnSkillInputStarted,
-			DGGameplayTags::Input_Slot_Q.GetTag());
+			DGGameplayTags::Input_SkillSlot_Key3.GetTag());
 		EnhancedInputComponent->BindAction(IA_Skill_Q, ETriggerEvent::Completed, this,
 			&APlayerCharacterBase::OnSkillInputCompleted,
-			DGGameplayTags::Input_Slot_Q.GetTag());
+			DGGameplayTags::Input_SkillSlot_Key3.GetTag());
 	}
 
 	if (IA_Skill_E)
 	{
 		EnhancedInputComponent->BindAction(IA_Skill_E, ETriggerEvent::Started, this,
 			&APlayerCharacterBase::OnSkillInputStarted,
-			DGGameplayTags::Input_Slot_E.GetTag());
+			DGGameplayTags::Input_SkillSlot_Key4.GetTag());
 		EnhancedInputComponent->BindAction(IA_Skill_E, ETriggerEvent::Completed, this,
 			&APlayerCharacterBase::OnSkillInputCompleted,
-			DGGameplayTags::Input_Slot_E.GetTag());
+			DGGameplayTags::Input_SkillSlot_Key4.GetTag());
 	}
 
 	// UI 토글 (맵, 인벤토리)
@@ -1042,75 +1042,75 @@ void APlayerCharacterBase::ServerHandleShiftAction_Implementation(
 	ASC->HandleGameplayEvent(Payload.EventTag, &Payload);
 }
 
-void APlayerCharacterBase::Server_TestApplyDamage_Implementation()
-{
-	if (!HasAuthority())
-	{
-		return;
-	}
-
-	UCombatComponent* SourceCombatComponent = GetCombatComponent();
-	if (!SourceCombatComponent)
-	{
-		return;
-	}
-
-	ABaseCharacter* BestTarget = nullptr;
-	float BestDistanceSq = TNumericLimits<float>::Max();
-
-	TArray<AActor*> FoundActors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseCharacter::StaticClass(), FoundActors);
-
-	for (AActor* Actor : FoundActors)
-	{
-		ABaseCharacter* Candidate = Cast<ABaseCharacter>(Actor);
-		if (!Candidate)
-		{
-			continue;
-		}
-
-		if (Candidate == this)
-		{
-			continue;
-		}
-
-		if (Candidate->IsDead())
-		{
-			continue;
-		}
-
-		if (IsFriendlyTo(Candidate))
-		{
-			continue;
-		}
-
-		const float DistanceSq = FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation());
-		constexpr float MaxTestDamageRange = 3000.f;
-
-		if (DistanceSq > FMath::Square(MaxTestDamageRange))
-		{
-			continue;
-		}
-
-		if (DistanceSq < BestDistanceSq)
-		{
-			BestDistanceSq = DistanceSq;
-			BestTarget = Candidate;
-		}
-	}
-
-	if (!BestTarget)
-	{
-		return;
-	}
-
-	FDGDamageRequest DamageRequest;
-	DamageRequest.SourceActor = this;
-	DamageRequest.TargetActor = BestTarget;
-	DamageRequest.BaseDamage = 100.f;
-	DamageRequest.SourceTag = DGGameplayTags::Input_Slot_1;
-	DamageRequest.HitLocation = BestTarget->GetActorLocation();
-	DamageRequest.bHasHitLocation = true;
-
-	const FDGDamageResult DamageResult = SourceCombatComponent->ApplyDamageRequest(DamageRequest);
-}
+// void APlayerCharacterBase::Server_TestApplyDamage_Implementation()
+// {
+// 	if (!HasAuthority())
+// 	{
+// 		return;
+// 	}
+//
+// 	UCombatComponent* SourceCombatComponent = GetCombatComponent();
+// 	if (!SourceCombatComponent)
+// 	{
+// 		return;
+// 	}
+//
+// 	ABaseCharacter* BestTarget = nullptr;
+// 	float BestDistanceSq = TNumericLimits<float>::Max();
+//
+// 	TArray<AActor*> FoundActors;
+// 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseCharacter::StaticClass(), FoundActors);
+//
+// 	for (AActor* Actor : FoundActors)
+// 	{
+// 		ABaseCharacter* Candidate = Cast<ABaseCharacter>(Actor);
+// 		if (!Candidate)
+// 		{
+// 			continue;
+// 		}
+//
+// 		if (Candidate == this)
+// 		{
+// 			continue;
+// 		}
+//
+// 		if (Candidate->IsDead())
+// 		{
+// 			continue;
+// 		}
+//
+// 		if (IsFriendlyTo(Candidate))
+// 		{
+// 			continue;
+// 		}
+//
+// 		const float DistanceSq = FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation());
+// 		constexpr float MaxTestDamageRange = 3000.f;
+//
+// 		if (DistanceSq > FMath::Square(MaxTestDamageRange))
+// 		{
+// 			continue;
+// 		}
+//
+// 		if (DistanceSq < BestDistanceSq)
+// 		{
+// 			BestDistanceSq = DistanceSq;
+// 			BestTarget = Candidate;
+// 		}
+// 	}
+//
+// 	if (!BestTarget)
+// 	{
+// 		return;
+// 	}
+//
+// 	FDGDamageRequest DamageRequest;
+// 	DamageRequest.SourceActor = this;
+// 	DamageRequest.TargetActor = BestTarget;
+// 	DamageRequest.BaseDamage = 100.f;
+// 	DamageRequest.SourceTag = DGGameplayTags::Input_Slot_1;
+// 	DamageRequest.HitLocation = BestTarget->GetActorLocation();
+// 	DamageRequest.bHasHitLocation = true;
+//
+// 	const FDGDamageResult DamageResult = SourceCombatComponent->ApplyDamageRequest(DamageRequest);
+// }
