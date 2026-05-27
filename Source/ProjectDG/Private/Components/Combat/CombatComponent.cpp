@@ -161,6 +161,11 @@ FDGDamageResult UCombatComponent::ApplyDamageRequest(const FDGDamageRequest& Dam
 	);
 
 	SpecHandle.Data->SetSetByCallerMagnitude(
+		DGGameplayTags::Data_GroggyDamage,
+		DamageRequest.GroggyDamage
+	);
+
+	SpecHandle.Data->SetSetByCallerMagnitude(
 		DGGameplayTags::Data_Damage,
 		DamageRequest.BaseDamage
 	);

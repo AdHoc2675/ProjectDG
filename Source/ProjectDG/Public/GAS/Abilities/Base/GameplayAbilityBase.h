@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -47,6 +47,10 @@ protected:
 	float DamageMultiplier,
 	FGameplayTag SourceTag,
 	FVector HitLocation = FVector::ZeroVector,
-	bool bHasHitLocation = false
+	bool bHasHitLocation = false,
+	float GroggyDamage = 0.f
 ) const;
+
+protected:
+	virtual float GetSkillGroggyDamage() const { return 0.f; }
 };

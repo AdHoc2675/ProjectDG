@@ -77,7 +77,7 @@ protected:
 	float GetSkillDamageMultiplier() const;
 
 	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
-	float GetSkillGroggyDamage() const;
+	virtual float GetSkillGroggyDamage() const override;
 
 	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
 	int32 GetSkillComboCount() const;

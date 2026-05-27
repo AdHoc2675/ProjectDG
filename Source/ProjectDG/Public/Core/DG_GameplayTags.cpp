@@ -1,4 +1,4 @@
-﻿#include "DG_GameplayTags.h"
+#include "DG_GameplayTags.h"
 
 namespace DGGameplayTags
 {
@@ -99,6 +99,7 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Data_Damage, "Data.Damage")
 	UE_DEFINE_GAMEPLAY_TAG(Data_BaseDamage, "Data_BaseDamage")
 	UE_DEFINE_GAMEPLAY_TAG(Data_DamageMultiplier, "Data_DamageMultiplier")	
+	UE_DEFINE_GAMEPLAY_TAG(Data_GroggyDamage, "Data_GroggyDamage")
 	UE_DEFINE_GAMEPLAY_TAG(Data_Cooldown, "Data.Cooldown")
 
 	// Block
@@ -116,4 +117,7 @@ namespace DGGameplayTags
 	// Boss State
 	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Groggy, "State.Boss.Groggy")
 	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Dead, "State.Boss.Dead")
+
+	// Boss Event
+	UE_DEFINE_GAMEPLAY_TAG(Event_Boss_Groggy, "Event.Boss.Groggy")
 }

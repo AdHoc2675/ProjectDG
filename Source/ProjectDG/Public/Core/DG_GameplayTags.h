@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include  "NativeGameplayTags.h"
 
@@ -99,6 +99,7 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Damage)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_BaseDamage)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_DamageMultiplier)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_GroggyDamage)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Cooldown)
 
 	// Block
@@ -116,4 +117,7 @@ namespace DGGameplayTags
 	// Boss State
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Boss_Groggy)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Boss_Dead)
+
+	// Boss Event
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Boss_Groggy)
 }

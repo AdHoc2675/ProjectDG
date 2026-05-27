@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "GAS/Abilities/Base/GameplayAbilityBase.h"
@@ -45,7 +45,8 @@ FDGDamageResult UGameplayAbilityBase::ApplyDamageToTarget(
 	float DamageMultiplier,
 	FGameplayTag SourceTag,
 	FVector HitLocation,
-	bool bHasHitLocation
+	bool bHasHitLocation,
+	float GroggyDamage
 ) const
 {
 	FDGDamageResult Result;
@@ -70,6 +71,8 @@ FDGDamageResult UGameplayAbilityBase::ApplyDamageToTarget(
 		return Result;
 	}
 
+	const float FinalGroggyDamage = GroggyDamage == 0.f ? GetSkillGroggyDamage() : GroggyDamage;
+
 	FDGDamageRequest DamageRequest;
 	DamageRequest.SourceActor = SourceActor;
 	DamageRequest.TargetActor = TargetActor;
@@ -78,6 +81,7 @@ FDGDamageResult UGameplayAbilityBase::ApplyDamageToTarget(
 	DamageRequest.SourceTag = SourceTag;
 	DamageRequest.HitLocation = HitLocation;
 	DamageRequest.bHasHitLocation = bHasHitLocation;
+	DamageRequest.GroggyDamage = FinalGroggyDamage;
 
 	return SourceCombatComponent->ApplyDamageRequest(DamageRequest);
 }
