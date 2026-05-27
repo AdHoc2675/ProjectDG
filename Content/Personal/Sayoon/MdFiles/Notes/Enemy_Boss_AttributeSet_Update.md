@@ -9,13 +9,13 @@
 일반 몬스터와 보스 몬스터 모두에게 기본적으로 부착되는 전투/AI 스탯입니다.
 
 * **추가된 스탯**:
-  * `StaggerGauge` / `MaxStaggerGauge` (그로기 무력화 게이지)
+  * `GroggyGauge` / `MaxGroggyGauge` (그로기 무력화 게이지)
   * `AttackSpeed` (공격 속도)
   * `MovementSpeed` (이동 속도)
   * `DetectionRadius` (어그로 인지 반경)
   * `ProvideExp` (처치 시 제공 경험치)
 * **주요 특징**:
-  * 데미지를 입어 `StaggerGauge`가 꽉 차면, 코드를 통해 자동으로 그로기 상태 태그(`TAG_Enemy_State_Groggy`)를 부여하도록 로직이 세팅되어 있습니다.
+  * 데미지를 입어 `GroggyGauge`가 꽉 차면, 코드를 통해 자동으로 그로기 상태 태그(`TAG_Enemy_State_Groggy`)를 부여하도록 로직이 세팅되어 있습니다.
 
 ---
 

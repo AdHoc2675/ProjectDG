@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayTagContainer.h"
+#include "TimerManager.h"
 #include "Character/Enemy/EnemyCharacterBase.h"
 #include "BossCharacterBase.generated.h"
 
@@ -12,6 +13,8 @@ struct FOnAttributeChangeData;
 
 class UBossCharacterClassData;
 class UDG_BossAttributeSet;
+class UDG_EnemyAttributeSet;
+class UAnimMontage;
 
 /**
  * 
@@ -37,6 +40,18 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "BossCharacterBase|ASC")
 	TObjectPtr<UDG_BossAttributeSet> BossAttributeSet = nullptr;
 
+	// 적 공통 AttributeSet
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "BossCharacterBase|ASC")
+	TObjectPtr<UDG_EnemyAttributeSet> EnemyAttributeSet = nullptr;
+
+	// 그로기 몽타주 (선택)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BossCharacterBase|Groggy")
+	TObjectPtr<UAnimMontage> GroggyMontage = nullptr;
+
+	// 그로기 유지 시간 (0이면 몽타주 노티파이에서 EndGroggy 호출)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BossCharacterBase|Groggy")
+	float GroggyDuration = 0.f;
+
 	// 보스 전용 스탯 GE 적용 (소환 직후 1회)
 	void ApplyBossSpecialEffects();
 
@@ -55,6 +70,18 @@ protected:
 	// Health Attribute 변경 콜백 (ASC Delegate로 바인딩)
 	void OnHealthChanged(const FOnAttributeChangeData& Data);
 
+	// Groggy Attribute 변경 콜백 (ASC Delegate로 바인딩)
+	void OnGroggyGaugeChanged(const FOnAttributeChangeData& Data);
+
+	// 그로기 진입/해제
+	void StartGroggy();
+
+	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Groggy")
+	void EndGroggy();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayGroggyMontage();
+
 	// Health 비율에 따라 Phase 태그 갱신 (단방향)
 	void UpdateHealthPhaseTags(float HealthRatio);
 
@@ -65,9 +92,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|ASC")
 	UDG_BossAttributeSet* GetBossAttributeSet() const { return BossAttributeSet; }
 
+	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|ASC")
+	UDG_EnemyAttributeSet* GetEnemyAttributeSet() const { return EnemyAttributeSet; }
+
 	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Team")
 	FGameplayTag GetBossTag() const { return BossTag; }
 
 private:
 	bool bBossSpecialEffectsApplied = false;
+	bool bIsGroggy = false;
+	FTimerHandle GroggyTimerHandle;
 };
