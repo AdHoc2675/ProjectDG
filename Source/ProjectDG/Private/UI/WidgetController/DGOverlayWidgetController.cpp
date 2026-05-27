@@ -166,16 +166,16 @@ void UDGOverlayWidgetController::SetEnemyTarget(UAbilitySystemComponent* InEnemy
 	// 찾은 그로기 AttributeSet으로 이벤트 연결
 	if (GroggyAS)
 	{
-		EnemyGroggyChangedDelegateHandle = CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(GroggyAS->GetStaggerGaugeAttribute()).AddLambda(
+		EnemyGroggyChangedDelegateHandle = CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(GroggyAS->GetGroggyGaugeAttribute()).AddLambda(
 			[this, GroggyAS](const FOnAttributeChangeData& Data)
 			{
-				OnEnemyGroggyChanged.Broadcast(Data.NewValue, GroggyAS->GetMaxStaggerGauge());
+				OnEnemyGroggyChanged.Broadcast(Data.NewValue, GroggyAS->GetMaxGroggyGauge());
 			}
 		);
-		EnemyMaxGroggyChangedDelegateHandle = CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(GroggyAS->GetMaxStaggerGaugeAttribute()).AddLambda(
+		EnemyMaxGroggyChangedDelegateHandle = CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(GroggyAS->GetMaxGroggyGaugeAttribute()).AddLambda(
 			[this, GroggyAS](const FOnAttributeChangeData& Data)
 			{
-				OnEnemyGroggyChanged.Broadcast(GroggyAS->GetStaggerGauge(), Data.NewValue);
+				OnEnemyGroggyChanged.Broadcast(GroggyAS->GetGroggyGauge(), Data.NewValue);
 			}
 		);
 	}
@@ -200,7 +200,7 @@ void UDGOverlayWidgetController::SetEnemyTarget(UAbilitySystemComponent* InEnemy
 
 	if (GroggyAS)
 	{
-		OnEnemyGroggyChanged.Broadcast(GroggyAS->GetStaggerGauge(), GroggyAS->GetMaxStaggerGauge());
+		OnEnemyGroggyChanged.Broadcast(GroggyAS->GetGroggyGauge(), GroggyAS->GetMaxGroggyGauge());
 	}
 }
 
@@ -237,8 +237,8 @@ void UDGOverlayWidgetController::ClearCurrentEnemyTarget()
 
 		if (UDG_EnemyAttributeSet* GroggyAS = Cast<UDG_EnemyAttributeSet>(CurrentEnemyAS))
 		{
-			CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(GroggyAS->GetStaggerGaugeAttribute()).Remove(EnemyGroggyChangedDelegateHandle);
-			CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(GroggyAS->GetMaxStaggerGaugeAttribute()).Remove(EnemyMaxGroggyChangedDelegateHandle);
+			CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(GroggyAS->GetGroggyGaugeAttribute()).Remove(EnemyGroggyChangedDelegateHandle);
+			CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(GroggyAS->GetMaxGroggyGaugeAttribute()).Remove(EnemyMaxGroggyChangedDelegateHandle);
 		}
 	}
 
