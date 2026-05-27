@@ -15,10 +15,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxStaminaChangedSignature, float
 // 추가로 Mental 관련 델리게이트도 여기에 선언할 수 있음
 
 
-// 적 체력 갱신 델리게이트
+// 적 정보 갱신 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyHealthChangedSignature, float, CurrentHealth, float, MaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyGroggyChangedSignature, float, CurrentGroggy, float, MaxGroggy);
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyTargetSetSignature, const FString&, EnemyName, int32, MaxHealthBars);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyTargetClearedSignature);
 
 // 미니맵 마커 전방 선언
 class UDGMinimapMarkerComponent;
@@ -69,9 +70,11 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Enemy Attributes")
 	FOnEnemyGroggyChangedSignature OnEnemyGroggyChanged;
 
-	// 적 타겟이 바뀌거나 피해를 입혔을 때 컨트롤러에 적 정보를 갱신하는 함수
-	UFUNCTION(BlueprintCallable, Category = "GAS|Enemy Attributes")
-	void SetEnemyTarget(class UAbilitySystemComponent* InEnemyASC, class UAttributeSet* InEnemyAS, const FString& EnemyName);
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Enemy Attributes")
+	FOnEnemyTargetSetSignature OnEnemyTargetSet;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Enemy Attributes")
+	FOnEnemyTargetClearedSignature OnEnemyTargetCleared;
 
 protected:
 	UPROPERTY()
@@ -82,8 +85,36 @@ protected:
 	// 이전 바인딩 해제를 위한 델리게이트 핸들
 	FDelegateHandle EnemyHealthChangedDelegateHandle;
 	FDelegateHandle EnemyMaxHealthChangedDelegateHandle;
-	// FDelegateHandle EnemyGroggyChangedDelegateHandle; // 필요시 사용
+	FDelegateHandle EnemyGroggyChangedDelegateHandle;
+	FDelegateHandle EnemyMaxGroggyChangedDelegateHandle;
 
+public:
+	// 우선순위에 의해 결정된 최종 적 타겟팅 적용
+	void SetEnemyTarget(class UAbilitySystemComponent* InEnemyASC, class UAttributeSet* InEnemyAS, const FString& EnemyName);
+
+	// 명시적인 적 등록 함수
+	UFUNCTION(BlueprintCallable, Category = "GAS|Enemy Attributes")
+	void NotifyBossEncountered(AActor* BossActor);
+
+	UFUNCTION(BlueprintCallable, Category = "GAS|Enemy Attributes")
+	void NotifyTargetChanged(AActor* TargetActor);
+
+	UFUNCTION(BlueprintCallable, Category = "GAS|Enemy Attributes")
+	void NotifyEnemyDamaged(AActor* DamagedEnemy);
+
+	UFUNCTION(BlueprintCallable, Category = "GAS|Enemy Attributes")
+	void ClearCurrentEnemyTarget();
+
+	// 상태 기반 적 업데이트 로직 (우선순위 결정)
+	void RefreshEnemyTargetPriority();
+
+	// 현재 추적 중인 대상들
+	TWeakObjectPtr<AActor> CurrentBossEnemy;
+	TWeakObjectPtr<AActor> CurrentLockedTarget;
+	TWeakObjectPtr<AActor> LastDamagedEnemy;
+
+	// 마지막 피해를 입힌 시간 기록 (타이머용)
+	float LastDamageTime = 0.f;
 #pragma endregion
 
 #pragma region Minimap
