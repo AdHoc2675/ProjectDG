@@ -7,6 +7,8 @@
 #include "GAS/Effects/Damage/GE_Damage.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
+#include "UI/HUD/DG_HUD.h"
+#include "UI/WidgetController/DGOverlayWidgetController.h"
 
 UCombatComponent::UCombatComponent()
 {
@@ -179,6 +181,29 @@ FDGDamageResult UCombatComponent::ApplyDamageRequest(const FDGDamageRequest& Dam
 	// 	*GetNameSafe(TargetActor),
 	// 	DamageRequest.BaseDamage
 	// ));
+
+	if (SourceActor)
+	{
+		if (APawn* SourcePawn = Cast<APawn>(SourceActor))
+		{
+			if (SourcePawn->IsLocallyControlled())
+			{
+				if (APlayerController* PC = Cast<APlayerController>(SourcePawn->GetController()))
+				{
+					// HUD 캐스팅
+					if (ADG_HUD* HUD = Cast<ADG_HUD>(PC->GetHUD()))
+					{
+						// GetOverlayWidgetController 호출 (파라미터 빈값이어도 됨, 이미 생성되어있으므로)
+						if (UDGOverlayWidgetController* Controller = HUD->GetOverlayWidgetController(FWidgetControllerParams()))
+						{
+							// 방금 때린 적을 타겟으로 넘겨줌
+							Controller->NotifyEnemyDamaged(TargetActor);
+						}
+					}
+				}
+			}
+		}
+	}
 
 	return Result;
 }
