@@ -13,14 +13,6 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Character_Class_Archer, "Character.Class.Archer")
 	UE_DEFINE_GAMEPLAY_TAG(Character_Class_Mage, "Character.Class.Mage")
 	UE_DEFINE_GAMEPLAY_TAG(Character_Class_Assassin, "Character.Class.Assassin")
-
-	// Input
-	// UE_DEFINE_GAMEPLAY_TAG(Input_Slot_1, "Input.Slot.1")
-	// UE_DEFINE_GAMEPLAY_TAG(Input_Slot_2, "Input.Slot.2")
-	// UE_DEFINE_GAMEPLAY_TAG(Input_Slot_3, "Input.Slot.3")
-	// UE_DEFINE_GAMEPLAY_TAG(Input_Slot_4, "Input.Slot.4")
-	// UE_DEFINE_GAMEPLAY_TAG(Input_Slot_Q, "Input.Slot.Q")
-	// UE_DEFINE_GAMEPLAY_TAG(Input_Slot_E, "Input.Slot.E")
 	
 	// Input
 	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_LeftMouse, "Input.SkillSlot.LeftMouse")
