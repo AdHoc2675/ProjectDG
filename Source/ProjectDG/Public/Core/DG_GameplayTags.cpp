@@ -15,12 +15,20 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Character_Class_Assassin, "Character.Class.Assassin")
 
 	// Input
-	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_1, "Input.Slot.1")
-	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_2, "Input.Slot.2")
-	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_3, "Input.Slot.3")
-	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_4, "Input.Slot.4")
-	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_Q, "Input.Slot.Q")
-	UE_DEFINE_GAMEPLAY_TAG(Input_Slot_E, "Input.Slot.E")
+	// UE_DEFINE_GAMEPLAY_TAG(Input_Slot_1, "Input.Slot.1")
+	// UE_DEFINE_GAMEPLAY_TAG(Input_Slot_2, "Input.Slot.2")
+	// UE_DEFINE_GAMEPLAY_TAG(Input_Slot_3, "Input.Slot.3")
+	// UE_DEFINE_GAMEPLAY_TAG(Input_Slot_4, "Input.Slot.4")
+	// UE_DEFINE_GAMEPLAY_TAG(Input_Slot_Q, "Input.Slot.Q")
+	// UE_DEFINE_GAMEPLAY_TAG(Input_Slot_E, "Input.Slot.E")
+	
+	// Input
+	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_LeftMouse, "Input.SkillSlot.LeftMouse")
+	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_RightMouse, "Input.SkillSlot.RightMouse")
+	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_Key1, "Input.SkillSlot.Key1")
+	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_Key2, "Input.SkillSlot.Key2")
+	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_Key3, "Input.SkillSlot.Key3")
+	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_Key4, "Input.SkillSlot.Key4")
 
 	// Event
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_InputWindow_Open, "Event.Combo.InputWindow.Open")
