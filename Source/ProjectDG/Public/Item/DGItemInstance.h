@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "Item/DG_ItemTypes.h"
+#include "GameplayEffectTypes.h"
 #include "DGItemInstance.generated.h"
 
 class UDGItemDefinition;
@@ -47,4 +48,8 @@ public:
 	// 겹침 수량 (장비는 항상 1, 소모품/재료는 1 이상)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Instance|Stack")
 	int32 Quantity = 1;
+
+
+	// 장착 시 캐릭터에게 적용된 스탯 버프의 고유 핸들 (장비 해제 시 제거 목적)
+	FActiveGameplayEffectHandle EquipStatHandle;
 };

@@ -29,6 +29,7 @@
 #include "Perception/AISense_Sight.h"
 
 #include "UI/HUD/DG_HUD.h"
+#include "UI/WidgetController/DGOverlayWidgetController.h"
 
 #include "Components/UI/DGMinimapCaptureComponent.h"
 #include "Components/UI/DGMinimapMarkerComponent.h"
@@ -210,6 +211,24 @@ void APlayerCharacterBase::InitializePlayerUI()
 				// HUD의 InitOverlay 함수 호출 (컨트롤러, State, ASC, 속성 데이터 전달)
 				HUD->InitOverlay(PC, PS, ASC, PS->GetDGAttributeSet());
 				UE_LOG(LogTemp, Log, TEXT("[PlayerCharacterBase] Player UI initialized on local player."));
+
+				// 락온 기능과 타겟 상태창 연동
+				if (LockOnComponent)
+				{
+					LockOnComponent->OnLockOnTargetChanged.AddLambda([HUD](const FLockOnTargetResult& Result) {
+						if (UDGOverlayWidgetController* Controller = HUD->GetOverlayWidgetController(FWidgetControllerParams()))
+						{
+							Controller->NotifyTargetChanged(Result.TargetActor);
+						}
+						});
+
+					LockOnComponent->OnLockOnReleased.AddLambda([HUD](const FLockOnTargetResult& Result) {
+						if (UDGOverlayWidgetController* Controller = HUD->GetOverlayWidgetController(FWidgetControllerParams()))
+						{
+							Controller->NotifyTargetChanged(nullptr);
+						}
+						});
+				}
 			}
 		}
 	}
@@ -780,7 +799,7 @@ void APlayerCharacterBase::ToggleInventoryAction()
 	{
 		if (ADG_HUD* HUD = Cast<ADG_HUD>(PC->GetHUD()))
 		{
-			HUD->ToggleInventoryWidget();
+			HUD->ToggleCharacterProfileWidget();
 		}
 	}
 }

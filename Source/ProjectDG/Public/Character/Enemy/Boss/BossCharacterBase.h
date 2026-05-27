@@ -58,6 +58,9 @@ protected:
 	// Health 비율에 따라 Phase 태그 갱신 (단방향)
 	void UpdateHealthPhaseTags(float HealthRatio);
 
+	// 보스 사망 처리 (보스/적 공통 태그 부여)
+	virtual void HandleDeath() override;
+
 public:
 	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|ASC")
 	UDG_BossAttributeSet* GetBossAttributeSet() const { return BossAttributeSet; }

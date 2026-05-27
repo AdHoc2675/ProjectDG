@@ -4,10 +4,64 @@
 
 #include "Character/Player/PlayerCharacterBase.h"
 #include "Character/Player/Data/PlayerSkillData.h"
+#include "Core/DG_GameplayTags.h"
+#include "GAS/Effects/Skills/GE_SkillCoolDown.h"
 
 UGA_PlayerSkillBase::UGA_PlayerSkillBase()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+	
+	CooldownGameplayEffectClass = UGE_SkillCoolDown::StaticClass();
+}
+
+const FGameplayTagContainer* UGA_PlayerSkillBase::GetCooldownTags() const
+{
+	TempCooldownTags.Reset();
+
+	if (const FGameplayTagContainer* ParentCooldownTags = Super::GetCooldownTags())
+	{
+		TempCooldownTags.AppendTags(*ParentCooldownTags);
+	}
+
+	const FGameplayTag CooldownTag = GetSkillCooldownTag();
+	if (CooldownTag.IsValid())
+	{
+		TempCooldownTags.AddTag(CooldownTag);
+	}
+
+	return &TempCooldownTags;
+}
+
+void UGA_PlayerSkillBase::ApplyCooldown(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
+{
+	const float Cooldown = GetSkillCooldown();
+	const FGameplayTag CooldownTag = GetSkillCooldownTag();
+
+	if (Cooldown <= 0.f || !CooldownTag.IsValid() || !CooldownGameplayEffectClass)
+	{
+		return;
+	}
+
+	FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(
+			CooldownGameplayEffectClass,
+			GetAbilityLevel()
+	);
+
+	if (!SpecHandle.IsValid() || !SpecHandle.Data.IsValid())
+	{
+		return;
+	}
+	SpecHandle.Data->SetSetByCallerMagnitude(DGGameplayTags::Data_Cooldown, Cooldown);
+	SpecHandle.Data->DynamicGrantedTags.AddTag(CooldownTag);
+
+	ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);
+}
+
+FGameplayTag UGA_PlayerSkillBase::GetSkillCooldownTag() const
+{
+	const UPlayerSkillData* Data = GetPlayerSkillData();
+	return Data ? Data->CooldownTag : FGameplayTag::EmptyTag;
 }
 
 const UPlayerSkillData* UGA_PlayerSkillBase::GetPlayerSkillData() const

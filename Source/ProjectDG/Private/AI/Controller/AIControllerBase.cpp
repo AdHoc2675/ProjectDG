@@ -2,6 +2,9 @@
 
 
 #include "AI/Controller/AIControllerBase.h"
+#include "BehaviorTree/BlackboardComponent.h"
+#include "BehaviorTree/BlackboardData.h"
+#include "BrainComponent.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "Perception/AISenseConfig_Touch.h"
@@ -51,4 +54,42 @@ AAIControllerBase::AAIControllerBase()
 
 	// 4. 메인 감각(Dominant Sense)을 시각으로 설정
 	EnemyPerceptionComponent->SetDominantSense(UAISenseConfig_Sight::StaticClass());
+}
+
+void AAIControllerBase::StopAIOnDeath()
+{
+	if (bAIStoppedByDeath)
+	{
+		return;
+	}
+
+	bAIStoppedByDeath = true;
+
+	StopMovement();
+
+	if (UBrainComponent* BrainComp = GetBrainComponent())
+	{
+		BrainComp->StopLogic(TEXT("Dead"));
+	}
+
+	if (UBlackboardComponent* BlackboardComp = GetBlackboardComponent())
+	{
+		if (UBlackboardData* BlackboardAsset = BlackboardComp->GetBlackboardAsset())
+		{
+			for (const FBlackboardEntry& Entry : BlackboardAsset->Keys)
+			{
+				if (Entry.EntryName != NAME_None)
+				{
+					BlackboardComp->ClearValue(Entry.EntryName);
+				}
+			}
+		}
+	}
+
+	if (EnemyPerceptionComponent)
+	{
+		EnemyPerceptionComponent->ForgetAll();
+		EnemyPerceptionComponent->SetActive(false);
+		EnemyPerceptionComponent->SetComponentTickEnabled(false);
+	}
 }
