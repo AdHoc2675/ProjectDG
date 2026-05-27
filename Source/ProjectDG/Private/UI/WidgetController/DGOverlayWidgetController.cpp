@@ -119,6 +119,7 @@ UDG_AttributeSet* UDGOverlayWidgetController::GetDGAttributeSet()
 }
 
 
+
 void UDGOverlayWidgetController::SetEnemyTarget(UAbilitySystemComponent* InEnemyASC, UAttributeSet* InEnemyAS, const FString& EnemyName)
 {
 	if (!InEnemyASC || !InEnemyAS) return;
@@ -155,6 +156,90 @@ void UDGOverlayWidgetController::SetEnemyTarget(UAbilitySystemComponent* InEnemy
 	// 즉시 초기값 방송하여 UI를 띄움
 	OnEnemyHealthChanged.Broadcast(CurrentEnemyAS->GetHealth(), CurrentEnemyAS->GetMaxHealth());
 }
+
+void UDGOverlayWidgetController::NotifyBossEncountered(AActor* BossActor)
+{
+	CurrentBossEnemy = BossActor;
+	RefreshEnemyTargetPriority();
+}
+
+void UDGOverlayWidgetController::NotifyTargetChanged(AActor* TargetActor)
+{
+	CurrentLockedTarget = TargetActor;
+	RefreshEnemyTargetPriority();
+}
+
+void UDGOverlayWidgetController::NotifyEnemyDamaged(AActor* DamagedEnemy)
+{
+	LastDamagedEnemy = DamagedEnemy;
+	if (UWorld* World = GetWorld())
+	{
+		LastDamageTime = World->GetTimeSeconds();
+	}
+
+	RefreshEnemyTargetPriority();
+}
+
+void UDGOverlayWidgetController::ClearCurrentEnemyTarget()
+{
+	// 델리게이트 해제
+	if (CurrentEnemyASC && CurrentEnemyAS)
+	{
+		CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(CurrentEnemyAS->GetHealthAttribute()).Remove(EnemyHealthChangedDelegateHandle);
+		CurrentEnemyASC->GetGameplayAttributeValueChangeDelegate(CurrentEnemyAS->GetMaxHealthAttribute()).Remove(EnemyMaxHealthChangedDelegateHandle);
+	}
+
+	CurrentEnemyASC = nullptr;
+	CurrentEnemyAS = nullptr;
+}
+
+
+void UDGOverlayWidgetController::RefreshEnemyTargetPriority()
+{
+	AActor* TargetToShow = nullptr;
+
+	// 1. 보스 우선 표시
+	if (CurrentBossEnemy.IsValid())
+	{
+		TargetToShow = CurrentBossEnemy.Get();
+	}
+	// 2. 보스가 없다면 내가 락온한 적 표시
+	else if (CurrentLockedTarget.IsValid())
+	{
+		TargetToShow = CurrentLockedTarget.Get();
+	}
+	// 3. 그것도 없다면 최근에 때린 적 (단, 맞은지 너무 오래됐다면 패스)
+	else if (LastDamagedEnemy.IsValid())
+	{
+		UWorld* World = GetWorld();
+		if (World && (World->GetTimeSeconds() - LastDamageTime < 10.0f)) // 10초 이내에 때렸던 타겟만
+		{
+			TargetToShow = LastDamagedEnemy.Get();
+		}
+	}
+
+	if (TargetToShow)
+	{
+		// 대상의 ASC 및 스탯 찾기
+		UAbilitySystemComponent* TargetASC = TargetToShow->GetComponentByClass<UAbilitySystemComponent>();
+		if (TargetASC)
+		{
+			// 보통 배열 첫 번째가 주인공 스탯
+			const UAttributeSet* TargetAS = TargetASC->GetSpawnedAttributes().Num() > 0 ? TargetASC->GetSpawnedAttributes()[0] : nullptr;
+
+			// 대상의 이름을 알 수 있는 함수(GetName 등)를 가져옵니다. 필요에 따라 형변환 가능 (예: AEnemyCharacterBase)
+			FString UnitName = TargetToShow->GetName();
+
+			SetEnemyTarget(TargetASC, const_cast<UAttributeSet*>(TargetAS), UnitName);
+		}
+	}
+	// 보여줄 대상이 없다면 초기화
+	else
+	{
+		ClearCurrentEnemyTarget();
+	}
+}
+
 
 // 마커가 새로 태어났을 때  -> UI로 토스
 void UDGOverlayWidgetController::HandleMarkerRegistered(UDGMinimapMarkerComponent* Marker)
