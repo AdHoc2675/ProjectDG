@@ -6,12 +6,72 @@
 #include "Character/Player/Data/PlayerSkillData.h"
 #include "Core/DG_GameplayTags.h"
 #include "GAS/Effects/Skills/GE_SkillCoolDown.h"
+#include "GAS/Effects/Skills/GE_SkillCost.h"
+
+#include "GAS/Attributes/DG_AttributeSet.h"
 
 UGA_PlayerSkillBase::UGA_PlayerSkillBase()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	
 	CooldownGameplayEffectClass = UGE_SkillCoolDown::StaticClass();
+	CostGameplayEffectClass = UGE_SkillCost::StaticClass();
+}
+
+bool UGA_PlayerSkillBase::CheckCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, OUT FGameplayTagContainer* OptionalRelevantTags) const
+{
+	// 기본 비용 검사 통과 여부
+	if (!Super::CheckCost(Handle, ActorInfo, OptionalRelevantTags))
+	{
+		return false;
+	}
+
+	// 데이터 에셋에 설정된 현재 스킬의 소모량
+	const float Cost = GetSkillSpiritCost();
+	if (Cost <= 0.f)
+	{
+		return true; // 차감할 비용이 없으면 통과
+	}
+
+	// 실제 현재 Mental 수치가 소모량보다 높은지 검사
+	if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
+	{
+		float CurrentMental = ASC->GetNumericAttribute(UDG_AttributeSet::GetMentalAttribute());
+		if (CurrentMental < Cost)
+		{
+			// 자원 부족 시 실패
+			return false;
+		}
+	}
+
+	return true;
+}
+
+void UGA_PlayerSkillBase::ApplyCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
+{
+	const float Cost = GetSkillSpiritCost();
+
+	// 소모값이 있고, 부모 UGameplayAbility에서 설정할 수 있는 CostGameplayEffectClass가 할당되어 있다면
+	if (Cost > 0.f && CostGameplayEffectClass && ActorInfo && ActorInfo->AbilitySystemComponent.IsValid())
+	{
+		FGameplayEffectContextHandle ContextHandle = ActorInfo->AbilitySystemComponent->MakeEffectContext();
+		ContextHandle.AddSourceObject(this);
+
+		FGameplayEffectSpecHandle SpecHandle = ActorInfo->AbilitySystemComponent->MakeOutgoingSpec(CostGameplayEffectClass, GetAbilityLevel(), ContextHandle);
+		if (SpecHandle.IsValid())
+		{
+			// 비용 값을 양수 양식으로 GE에 넘김
+			FGameplayTag CostTag = FGameplayTag::RequestGameplayTag(TEXT("Data.MentalCost"));
+			SpecHandle.Data->SetSetByCallerMagnitude(CostTag, -Cost); // 값을 뺄 것이므로 음수(-)로 넘김 (GE 셋팅에 따라 양수로 넘겨도 됨)
+
+			ActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+		}
+	}
+	else
+	{
+		// 할당된 GE가 없으면 기본 로직
+		Super::ApplyCost(Handle, ActorInfo, ActivationInfo);
+	}
 }
 
 const FGameplayTagContainer* UGA_PlayerSkillBase::GetCooldownTags() const

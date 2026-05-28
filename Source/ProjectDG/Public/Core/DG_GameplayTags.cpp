@@ -112,6 +112,7 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Data_DamageMultiplier, "Data_DamageMultiplier")	
 	UE_DEFINE_GAMEPLAY_TAG(Data_GroggyDamage, "Data_GroggyDamage")
 	UE_DEFINE_GAMEPLAY_TAG(Data_Cooldown, "Data.Cooldown")
+	UE_DEFINE_GAMEPLAY_TAG(Data_MentalCost, "Data.MentalCost")
 
 	// Block
 	UE_DEFINE_GAMEPLAY_TAG(Block_Movement_Dodge, "Block.Movement.Dodge")
