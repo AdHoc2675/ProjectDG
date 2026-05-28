@@ -15,6 +15,8 @@ enum class EMinimapMarkerType : uint8
 	Quest UMETA(DisplayName = "Quest")
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMapMarkerClickedSignature, UDGMinimapMarkerComponent*, ClickedMarker);
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class PROJECTDG_API UDGMinimapMarkerComponent : public UActorComponent
 {
@@ -43,4 +45,23 @@ public:
 	// 이 마커가 '나(로컬 플레이어)'의 것인지 '남(파티원 등)'의 것인지 판별하는 유틸 함수
 	UFUNCTION(BlueprintPure, Category = "Minimap")
 	bool IsLocalPlayerMarker() const;
+
+	/* Visibility Config */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|Visibility")
+	bool bShowOnMinimap = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|Visibility")
+	bool bShowOnFullMap = true;
+
+	/* Interaction (주로 Fullmap에서 사용) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|Interaction")
+	bool bIsInteractable = false;
+
+	// 상호작용(클릭) 이벤트 브로드캐스터
+	UPROPERTY(BlueprintAssignable, Category = "Map|Interaction")
+	FOnMapMarkerClickedSignature OnMarkerClicked;
+
+	// UI Widget에서 클릭되었을 때 호출할 함수
+	UFUNCTION(BlueprintCallable, Category = "Map|Interaction")
+	void NotifyClicked();
 };
