@@ -26,6 +26,9 @@ class PROJECTDG_API UGA_PlayerSkillBase : public UGameplayAbilityBase
 public:
 	UGA_PlayerSkillBase();
 
+	virtual bool CheckCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
+	virtual void ApplyCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const override;
+
 protected:
 	/** 이 GA가 사용할 스킬 데이터 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DG|Skill")
