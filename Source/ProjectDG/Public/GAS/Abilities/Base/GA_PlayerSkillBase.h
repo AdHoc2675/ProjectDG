@@ -9,6 +9,10 @@
 
 class UPlayerSkillData;
 class UAnimMontage;
+class UTexture2D;
+class UNiagaraSystem;
+class USoundBase;
+class ADG_PlayerState;
 
 /**
  * 플레이어 스킬 공통 Base.
@@ -52,6 +56,18 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
 	const UPlayerSkillData* GetPlayerSkillData() const;
 
+	/** 현재 콤보 Step에 해당하는 SkillData. 없으면 대표 SkillData를 반환 */
+	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
+	const UPlayerSkillData* GetCurrentComboSkillData() const;
+
+	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
+	int32 GetCurrentComboStepIndex() const;
+
+	void AdvanceCurrentComboStep();
+	void ResetCurrentComboStep();
+
+	ADG_PlayerState* GetDGPlayerState() const;
+
 	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
 	FGameplayTag GetSkillTag() const;
 	
@@ -84,6 +100,21 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
 	UAnimMontage* GetSkillMontage() const;
+
+	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
+	UTexture2D* GetSkillIcon() const;
+
+	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
+	UNiagaraSystem* GetSkillCastVFX() const;
+
+	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
+	UNiagaraSystem* GetSkillHitVFX() const;
+
+	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
+	UNiagaraSystem* GetSkillProjectileVFX() const;
+
+	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
+	USoundBase* GetSkillSFX() const;
 
 	UFUNCTION(BlueprintCallable, Category = "DG|Skill")
 	bool DoesSkillRequireTarget() const;

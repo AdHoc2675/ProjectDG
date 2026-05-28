@@ -1,6 +1,5 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "GameFramework/DG_PlayerState.h"
 
 #include "AbilitySystemComponent.h"
@@ -8,6 +7,7 @@
 #include "Core/DG_Debug.h"
 #include "Data/Attribute/DT_Attribute.h"
 #include "Engine/DataTable.h"
+#include "GameFramework/GameStateBase.h"
 #include "GAS/Attributes/DG_AttributeSet.h"
 #include "Net/UnrealNetwork.h"
 
@@ -37,7 +37,6 @@ void ADG_PlayerState::BeginPlay()
 	Super::BeginPlay();
 }
 
-
 UAbilitySystemComponent* ADG_PlayerState::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;
@@ -47,7 +46,6 @@ UDG_AttributeSet* ADG_PlayerState::GetDGAttributeSet() const
 {
 	return AttributeSet;
 }
-
 
 void ADG_PlayerState::InitializeAttributesFromDataTable() const
 {
@@ -96,7 +94,6 @@ void ADG_PlayerState::InitializeAttributesFromDataTable() const
 		return;
 	}
 
-	
 	AttributeSet->InitHealth(InitRow->MaxHealth);
 	AttributeSet->InitMaxHealth(InitRow->MaxHealth);
 	
@@ -124,6 +121,144 @@ void ADG_PlayerState::InitializeAttributesFromDataTable() const
 	AttributeSet->InitGroggyDamageIncreaseRate(InitRow->GroggyDamageIncreaseRate);
 
 	Debug::Print(TEXT("[DG_PlayerState] Attributes initialized from DT_Attribute."));
+}
+
+float ADG_PlayerState::GetSkillComboServerTime() const
+{
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return 0.f;
+	}
+
+	const AGameStateBase* GameState = World->GetGameState();
+	if (GameState)
+	{
+		return GameState->GetServerWorldTimeSeconds();
+	}
+
+	return World->GetTimeSeconds();
+}
+
+const FPlayerSkillChainRuntimeState* ADG_PlayerState::FindSkillComboState(FGameplayTag SkillTag) const
+{
+	if (!SkillTag.IsValid())
+	{
+		return nullptr;
+	}
+
+	for (const FPlayerSkillChainRuntimeState& State : SkillComboStates)
+	{
+		if (State.SkillTag == SkillTag)
+		{
+			return &State;
+		}
+	}
+
+	return nullptr;
+}
+
+FPlayerSkillChainRuntimeState* ADG_PlayerState::FindSkillComboStateMutable(FGameplayTag SkillTag)
+{
+	if (!SkillTag.IsValid())
+	{
+		return nullptr;
+	}
+
+	for (FPlayerSkillChainRuntimeState& State : SkillComboStates)
+	{
+		if (State.SkillTag == SkillTag)
+		{
+			return &State;
+		}
+	}
+
+	return nullptr;
+}
+
+int32 ADG_PlayerState::GetCurrentSkillComboStepIndex(FGameplayTag SkillTag, int32 ComboCount) const
+{
+	if (!SkillTag.IsValid() || ComboCount <= 1)
+	{
+		return 0;
+	}
+
+	const FPlayerSkillChainRuntimeState* State = FindSkillComboState(SkillTag);
+	if (!State)
+	{
+		return 0;
+	}
+
+	const float CurrentServerTime = GetSkillComboServerTime();
+	if (State->ExpireServerTime > 0.f && CurrentServerTime > State->ExpireServerTime)
+	{
+		return 0;
+	}
+
+	if (State->CurrentStepIndex < 0 || State->CurrentStepIndex >= ComboCount)
+	{
+		return 0;
+	}
+
+	return State->CurrentStepIndex;
+}
+
+void ADG_PlayerState::AdvanceSkillComboStep(FGameplayTag SkillTag, int32 ComboCount, float ExpireDuration)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (!SkillTag.IsValid())
+	{
+		return;
+	}
+
+	if (ComboCount <= 1)
+	{
+		ResetSkillComboStep(SkillTag);
+		return;
+	}
+
+	const int32 CurrentStepIndex = GetCurrentSkillComboStepIndex(SkillTag, ComboCount);
+	const int32 NextStepIndex = (CurrentStepIndex + 1) % ComboCount;
+
+	FPlayerSkillChainRuntimeState* State = FindSkillComboStateMutable(SkillTag);
+	if (!State)
+	{
+		FPlayerSkillChainRuntimeState NewState;
+		NewState.SkillTag = SkillTag;
+		SkillComboStates.Add(NewState);
+
+		State = &SkillComboStates.Last();
+	}
+
+	State->CurrentStepIndex = NextStepIndex;
+	State->ExpireServerTime = NextStepIndex == 0
+		? 0.f
+		: GetSkillComboServerTime() + FMath::Max(0.f, ExpireDuration);
+
+	ForceNetUpdate();
+}
+
+void ADG_PlayerState::ResetSkillComboStep(FGameplayTag SkillTag)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	FPlayerSkillChainRuntimeState* State = FindSkillComboStateMutable(SkillTag);
+	if (!State)
+	{
+		return;
+	}
+
+	State->CurrentStepIndex = 0;
+	State->ExpireServerTime = 0.f;
+
+	ForceNetUpdate();
 }
 
 void ADG_PlayerState::InitializePlayerDataFromClassData(const UPlayerCharacterClassData* InClassData)
@@ -164,6 +299,7 @@ void ADG_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(ADG_PlayerState, CharacterClassTag);
 	DOREPLIFETIME(ADG_PlayerState, Level);
 	DOREPLIFETIME(ADG_PlayerState, CurrentExp);
+	DOREPLIFETIME(ADG_PlayerState, SkillComboStates);
 }
 
 void ADG_PlayerState::OnRep_CharacterClassTag()
@@ -179,4 +315,10 @@ void ADG_PlayerState::OnRep_Level()
 void ADG_PlayerState::OnRep_CurrentExp()
 {
 	// 클라이언트에서 경험치 UI 갱신
+}
+
+void ADG_PlayerState::OnRep_SkillComboStates()
+{
+	// 후속 작업:
+	// 스킬 UI에서 현재 Step 아이콘 갱신이 필요하면 여기서 이벤트/델리게이트 연결
 }
