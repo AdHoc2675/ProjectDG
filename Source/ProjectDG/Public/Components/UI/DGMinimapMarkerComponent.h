@@ -46,10 +46,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Minimap")
 	bool IsLocalPlayerMarker() const;
 
-	/* Visibility Config */
+	// true면 미니맵에서 표시 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|Visibility")
 	bool bShowOnMinimap = true;
 
+	// true면 풀맵에서 표시
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|Visibility")
 	bool bShowOnFullMap = true;
 
