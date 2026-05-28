@@ -47,3 +47,9 @@ bool UDGMinimapMarkerComponent::IsLocalPlayerMarker() const
 
 	return false;
 }
+
+void UDGMinimapMarkerComponent::NotifyClicked()
+{
+	// 나를 구독하고 있는 대상(웨이포인트 등)에게 클릭 사실을 알림
+	OnMarkerClicked.Broadcast(this);
+}

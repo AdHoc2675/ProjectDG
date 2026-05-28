@@ -27,6 +27,9 @@ void UDGMiniMapWidget::OnMarkerAdded(UDGMinimapMarkerComponent* Marker)
 	if (!Marker || !MarkerWidgetClass || !MinimapOverlay) return;
 	if (ActiveMarkerWidgets.Contains(Marker)) return;
 
+	// 풀맵에 표시하지 않는 마커는 스킵
+	if (!Marker->bShowOnFullMap) return;
+
 	// 블루프린트로 지정한 마커 UI(위젯)를 생성
 	UDGMinimapMarkerWidget* NewMarkerWidget = CreateWidget<UDGMinimapMarkerWidget>(this, MarkerWidgetClass);
 
@@ -94,8 +97,8 @@ void UDGMiniMapWidget::UpdateMarkers()
 		UMaterialInstanceDynamic* DynamicMat = MapBackgroundImage->GetDynamicMaterial();
 		if (DynamicMat)
 		{
-			// 머티리얼 파라미터 이름이 "RenderTexture" 라고 가정합니다.
-			// (에디터에서 미니맵 UI 머티리얼의 텍스처 파라미터 이름을 이거로 맞춰주세요)
+			// 머티리얼 파라미터 이름이 "RenderTexture" 라고 가정
+			// (에디터에서 미니맵 UI 머티리얼의 텍스처 파라미터 이름을 RenderTexture로 설정해줘야 함)
 			DynamicMat->SetTextureParameterValue(FName("RenderTexture"), CaptureComp->GetRenderTarget());
 			MapBackgroundImage->SetRenderTranslation(FVector2D::ZeroVector);
 		}
@@ -124,7 +127,7 @@ void UDGMiniMapWidget::UpdateMarkers()
 		AActor* TargetActor = MarkerComp->GetOwner();
 		if (!TargetActor) continue;
 
-		// 1. 컴포넌트의 수학 공식 호출 (픽셀계산 제거! 0~1 값 추출)
+		// 1. 컴포넌트의 수학 공식 호출 (0~1 값 추출)
 		FDGMinimapScreenPosition PosInfo = CaptureComp->WorldToScreenPosition(TargetActor->GetActorLocation());
 
 		// 2. 반환받은 0~1 비율을 UMG의 뷰포인트 중심 좌표(-MapRadius ~ +MapRadius) 로 오프셋 변환

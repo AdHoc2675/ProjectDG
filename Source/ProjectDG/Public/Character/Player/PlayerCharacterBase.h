@@ -305,6 +305,10 @@ public:
 	/** GA에서 현재 상황에 맞는 몽타주를 가져가기 위한 Getter */
 	UFUNCTION(BlueprintCallable, Category = "PlayerCharacterBase|Animation")
 	const FPlayerMovementAnimationSet& GetCurrentMovementAnims() const;
+
+	// 서버로 텔레포트를 요청하는 RPC 함수
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "PlayerCharacterBase|Movement")
+	void ServerTeleportToLocation(FVector TargetLocation);
 	
 #pragma endregion Movement
 	
