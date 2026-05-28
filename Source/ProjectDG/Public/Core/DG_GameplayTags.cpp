@@ -120,6 +120,7 @@ namespace DGGameplayTags
 
 	// Enemy State
 	UE_DEFINE_GAMEPLAY_TAG(State_Enemy_Dead, "State.Enemy.Dead")
+	UE_DEFINE_GAMEPLAY_TAG(State_Enemy_Returning, "State.Enemy.Returning")
 
 	// Boss Phase
 	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Phase_1, "State.Boss.Phase.1")

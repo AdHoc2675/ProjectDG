@@ -124,6 +124,7 @@ namespace DGGameplayTags
 
 	// Enemy State
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Enemy_Dead)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Enemy_Returning)
 
 	// Boss Phase
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Boss_Phase_1)
