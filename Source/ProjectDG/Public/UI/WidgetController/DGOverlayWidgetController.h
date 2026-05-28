@@ -12,7 +12,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChangedSignature, float, Ne
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHealthChangedSignature, float, NewMaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStaminaChangedSignature, float, NewStamina);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxStaminaChangedSignature, float, NewMaxStamina);
-// 추가로 Mental 관련 델리게이트도 여기에 선언할 수 있음
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMentalChangedSignature, float, NewMental);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxMentalChangedSignature, float, NewMaxMental);
 
 
 // 적 정보 갱신 델리게이트
@@ -54,6 +55,12 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
 	FOnMaxStaminaChangedSignature OnMaxStaminaChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
+	FOnMentalChangedSignature OnMentalChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
+	FOnMaxMentalChangedSignature OnMaxMentalChanged;
 
 
 protected:

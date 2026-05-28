@@ -16,10 +16,8 @@ void UDGPlayerStatWidget::BindToController(UDGOverlayWidgetController* Controlle
 	Controller->OnMaxHealthChanged.AddDynamic(this, &UDGPlayerStatWidget::MaxHealthChanged);
 	Controller->OnStaminaChanged.AddDynamic(this, &UDGPlayerStatWidget::StaminaChanged);
 	Controller->OnMaxStaminaChanged.AddDynamic(this, &UDGPlayerStatWidget::MaxStaminaChanged);
-
-	// Mental 이벤트 바인딩 (OverlayController에도 Mental 델리게이트가 추가되어야 합니다)
-	// Controller->OnMentalChanged.AddDynamic(this, &UDGPlayerStatWidget::MentalChanged);
-	// Controller->OnMaxMentalChanged.AddDynamic(this, &UDGPlayerStatWidget::MaxMentalChanged);
+	Controller->OnMentalChanged.AddDynamic(this, &UDGPlayerStatWidget::MentalChanged);
+	Controller->OnMaxMentalChanged.AddDynamic(this, &UDGPlayerStatWidget::MaxMentalChanged);
 
 	Debug::Print(FString::Printf(TEXT("[DGPlayerStatWidget] successfully bound to controller: %s"), *Controller->GetName()));
 }
