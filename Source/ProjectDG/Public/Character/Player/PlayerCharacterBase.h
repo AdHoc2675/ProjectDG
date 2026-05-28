@@ -284,7 +284,7 @@ public:
 	void ClientDrawAttackBoxDebug(FVector_NetQuantize Center, FVector_NetQuantize BoxHalfExtent, FRotator BoxRotation,FColor Color, float Duration);
 
 	UFUNCTION(Server, Reliable)
-	void ServerRequestMeleeComboInput(FGameplayTag SkillTag, int32 ComboIndex);
+	void ServerRequestMeleeComboInput(FGameplayTag SkillTag, int32 ComboIndex, float ClientInputServerTime);
 	
 	
 #pragma endregion Skill

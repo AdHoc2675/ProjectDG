@@ -985,7 +985,7 @@ void APlayerCharacterBase::ClientDrawAttackBoxDebug_Implementation(
 	);
 }
 
-void APlayerCharacterBase::ServerRequestMeleeComboInput_Implementation(FGameplayTag SkillTag, int32 ComboIndex)
+void APlayerCharacterBase::ServerRequestMeleeComboInput_Implementation(FGameplayTag SkillTag, int32 ComboIndex, float ClientInputServerTime)
 {
 	if (!SkillTag.IsValid() || ComboIndex < 1)
 	{
@@ -998,6 +998,7 @@ void APlayerCharacterBase::ServerRequestMeleeComboInput_Implementation(FGameplay
 	Payload.Target = this;
 	Payload.EventMagnitude = static_cast<float>(ComboIndex);
 	Payload.InstigatorTags.AddTag(SkillTag);
+	Payload.TargetData.UniqueId = FMath::RoundToInt(ClientInputServerTime * 1000.f);
 
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
 			this,

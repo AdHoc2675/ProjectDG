@@ -9,6 +9,7 @@
 #include "Character/Player/PlayerCharacterBase.h"
 #include "Core/DG_GameplayTags.h"
 #include "Core/DG_Debug.h"
+#include "GameFramework/GameStateBase.h"
 
 UGA_MeleeAttackBase::UGA_MeleeAttackBase()
 {
@@ -68,6 +69,8 @@ void UGA_MeleeAttackBase::ResetMeleeState()
 	CurrentComboIndex = 1;
 	bComboInputWindowOpen = false;
 	bComboInputBuffered = false;
+	ComboInputWindowOpenedServerTime = 0.f;
+	ComboInputWindowClosedServerTime = 0.f;
 	HitActorsByCombo.Reset();
 }
 
@@ -298,14 +301,35 @@ void UGA_MeleeAttackBase::SendComboInputRequestToServer()
 		return;
 	}
 
-	PlayerCharacter->ServerRequestMeleeComboInput(GetSkillTag(), CurrentComboIndex);
+	float ClientInputServerTime = 0.f;
+	if (const UWorld* World = GetWorld())
+	{
+		if (const AGameStateBase* GameState = World->GetGameState())
+		{
+			ClientInputServerTime = GameState->GetServerWorldTimeSeconds();
+		}
+	}
+
+	PlayerCharacter->ServerRequestMeleeComboInput(
+			GetSkillTag(),
+			CurrentComboIndex,
+			ClientInputServerTime
+	);
 }
 
 void UGA_MeleeAttackBase::OnComboInputWindowOpened(FGameplayEventData Payload)
 {
 	bComboInputWindowOpen = true;
 
-	if (!HasAuthorityAvatar())
+	if (HasAuthorityAvatar())
+	{
+		if (const UWorld* World = GetWorld())
+		{
+			ComboInputWindowOpenedServerTime = World->GetTimeSeconds();
+			ComboInputWindowClosedServerTime = 0.f;
+		}
+	}
+	else
 	{
 		TryBufferComboInputFromHeldState();
 	}
@@ -314,6 +338,14 @@ void UGA_MeleeAttackBase::OnComboInputWindowOpened(FGameplayEventData Payload)
 void UGA_MeleeAttackBase::OnComboInputWindowClosed(FGameplayEventData Payload)
 {
 	bComboInputWindowOpen = false;
+	
+	if (HasAuthorityAvatar())
+	{
+		if (const UWorld* World = GetWorld())
+		{
+			ComboInputWindowClosedServerTime = World->GetTimeSeconds();
+		}
+	}
 }
 
 void UGA_MeleeAttackBase::OnComboBranch(FGameplayEventData Payload)
@@ -436,6 +468,22 @@ void UGA_MeleeAttackBase::OnComboInputRequest(FGameplayEventData Payload)
 
 	const int32 RequestedComboIndex = FMath::RoundToInt(Payload.EventMagnitude);
 	if (RequestedComboIndex != CurrentComboIndex)
+	{
+		return;
+	}
+	
+	const float ClientInputServerTime =
+			 static_cast<float>(Payload.TargetData.UniqueId) / 1000.f;
+
+	const float MinAllowedTime =
+			ComboInputWindowOpenedServerTime - ComboInputServerTimeTolerance;
+
+	const float MaxAllowedTime =
+			ComboInputWindowClosedServerTime > 0.f
+					? ComboInputWindowClosedServerTime + ComboInputServerTimeTolerance
+					: GetWorld()->GetTimeSeconds() + ComboInputServerTimeTolerance;
+
+	if (ClientInputServerTime < MinAllowedTime || ClientInputServerTime > MaxAllowedTime)
 	{
 		return;
 	}
