@@ -100,6 +100,12 @@ APlayerCharacterBase::APlayerCharacterBase()
 	LockOnComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOnComponent"));
 
 	MinimapMarkerComponent->MarkerType = EMinimapMarkerType::Player;
+
+	// 네트워크 컬 거리(기본값은 225,000,000 = 약 150미터)를 엄청나게 크게 설정
+	// 맵이 너무 넓거나 동접자가 높으면 연산량과 트래픽 패킷 낭비가 심해진다는 단점 있음
+	// 근데 우린 동접자 4명이니까 아마 괜찮을듯
+	SetNetCullDistanceSquared(1000000000000.0f); // 10km 반경
+
 }
 
 void APlayerCharacterBase::BeginPlay()
@@ -808,10 +814,10 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 {
 	HeldSkillSlots.FindOrAdd(SlotTag) = true;
 
-	if (!HasAuthority())
-	{
-		ServerSetSkillInputHeld(SlotTag, true);
-	}
+	// if (!HasAuthority())
+	// {
+	// 	ServerSetSkillInputHeld(SlotTag, true);
+	// }
 
 	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
 	if (!ASC)
@@ -831,10 +837,10 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 		{
 			SendSkillInputStartedEvent(SkillInputEventTag);
 
-			if (!HasAuthority())
-			{
-				ServerSendSkillInputStartedEvent(SkillInputEventTag);
-			}
+			// if (!HasAuthority())
+			// {
+			// 	ServerSendSkillInputStartedEvent(SkillInputEventTag);
+			// }
 		}
 	}
 }
@@ -843,10 +849,10 @@ void APlayerCharacterBase::OnSkillInputCompleted(FGameplayTag SlotTag)
 {
 	HeldSkillSlots.FindOrAdd(SlotTag) = false;
 
-	if (!HasAuthority())
-	{
-		ServerSetSkillInputHeld(SlotTag, false);
-	}
+	// if (!HasAuthority())
+	// {
+	// 	ServerSetSkillInputHeld(SlotTag, false);
+	// }
 
 	const FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
 	if (SkillTag.IsValid())
@@ -985,6 +991,28 @@ void APlayerCharacterBase::ClientDrawAttackBoxDebug_Implementation(
 	);
 }
 
+void APlayerCharacterBase::ServerRequestMeleeComboInput_Implementation(FGameplayTag SkillTag, int32 ComboIndex, float ClientInputServerTime)
+{
+	if (!SkillTag.IsValid() || ComboIndex < 1)
+	{
+		return;
+	}
+
+	FGameplayEventData Payload;
+	Payload.EventTag = DGGameplayTags::Event_Combo_InputRequest.GetTag();
+	Payload.Instigator = this;
+	Payload.Target = this;
+	Payload.EventMagnitude = static_cast<float>(ComboIndex);
+	Payload.InstigatorTags.AddTag(SkillTag);
+	Payload.TargetData.UniqueId = FMath::RoundToInt(ClientInputServerTime * 1000.f);
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+			this,
+			DGGameplayTags::Event_Combo_InputRequest.GetTag(),
+			Payload
+	);
+}
+
 void APlayerCharacterBase::InitializeMovementStats()
 {
 	if (!CharacterClassData || !CharacterClassData->MovementData)
@@ -1015,6 +1043,11 @@ const FPlayerMovementAnimationSet& APlayerCharacterBase::GetCurrentMovementAnims
 	// }
 
 	return CharacterClassData->StandardAnims;
+}
+
+void APlayerCharacterBase::ServerTeleportToLocation_Implementation(FVector TargetLocation)
+{
+	SetActorLocation(TargetLocation);
 }
 
 void APlayerCharacterBase::ServerHandleShiftAction_Implementation(

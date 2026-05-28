@@ -21,9 +21,8 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 		OnMaxHealthChanged.Broadcast(DGAS->GetMaxHealth());
 		OnStaminaChanged.Broadcast(DGAS->GetStamina());
 		OnMaxStaminaChanged.Broadcast(DGAS->GetMaxStamina());
-
-		UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] BroadcastInitialValues called. Health: %f, MaxHealth: %f, Stamina: %f, MaxStamina: %f"),
-			DGAS->GetHealth(), DGAS->GetMaxHealth(), DGAS->GetStamina(), DGAS->GetMaxStamina());
+		OnMentalChanged.Broadcast(DGAS->GetMental());
+		OnMaxMentalChanged.Broadcast(DGAS->GetMaxMental());
 	}
 
 	// 미니맵 초기 마커 
@@ -89,6 +88,20 @@ void UDGOverlayWidgetController::BindCallbacksToDependencies()
 			[this](const FOnAttributeChangeData& Data)
 			{
 				OnMaxStaminaChanged.Broadcast(Data.NewValue);
+			}
+		);
+
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(DGAS->GetMentalAttribute()).AddLambda(
+			[this](const FOnAttributeChangeData& Data)
+			{
+				OnMentalChanged.Broadcast(Data.NewValue);
+			}
+		);
+
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(DGAS->GetMaxMentalAttribute()).AddLambda(
+			[this](const FOnAttributeChangeData& Data)
+			{
+				OnMaxMentalChanged.Broadcast(Data.NewValue);
 			}
 		);
 	}

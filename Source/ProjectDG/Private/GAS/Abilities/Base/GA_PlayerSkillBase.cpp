@@ -6,12 +6,75 @@
 #include "Character/Player/Data/PlayerSkillData.h"
 #include "Core/DG_GameplayTags.h"
 #include "GAS/Effects/Skills/GE_SkillCoolDown.h"
+#include "GAS/Effects/Skills/GE_SkillCost.h"
+
+#include "GAS/Attributes/DG_AttributeSet.h"
 
 UGA_PlayerSkillBase::UGA_PlayerSkillBase()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	
 	CooldownGameplayEffectClass = UGE_SkillCoolDown::StaticClass();
+	CostGameplayEffectClass = UGE_SkillCost::StaticClass();
+}
+
+bool UGA_PlayerSkillBase::CheckCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, OUT FGameplayTagContainer* OptionalRelevantTags) const
+{
+	//// 기본 비용 검사 통과 여부
+	//if (!Super::CheckCost(Handle, ActorInfo, OptionalRelevantTags))
+	//{
+	//	return false;
+	//}
+
+	// 데이터 에셋에 설정된 현재 스킬의 소모량
+	const float Cost = GetSkillSpiritCost();
+	if (Cost <= 0.f)
+	{
+		return true; // 차감할 비용이 없으면 통과
+	}
+
+	// 실제 현재 Mental 수치가 소모량보다 높은지 검사
+	if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
+	{
+		float CurrentMental = ASC->GetNumericAttribute(UDG_AttributeSet::GetMentalAttribute());
+		if (CurrentMental < Cost)
+		{
+			// 자원 부족 시 실패
+			return false;
+		}
+	}
+
+	return true;
+}
+
+void UGA_PlayerSkillBase::ApplyCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
+{
+	const float Cost = GetSkillSpiritCost(); // 데이터 에셋에서 소모량 가져오기
+	const float Gain = GetSkillSpiritGain(); // 데이터 에셋에서 회복량 가져오기
+
+	// 소모값(Cost)이나 회복값(Gain) 중 하나라도 있고, GE가 할당되어 있다면
+	if ((Cost > 0.f || Gain > 0.f) && CostGameplayEffectClass && ActorInfo && ActorInfo->AbilitySystemComponent.IsValid())
+	{
+		FGameplayEffectContextHandle ContextHandle = ActorInfo->AbilitySystemComponent->MakeEffectContext();
+		ContextHandle.AddSourceObject(this);
+
+		FGameplayEffectSpecHandle SpecHandle = ActorInfo->AbilitySystemComponent->MakeOutgoingSpec(CostGameplayEffectClass, GetAbilityLevel(), ContextHandle);
+		if (SpecHandle.IsValid())
+		{
+			// 소모는 빼고(-) 회복은 더하는(+) 최종 변화량 계산
+			const float FinalMentalChange = Gain - Cost;
+
+			FGameplayTag CostTag = FGameplayTag::RequestGameplayTag(TEXT("Data.MentalCost"));
+			SpecHandle.Data->SetSetByCallerMagnitude(CostTag, FinalMentalChange);
+
+			ActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+		}
+	}
+	else
+	{
+		// 할당된 GE가 없으면 기본 로직
+		Super::ApplyCost(Handle, ActorInfo, ActivationInfo);
+	}
 }
 
 const FGameplayTagContainer* UGA_PlayerSkillBase::GetCooldownTags() const
