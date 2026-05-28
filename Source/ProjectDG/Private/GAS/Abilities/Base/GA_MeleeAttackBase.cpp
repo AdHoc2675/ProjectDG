@@ -6,6 +6,7 @@
 #include "Character/Player/Data/PlayerSkillData.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "Character/Player/PlayerCharacterBase.h"
 #include "Core/DG_GameplayTags.h"
 #include "Core/DG_Debug.h"
 
@@ -177,6 +178,23 @@ void UGA_MeleeAttackBase::StartMeleeEventTasks()
 		);
 		AttackHitTask->ReadyForActivation();
 	}
+	
+	ComboInputRequestTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+	  this,
+	  DGGameplayTags::Event_Combo_InputRequest.GetTag(),
+	  nullptr,
+	  false,
+	  true
+);
+
+	if (ComboInputRequestTask)
+	{
+		ComboInputRequestTask->EventReceived.AddDynamic(
+				this,
+				&UGA_MeleeAttackBase::OnComboInputRequest
+		);
+		ComboInputRequestTask->ReadyForActivation();
+	}
 }
 
 void UGA_MeleeAttackBase::PlayMeleeMontageFromStart()
@@ -272,6 +290,17 @@ void UGA_MeleeAttackBase::EndMeleeAbility()
 	K2_EndAbility();
 }
 
+void UGA_MeleeAttackBase::SendComboInputRequestToServer()
+{
+	APlayerCharacterBase* PlayerCharacter = GetAvatarPlayerCharacter();
+	if (!PlayerCharacter)
+	{
+		return;
+	}
+
+	PlayerCharacter->ServerRequestMeleeComboInput(GetSkillTag(), CurrentComboIndex);
+}
+
 void UGA_MeleeAttackBase::OnComboInputWindowOpened(FGameplayEventData Payload)
 {
 	bComboInputWindowOpen = true;
@@ -347,6 +376,11 @@ void UGA_MeleeAttackBase::OnAttackHit(FGameplayEventData Payload)
 
 void UGA_MeleeAttackBase::OnSkillInputEventReceived(FGameplayEventData Payload)
 {
+	if (HasAuthorityAvatar())
+	{
+		return;
+	}
+	
 	if (Payload.EventTag != GetSkillInputEventTag())
 	{
 		return;
@@ -358,6 +392,8 @@ void UGA_MeleeAttackBase::OnSkillInputEventReceived(FGameplayEventData Payload)
 	}
 
 	bComboInputBuffered = true;
+	
+	SendComboInputRequestToServer();
 }
 
 void UGA_MeleeAttackBase::OnMontageCompleted()
@@ -378,4 +414,31 @@ void UGA_MeleeAttackBase::OnMontageBlendOut()
 void UGA_MeleeAttackBase::OnMontageCancelled()
 {
 	EndMeleeAbility();
+}
+
+void UGA_MeleeAttackBase::OnComboInputRequest(FGameplayEventData Payload)
+{
+	if (!HasAuthorityAvatar())
+	{
+		return;
+	}
+
+	const FGameplayTag SkillTag = GetSkillTag();
+	if (!SkillTag.IsValid() || !Payload.InstigatorTags.HasTagExact(SkillTag))
+	{
+		return;
+	}
+
+	if (!bComboInputWindowOpen)
+	{
+		return;
+	}
+
+	const int32 RequestedComboIndex = FMath::RoundToInt(Payload.EventMagnitude);
+	if (RequestedComboIndex != CurrentComboIndex)
+	{
+		return;
+	}
+
+	bComboInputBuffered = true;
 }

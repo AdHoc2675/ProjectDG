@@ -64,6 +64,9 @@ protected:
 	
 	UPROPERTY()
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillInputEventTask = nullptr;
+	
+	UPROPERTY()
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> ComboInputRequestTask = nullptr;
 
 protected:
 	int32 CurrentComboIndex = 1;
@@ -90,6 +93,8 @@ protected:
 	float GetCurrentComboDamage() const;
 
 	void EndMeleeAbility();
+	
+	void SendComboInputRequestToServer();
 
 protected:
 	UFUNCTION()
@@ -121,4 +126,7 @@ protected:
 
 	UFUNCTION()
 	void OnMontageCancelled();
+	
+	UFUNCTION()
+	void OnComboInputRequest(FGameplayEventData Payload);
 };

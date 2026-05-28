@@ -34,6 +34,9 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Attack_Hit, "Event.Attack.Hit")
 
 	UE_DEFINE_GAMEPLAY_TAG(Event_Attack_HitWindow_Begin, "Event.Attack.HitWindow.Begin")
+	
+	// MeleeAttack Combo Miss 완화
+	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_InputRequest, "Event.Combo.InputRequest")
 
 	// DoomStrike(파멸의 맹타) 몽타주 출력 시 타겟팅 대상에게 Dash 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그
 	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Warrior_DoomStrike_DashBegin, "Event.Movement.Warrior.DoomStrike.DashBegin")
