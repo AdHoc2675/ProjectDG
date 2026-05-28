@@ -275,7 +275,11 @@ void UGA_MeleeAttackBase::EndMeleeAbility()
 void UGA_MeleeAttackBase::OnComboInputWindowOpened(FGameplayEventData Payload)
 {
 	bComboInputWindowOpen = true;
-	TryBufferComboInputFromHeldState();
+
+	if (!HasAuthorityAvatar())
+	{
+		TryBufferComboInputFromHeldState();
+	}
 }
 
 void UGA_MeleeAttackBase::OnComboInputWindowClosed(FGameplayEventData Payload)
