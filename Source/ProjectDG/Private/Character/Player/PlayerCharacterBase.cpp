@@ -808,10 +808,10 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 {
 	HeldSkillSlots.FindOrAdd(SlotTag) = true;
 
-	if (!HasAuthority())
-	{
-		ServerSetSkillInputHeld(SlotTag, true);
-	}
+	// if (!HasAuthority())
+	// {
+	// 	ServerSetSkillInputHeld(SlotTag, true);
+	// }
 
 	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
 	if (!ASC)
@@ -831,10 +831,10 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 		{
 			SendSkillInputStartedEvent(SkillInputEventTag);
 
-			if (!HasAuthority())
-			{
-				ServerSendSkillInputStartedEvent(SkillInputEventTag);
-			}
+			// if (!HasAuthority())
+			// {
+			// 	ServerSendSkillInputStartedEvent(SkillInputEventTag);
+			// }
 		}
 	}
 }
@@ -843,10 +843,10 @@ void APlayerCharacterBase::OnSkillInputCompleted(FGameplayTag SlotTag)
 {
 	HeldSkillSlots.FindOrAdd(SlotTag) = false;
 
-	if (!HasAuthority())
-	{
-		ServerSetSkillInputHeld(SlotTag, false);
-	}
+	// if (!HasAuthority())
+	// {
+	// 	ServerSetSkillInputHeld(SlotTag, false);
+	// }
 
 	const FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
 	if (SkillTag.IsValid())
@@ -982,6 +982,28 @@ void APlayerCharacterBase::ClientDrawAttackBoxDebug_Implementation(
 		Color,
 		false,
 		Duration
+	);
+}
+
+void APlayerCharacterBase::ServerRequestMeleeComboInput_Implementation(FGameplayTag SkillTag, int32 ComboIndex, float ClientInputServerTime)
+{
+	if (!SkillTag.IsValid() || ComboIndex < 1)
+	{
+		return;
+	}
+
+	FGameplayEventData Payload;
+	Payload.EventTag = DGGameplayTags::Event_Combo_InputRequest.GetTag();
+	Payload.Instigator = this;
+	Payload.Target = this;
+	Payload.EventMagnitude = static_cast<float>(ComboIndex);
+	Payload.InstigatorTags.AddTag(SkillTag);
+	Payload.TargetData.UniqueId = FMath::RoundToInt(ClientInputServerTime * 1000.f);
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+			this,
+			DGGameplayTags::Event_Combo_InputRequest.GetTag(),
+			Payload
 	);
 }
 

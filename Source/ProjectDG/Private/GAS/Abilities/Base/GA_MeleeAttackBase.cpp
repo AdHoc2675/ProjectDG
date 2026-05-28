@@ -6,8 +6,10 @@
 #include "Character/Player/Data/PlayerSkillData.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "Character/Player/PlayerCharacterBase.h"
 #include "Core/DG_GameplayTags.h"
 #include "Core/DG_Debug.h"
+#include "GameFramework/GameStateBase.h"
 
 UGA_MeleeAttackBase::UGA_MeleeAttackBase()
 {
@@ -67,6 +69,8 @@ void UGA_MeleeAttackBase::ResetMeleeState()
 	CurrentComboIndex = 1;
 	bComboInputWindowOpen = false;
 	bComboInputBuffered = false;
+	ComboInputWindowOpenedServerTime = 0.f;
+	ComboInputWindowClosedServerTime = 0.f;
 	HitActorsByCombo.Reset();
 }
 
@@ -177,6 +181,23 @@ void UGA_MeleeAttackBase::StartMeleeEventTasks()
 		);
 		AttackHitTask->ReadyForActivation();
 	}
+	
+	ComboInputRequestTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+	  this,
+	  DGGameplayTags::Event_Combo_InputRequest.GetTag(),
+	  nullptr,
+	  false,
+	  true
+);
+
+	if (ComboInputRequestTask)
+	{
+		ComboInputRequestTask->EventReceived.AddDynamic(
+				this,
+				&UGA_MeleeAttackBase::OnComboInputRequest
+		);
+		ComboInputRequestTask->ReadyForActivation();
+	}
 }
 
 void UGA_MeleeAttackBase::PlayMeleeMontageFromStart()
@@ -272,15 +293,59 @@ void UGA_MeleeAttackBase::EndMeleeAbility()
 	K2_EndAbility();
 }
 
+void UGA_MeleeAttackBase::SendComboInputRequestToServer()
+{
+	APlayerCharacterBase* PlayerCharacter = GetAvatarPlayerCharacter();
+	if (!PlayerCharacter)
+	{
+		return;
+	}
+
+	float ClientInputServerTime = 0.f;
+	if (const UWorld* World = GetWorld())
+	{
+		if (const AGameStateBase* GameState = World->GetGameState())
+		{
+			ClientInputServerTime = GameState->GetServerWorldTimeSeconds();
+		}
+	}
+
+	PlayerCharacter->ServerRequestMeleeComboInput(
+			GetSkillTag(),
+			CurrentComboIndex,
+			ClientInputServerTime
+	);
+}
+
 void UGA_MeleeAttackBase::OnComboInputWindowOpened(FGameplayEventData Payload)
 {
 	bComboInputWindowOpen = true;
-	TryBufferComboInputFromHeldState();
+
+	if (HasAuthorityAvatar())
+	{
+		if (const UWorld* World = GetWorld())
+		{
+			ComboInputWindowOpenedServerTime = World->GetTimeSeconds();
+			ComboInputWindowClosedServerTime = 0.f;
+		}
+	}
+	else
+	{
+		TryBufferComboInputFromHeldState();
+	}
 }
 
 void UGA_MeleeAttackBase::OnComboInputWindowClosed(FGameplayEventData Payload)
 {
 	bComboInputWindowOpen = false;
+	
+	if (HasAuthorityAvatar())
+	{
+		if (const UWorld* World = GetWorld())
+		{
+			ComboInputWindowClosedServerTime = World->GetTimeSeconds();
+		}
+	}
 }
 
 void UGA_MeleeAttackBase::OnComboBranch(FGameplayEventData Payload)
@@ -343,6 +408,11 @@ void UGA_MeleeAttackBase::OnAttackHit(FGameplayEventData Payload)
 
 void UGA_MeleeAttackBase::OnSkillInputEventReceived(FGameplayEventData Payload)
 {
+	if (HasAuthorityAvatar())
+	{
+		return;
+	}
+	
 	if (Payload.EventTag != GetSkillInputEventTag())
 	{
 		return;
@@ -354,6 +424,8 @@ void UGA_MeleeAttackBase::OnSkillInputEventReceived(FGameplayEventData Payload)
 	}
 
 	bComboInputBuffered = true;
+	
+	SendComboInputRequestToServer();
 }
 
 void UGA_MeleeAttackBase::OnMontageCompleted()
@@ -374,4 +446,47 @@ void UGA_MeleeAttackBase::OnMontageBlendOut()
 void UGA_MeleeAttackBase::OnMontageCancelled()
 {
 	EndMeleeAbility();
+}
+
+void UGA_MeleeAttackBase::OnComboInputRequest(FGameplayEventData Payload)
+{
+	if (!HasAuthorityAvatar())
+	{
+		return;
+	}
+
+	const FGameplayTag SkillTag = GetSkillTag();
+	if (!SkillTag.IsValid() || !Payload.InstigatorTags.HasTagExact(SkillTag))
+	{
+		return;
+	}
+
+	if (!bComboInputWindowOpen)
+	{
+		return;
+	}
+
+	const int32 RequestedComboIndex = FMath::RoundToInt(Payload.EventMagnitude);
+	if (RequestedComboIndex != CurrentComboIndex)
+	{
+		return;
+	}
+	
+	const float ClientInputServerTime =
+			 static_cast<float>(Payload.TargetData.UniqueId) / 1000.f;
+
+	const float MinAllowedTime =
+			ComboInputWindowOpenedServerTime - ComboInputServerTimeTolerance;
+
+	const float MaxAllowedTime =
+			ComboInputWindowClosedServerTime > 0.f
+					? ComboInputWindowClosedServerTime + ComboInputServerTimeTolerance
+					: GetWorld()->GetTimeSeconds() + ComboInputServerTimeTolerance;
+
+	if (ClientInputServerTime < MinAllowedTime || ClientInputServerTime > MaxAllowedTime)
+	{
+		return;
+	}
+
+	bComboInputBuffered = true;
 }

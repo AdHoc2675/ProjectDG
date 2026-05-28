@@ -64,6 +64,9 @@ protected:
 	
 	UPROPERTY()
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillInputEventTask = nullptr;
+	
+	UPROPERTY()
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> ComboInputRequestTask = nullptr;
 
 protected:
 	int32 CurrentComboIndex = 1;
@@ -71,6 +74,12 @@ protected:
 	bool bComboInputWindowOpen = false;
 	bool bComboInputBuffered = false;
 	bool bEndingMeleeAbility = false;
+	
+	float ComboInputWindowOpenedServerTime = 0.f;
+	float ComboInputWindowClosedServerTime = 0.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "DG|Combo")
+	float ComboInputServerTimeTolerance = 0.10f;
 
 	TMap<int32, TSet<TWeakObjectPtr<AActor>>> HitActorsByCombo;
 
@@ -90,6 +99,8 @@ protected:
 	float GetCurrentComboDamage() const;
 
 	void EndMeleeAbility();
+	
+	void SendComboInputRequestToServer();
 
 protected:
 	UFUNCTION()
@@ -121,4 +132,7 @@ protected:
 
 	UFUNCTION()
 	void OnMontageCancelled();
+	
+	UFUNCTION()
+	void OnComboInputRequest(FGameplayEventData Payload);
 };
