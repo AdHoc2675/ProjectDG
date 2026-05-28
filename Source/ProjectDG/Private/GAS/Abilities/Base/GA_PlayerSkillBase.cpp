@@ -20,11 +20,11 @@ UGA_PlayerSkillBase::UGA_PlayerSkillBase()
 
 bool UGA_PlayerSkillBase::CheckCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, OUT FGameplayTagContainer* OptionalRelevantTags) const
 {
-	// 기본 비용 검사 통과 여부
-	if (!Super::CheckCost(Handle, ActorInfo, OptionalRelevantTags))
-	{
-		return false;
-	}
+	//// 기본 비용 검사 통과 여부
+	//if (!Super::CheckCost(Handle, ActorInfo, OptionalRelevantTags))
+	//{
+	//	return false;
+	//}
 
 	// 데이터 에셋에 설정된 현재 스킬의 소모량
 	const float Cost = GetSkillSpiritCost();
@@ -49,10 +49,11 @@ bool UGA_PlayerSkillBase::CheckCost(const FGameplayAbilitySpecHandle Handle, con
 
 void UGA_PlayerSkillBase::ApplyCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
 {
-	const float Cost = GetSkillSpiritCost();
+	const float Cost = GetSkillSpiritCost(); // 데이터 에셋에서 소모량 가져오기
+	const float Gain = GetSkillSpiritGain(); // 데이터 에셋에서 회복량 가져오기
 
-	// 소모값이 있고, 부모 UGameplayAbility에서 설정할 수 있는 CostGameplayEffectClass가 할당되어 있다면
-	if (Cost > 0.f && CostGameplayEffectClass && ActorInfo && ActorInfo->AbilitySystemComponent.IsValid())
+	// 소모값(Cost)이나 회복값(Gain) 중 하나라도 있고, GE가 할당되어 있다면
+	if ((Cost > 0.f || Gain > 0.f) && CostGameplayEffectClass && ActorInfo && ActorInfo->AbilitySystemComponent.IsValid())
 	{
 		FGameplayEffectContextHandle ContextHandle = ActorInfo->AbilitySystemComponent->MakeEffectContext();
 		ContextHandle.AddSourceObject(this);
@@ -60,9 +61,11 @@ void UGA_PlayerSkillBase::ApplyCost(const FGameplayAbilitySpecHandle Handle, con
 		FGameplayEffectSpecHandle SpecHandle = ActorInfo->AbilitySystemComponent->MakeOutgoingSpec(CostGameplayEffectClass, GetAbilityLevel(), ContextHandle);
 		if (SpecHandle.IsValid())
 		{
-			// 비용 값을 양수 양식으로 GE에 넘김
+			// 소모는 빼고(-) 회복은 더하는(+) 최종 변화량 계산
+			const float FinalMentalChange = Gain - Cost;
+
 			FGameplayTag CostTag = FGameplayTag::RequestGameplayTag(TEXT("Data.MentalCost"));
-			SpecHandle.Data->SetSetByCallerMagnitude(CostTag, -Cost); // 값을 뺄 것이므로 음수(-)로 넘김 (GE 셋팅에 따라 양수로 넘겨도 됨)
+			SpecHandle.Data->SetSetByCallerMagnitude(CostTag, FinalMentalChange);
 
 			ActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 		}
