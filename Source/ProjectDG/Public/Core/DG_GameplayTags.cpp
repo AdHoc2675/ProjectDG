@@ -81,6 +81,23 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Archer_PiercingArrow, "Skill.Archer.PiercingArrow")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Archer_GaleArrow, "Skill.Archer.GaleArrow")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Archer_AimedArrow, "Skill.Archer.AimedArrow")
+	
+	
+	// Skill.Assassin
+	UE_DEFINE_GAMEPLAY_TAG(Skill_Assassin_QuickSlash, "Skill.Assassin.QuickSlash")
+	UE_DEFINE_GAMEPLAY_TAG(Skill_Assassin_Ambush, "Skill.Assassin.Ambush")
+	UE_DEFINE_GAMEPLAY_TAG(Skill_Assassin_ShadowAssault, "Skill.Assassin.ShadowAssault")
+	UE_DEFINE_GAMEPLAY_TAG(Skill_Assassin_FlashSlash, "Skill.Assassin.FlashSlash")
+	UE_DEFINE_GAMEPLAY_TAG(Skill_Assassin_HeartStab, "Skill.Assassin.HeartStab")
+	UE_DEFINE_GAMEPLAY_TAG(Skill_Assassin_Infiltration, "Skill.Assassin.Infiltration")
+	
+	// Cooldown.Skill.Assassin
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Assassin_QuickSlash, "Cooldown.Skill.Assassin.QuickSlash")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Assassin_Ambush, "Cooldown.Skill.Assassin.Ambush")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Assassin_ShadowAssault, "Cooldown.Skill.Assassin.ShadowAssault")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Assassin_FlashSlash, "Cooldown.Skill.Assassin.FlashSlash")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Assassin_HeartStab, "Cooldown.Skill.Assassin.HeartStab")
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Assassin_Infiltration, "Cooldown.Skill.Assassin.Infiltration")
 
 
 	// Skill.Boss
@@ -90,7 +107,7 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Movement_Dodge, "State.Movement.Dodge")
 	UE_DEFINE_GAMEPLAY_TAG(State_Movement_Sprint, "State.Movement.Sprint")
 	UE_DEFINE_GAMEPLAY_TAG(State_Movement_Jump, "State.Movement.Jump")
-
+	
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_SharpStrike_Active, "State.Skill.Warrior.SharpStrike.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_CuttingSmash_Active, "State.Skill.Warrior.CuttingSmash.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_GroundSlam_Active, "State.Skill.Warrior.GroundSlam.Active")
@@ -98,12 +115,20 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_ShockWave_Active, "State.Skill.Warrior.ShockWave.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_DoomStrike_Active, "State.Skill.Warrior.DoomStrike.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_LeapingSlam_Active, "State.Skill.Warrior.LeapingSlam.Active")
-
+	
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Archer_Snipe_Active, "State.Skill.Archer.Snipe.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Archer_RapidShot_Active, "State.Skill.Archer.RapidShot.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Archer_PiercingArrow_Active, "State.Skill.Archer.PiercingArrow.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Archer_GaleArrow_Active, "State.Skill.Archer.GaleArrow.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Archer_AimedArrow_Active, "State.Skill.Archer.AimedArrow.Active")
+	
+	// State.Skill.Assassin
+	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Assassin_QuickSlash_Active, "State.Skill.Assassin.QuickSlash.Active")
+	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Assassin_Ambush_Active, "State.Skill.Assassin.Ambush.Active")
+	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Assassin_ShadowAssault_Active, "State.Skill.Assassin.ShadowAssault.Active")
+	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Assassin_FlashSlash_Active, "State.Skill.Assassin.FlashSlash.Active")
+	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Assassin_HeartStab_Active, "State.Skill.Assassin.HeartStab.Active")
+	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Assassin_Infiltration_Active, "State.Skill.Assassin.Infiltration.Active")
 
 
 	// Data

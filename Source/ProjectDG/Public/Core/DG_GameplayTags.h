@@ -45,7 +45,7 @@ namespace DGGameplayTags
 	// LeapingSlam(도약찍기) 몽타주 출력 시 타겟팅 대상에게 Leap 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그 
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Movement_Warrior_LeapingSlam_MoveBegin)
 
-	// 전사스킬 예리한일격 탭으로 전달 시 필요 태그
+	// 전사스킬 예리한일격 탭으로 전달 시 필요 태그 (모든 스킬에 대해 필요한 건 아님, 콤보 공격 시 몽타주 ANS 내부에서 기다리는 태그)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Warrior_SharpStrike)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Warrior_CuttingSmash)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Warrior_LeapingSlam)
@@ -83,6 +83,23 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Archer_PiercingArrow)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Archer_GaleArrow)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Archer_AimedArrow)
+	
+	
+	// Skill_Assassin
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Assassin_QuickSlash)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Assassin_Ambush)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Assassin_ShadowAssault)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Assassin_FlashSlash)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Assassin_HeartStab)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Assassin_Infiltration)
+	
+	// Skill_Assassin_Cooldown
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Assassin_QuickSlash)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Assassin_Ambush)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Assassin_ShadowAssault)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Assassin_FlashSlash)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Assassin_HeartStab)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Assassin_Infiltration)
 
 
 	// Skill_Boss
@@ -92,7 +109,8 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Dodge)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Sprint)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Jump)
-
+	
+	// Warrior Skill State (해당 스킬 사용 중 다른 스킬을 사용하지 못하게 하는 등의 방식으로 사용 가능) 
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_SharpStrike_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_CuttingSmash_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_GroundSlam_Active)
@@ -101,11 +119,21 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_DoomStrike_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_LeapingSlam_Active)
 
+	// Archer Skill State
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Archer_Snipe_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Archer_RapidShot_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Archer_PiercingArrow_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Archer_GaleArrow_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Archer_AimedArrow_Active)
+	
+	
+	// Assassin Skill State
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Assassin_QuickSlash_Active)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Assassin_Ambush_Active)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Assassin_ShadowAssault_Active)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Assassin_FlashSlash_Active)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Assassin_HeartStab_Active)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Assassin_Infiltration_Active)
 	
 	
 
