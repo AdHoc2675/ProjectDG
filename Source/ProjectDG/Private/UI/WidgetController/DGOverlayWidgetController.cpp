@@ -81,12 +81,12 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 					OnSkillInfoSet.Broadcast(Info);
 					BroadcastedCount++;
 
-					UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] 브로드캐스트 스킬: %s (태그: %s)"), *SlotDef.SkillData->SkillName.ToString(), *Info.SlotTag.ToString());
+					//UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] 브로드캐스트 스킬: %s (태그: %s)"), *SlotDef.SkillData->SkillName.ToString(), *Info.SlotTag.ToString());
 				}
 			}
 
 			// 이제 실제 방송된 숫자를 정확하게 기재
-			UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] BroadcastInitialValues: Broadcasted actual skill info for %d skills."), BroadcastedCount);
+			//UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] BroadcastInitialValues: Broadcasted actual skill info for %d skills."), BroadcastedCount);
 		}
 	}
 }
@@ -168,14 +168,14 @@ void UDGOverlayWidgetController::BindCallbacksToDependencies()
 
 		if (!PlayerChar)
 		{
-			UE_LOG(LogTemp, Error, TEXT("[DGOverlayWidgetController] BindCallbacksToDependencies 실패! 현재 PlayerController에 유효한 Pawn이 빙의되어 있지 않습니다."));
+			//UE_LOG(LogTemp, Error, TEXT("[DGOverlayWidgetController] BindCallbacksToDependencies 실패, 현재 PlayerController에 유효한 Pawn이 빙의되어 있지 않음."));
 		}
 		else
 		{
 			UPlayerCharacterClassData* ClassData = PlayerChar->CharacterClassData;
 			if (!ClassData)
 			{
-				UE_LOG(LogTemp, Error, TEXT("[DGOverlayWidgetController] BindCallbacksToDependencies 실패! 빙의된 Pawn(%s)에 CharacterClassData가 없습니다."), *PlayerChar->GetName());
+				//UE_LOG(LogTemp, Error, TEXT("[DGOverlayWidgetController] BindCallbacksToDependencies 실패, 빙의된 Pawn(%s)에 CharacterClassData가 없음"), *PlayerChar->GetName());
 			}
 			else
 			{
@@ -190,10 +190,10 @@ void UDGOverlayWidgetController::BindCallbacksToDependencies()
 						).AddUObject(this, &UDGOverlayWidgetController::OnCooldownTagChanged);
 
 						BoundCount++;
-						UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] 쿨타임 이벤트 바인딩 완료 - 태그: %s"), *SlotDef.SkillData->CooldownTag.ToString());
+						//UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] 쿨타임 이벤트 바인딩 완료 - 태그: %s"), *SlotDef.SkillData->CooldownTag.ToString());
 					}
 				}
-				UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] 총 %d개의 쿨타임 이벤트를 바인딩했습니다."), BoundCount);
+				//UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] 총 %d개의 쿨타임 이벤트를 바인딩"), BoundCount);
 			}
 		}
 	}

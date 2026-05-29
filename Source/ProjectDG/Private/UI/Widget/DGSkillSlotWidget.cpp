@@ -28,15 +28,14 @@ void UDGSkillSlotWidget::UpdateCooldown(float TimeRemaining, float Duration)
 {
 	CurrentTimeRemaining = TimeRemaining;
 
-	UE_LOG(LogTemp, Log, TEXT("[DGSkillSlotWidget] %s 쿨타임 수신 - TimeRemaining: %f / Duration: %f"), *SlotTag.ToString(), TimeRemaining, Duration);
-
 	if (TimeRemaining > 0.f)
 	{
 		// 쿨타임 시작 및 갱신
 		if (CooldownText)
 		{
-			CooldownText->SetVisibility(ESlateVisibility::Visible);
-			CooldownText->SetText(FText::AsNumber(FMath::CeilToInt(CurrentTimeRemaining)));
+			// 이벤트 테스트 방지를 위해 SelfHitTestInvisible 추천 (Visible도 동작은 함)
+			CooldownText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+			RefreshCooldownText();
 		}
 
 		// 기존에 돌고 있던 타이머가 있다면 지우고 새로 시작
@@ -52,7 +51,6 @@ void UDGSkillSlotWidget::UpdateCooldown(float TimeRemaining, float Duration)
 				true
 			);
 		}
-		// CooldownOverlayImage가 있다면 머티리얼 파라미터로 % 넘겨주기
 	}
 	else
 	{
@@ -61,13 +59,19 @@ void UDGSkillSlotWidget::UpdateCooldown(float TimeRemaining, float Duration)
 		{
 			CooldownText->SetVisibility(ESlateVisibility::Hidden);
 		}
-		GetWorld()->GetTimerManager().ClearTimer(CooldownTimerHandle);
+
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().ClearTimer(CooldownTimerHandle);
+		}
 	}
 }
 
 void UDGSkillSlotWidget::UpdateCooldownText()
 {
+	// 0.1초마다 감소
 	CurrentTimeRemaining -= 0.1f;
+
 	if (CurrentTimeRemaining <= 0.f)
 	{
 		// 시간이 다 되었다면 명시적으로 0.0을 넘겨 강제 종료
@@ -75,10 +79,26 @@ void UDGSkillSlotWidget::UpdateCooldownText()
 	}
 	else
 	{
-		if (CooldownText)
-		{
-			CooldownText->SetText(FText::AsNumber(FMath::CeilToInt(CurrentTimeRemaining)));
-		}
+		RefreshCooldownText();
+	}
+}
+
+// 텍스트를 포맷팅하는 내부 헬퍼 로직 추가
+void UDGSkillSlotWidget::RefreshCooldownText()
+{
+	if (!CooldownText) return;
+
+	if (CurrentTimeRemaining <= 3.0f)
+	{
+		// 3초 이하면 소수점 첫째 자리까지 표시 (예: "2.5", "0.8")
+		// FMath::Max로 혹시 모를 -0.0 표기를 방지
+		FString TimeStr = FString::Printf(TEXT("%.1f"), FMath::Max(0.f, CurrentTimeRemaining));
+		CooldownText->SetText(FText::FromString(TimeStr));
+	}
+	else
+	{
+		// 3초를 초과하면 정수로 올림하여 표시 (예: "4")
+		CooldownText->SetText(FText::AsNumber(FMath::CeilToInt(CurrentTimeRemaining)));
 	}
 }
 

@@ -23,6 +23,9 @@ public:
 	// 쿨타임 정보 갱신
 	void UpdateCooldown(float TimeRemaining, float Duration);
 
+	// 퍼센티지 계산 시 사용
+	void RefreshCooldownText();
+
 	// 내가 담당하는 쿨타임 태그가 맞는지 확인
 	bool MatchCooldownTag(FGameplayTag TagToCheck) const;
 
