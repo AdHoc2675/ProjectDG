@@ -28,6 +28,8 @@ void UDGSkillSlotWidget::UpdateCooldown(float TimeRemaining, float Duration)
 {
 	CurrentTimeRemaining = TimeRemaining;
 
+	UE_LOG(LogTemp, Log, TEXT("[DGSkillSlotWidget] %s 쿨타임 수신 - TimeRemaining: %f / Duration: %f"), *SlotTag.ToString(), TimeRemaining, Duration);
+
 	if (TimeRemaining > 0.f)
 	{
 		// 쿨타임 시작 및 갱신
@@ -37,14 +39,19 @@ void UDGSkillSlotWidget::UpdateCooldown(float TimeRemaining, float Duration)
 			CooldownText->SetText(FText::AsNumber(FMath::CeilToInt(CurrentTimeRemaining)));
 		}
 
-		// (옵션) 타이머를 돌려서 매 0.1초마다 텍스트를 업데이트하는 방식
-		GetWorld()->GetTimerManager().SetTimer(
-			CooldownTimerHandle,
-			this,
-			&UDGSkillSlotWidget::UpdateCooldownText,
-			0.1f,
-			true
-		);
+		// 기존에 돌고 있던 타이머가 있다면 지우고 새로 시작
+		UWorld* World = GetWorld();
+		if (World)
+		{
+			World->GetTimerManager().ClearTimer(CooldownTimerHandle);
+			World->GetTimerManager().SetTimer(
+				CooldownTimerHandle,
+				this,
+				&UDGSkillSlotWidget::UpdateCooldownText,
+				0.1f,
+				true
+			);
+		}
 		// CooldownOverlayImage가 있다면 머티리얼 파라미터로 % 넘겨주기
 	}
 	else
@@ -63,6 +70,7 @@ void UDGSkillSlotWidget::UpdateCooldownText()
 	CurrentTimeRemaining -= 0.1f;
 	if (CurrentTimeRemaining <= 0.f)
 	{
+		// 시간이 다 되었다면 명시적으로 0.0을 넘겨 강제 종료
 		UpdateCooldown(0.f, 0.f);
 	}
 	else
@@ -76,5 +84,5 @@ void UDGSkillSlotWidget::UpdateCooldownText()
 
 bool UDGSkillSlotWidget::MatchCooldownTag(FGameplayTag TagToCheck) const
 {
-	return CooldownTag == TagToCheck;
+	return CooldownTag.IsValid() && (CooldownTag == TagToCheck);
 }

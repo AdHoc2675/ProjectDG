@@ -164,10 +164,22 @@ void UDGOverlayWidgetController::BindCallbacksToDependencies()
 	// 플레이어 스킬의 쿨타임 태그들을 리스닝
 	if (AbilitySystemComponent)
 	{
-		if (APlayerCharacterBase* PlayerChar = Cast<APlayerCharacterBase>(PlayerController->GetPawn()))
+		APlayerCharacterBase* PlayerChar = Cast<APlayerCharacterBase>(PlayerController->GetPawn());
+
+		if (!PlayerChar)
 		{
-			if (UPlayerCharacterClassData* ClassData = PlayerChar->CharacterClassData)
+			UE_LOG(LogTemp, Error, TEXT("[DGOverlayWidgetController] BindCallbacksToDependencies 실패! 현재 PlayerController에 유효한 Pawn이 빙의되어 있지 않습니다."));
+		}
+		else
+		{
+			UPlayerCharacterClassData* ClassData = PlayerChar->CharacterClassData;
+			if (!ClassData)
 			{
+				UE_LOG(LogTemp, Error, TEXT("[DGOverlayWidgetController] BindCallbacksToDependencies 실패! 빙의된 Pawn(%s)에 CharacterClassData가 없습니다."), *PlayerChar->GetName());
+			}
+			else
+			{
+				int32 BoundCount = 0;
 				for (const FSkillSlotDefinition& SlotDef : ClassData->SkillSlots)
 				{
 					if (SlotDef.SkillData && SlotDef.SkillData->CooldownTag.IsValid())
@@ -176,8 +188,12 @@ void UDGOverlayWidgetController::BindCallbacksToDependencies()
 							SlotDef.SkillData->CooldownTag,
 							EGameplayTagEventType::NewOrRemoved
 						).AddUObject(this, &UDGOverlayWidgetController::OnCooldownTagChanged);
+
+						BoundCount++;
+						UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] 쿨타임 이벤트 바인딩 완료 - 태그: %s"), *SlotDef.SkillData->CooldownTag.ToString());
 					}
 				}
+				UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] 총 %d개의 쿨타임 이벤트를 바인딩했습니다."), BoundCount);
 			}
 		}
 	}

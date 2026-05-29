@@ -7,6 +7,23 @@
 #include "Core/DG_GameplayTags.h"
 #include "Core/DG_Debug.h"
 
+void UDGPlayerStatWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	// 캐싱 배열 비우고 슬롯 위젯 할당 (null 체크 포함)
+	AllSkillSlots.Empty();
+
+	if (SkillSlot_LMB) AllSkillSlots.Add(SkillSlot_LMB);
+	if (SkillSlot_RMB) AllSkillSlots.Add(SkillSlot_RMB);
+	if (SkillSlot_1) AllSkillSlots.Add(SkillSlot_1);
+	if (SkillSlot_2) AllSkillSlots.Add(SkillSlot_2);
+	if (SkillSlot_3) AllSkillSlots.Add(SkillSlot_3);
+	if (SkillSlot_4) AllSkillSlots.Add(SkillSlot_4);
+
+	UE_LOG(LogTemp, Log, TEXT("[DGPlayerStatWidget] %d개의 스킬 슬롯을 다이나믹 배열에 할당했습니다."), AllSkillSlots.Num());
+}
+
 void UDGPlayerStatWidget::BindToController(UDGOverlayWidgetController* Controller)
 {
 	if (!Controller) return;
