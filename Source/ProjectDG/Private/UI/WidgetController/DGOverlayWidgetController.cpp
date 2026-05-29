@@ -38,7 +38,7 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 				OnMarkerAdded.Broadcast(Marker);
 			}
 
-			UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] BroadcastInitialValues called. Initial Minimap Markers Count: %d"), MinimapSubsystem->GetActiveMarkers().Num());
+			//UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] BroadcastInitialValues called. Initial Minimap Markers Count: %d"), MinimapSubsystem->GetActiveMarkers().Num());
 		}
 	}
 
@@ -59,24 +59,34 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 		}
 	}
 
-	// [추가] 플레이어의 캐릭터 클래스 데이터를 가져와 스킬 정보 세팅
+	// 플레이어의 캐릭터 클래스 데이터를 가져와 스킬 정보 세팅
 	if (APlayerCharacterBase* PlayerChar = Cast<APlayerCharacterBase>(PlayerController->GetPawn()))
 	{
 		if (UPlayerCharacterClassData* ClassData = PlayerChar->CharacterClassData)
 		{
+			int32 BroadcastedCount = 0; // 실제로 바인딩된 개수 카운트
 			for (const FSkillSlotDefinition& SlotDef : ClassData->SkillSlots)
 			{
-				if (SlotDef.SkillData && SlotDef.SkillData->Icon)
+				// Icon이 null이라도 바인딩을 진행하게 && 조건에서 제거
+				if (SlotDef.SkillData)
 				{
 					FUIPlayerSkillInfo Info;
-					Info.SlotTag = SlotDef.SlotTag;
+
+					// [방어 코드] ClassData 구조체에 SlotTag가 비어있다면 PlayerSkillData의 DefaultSlotTag를 당겨옴
+					Info.SlotTag = SlotDef.SlotTag.IsValid() ? SlotDef.SlotTag : SlotDef.SkillData->DefaultSlotTag;
 					Info.CooldownTag = SlotDef.SkillData->CooldownTag;
-					Info.Icon = SlotDef.SkillData->Icon;
+					Info.Icon = SlotDef.SkillData->Icon; // null이어도 넘길 수 있음
 
 					// 위젯으로 기본 스킬 정보 브로드캐스트
 					OnSkillInfoSet.Broadcast(Info);
+					BroadcastedCount++;
+
+					UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] 브로드캐스트 스킬: %s (태그: %s)"), *SlotDef.SkillData->SkillName.ToString(), *Info.SlotTag.ToString());
 				}
 			}
+
+			// 이제 실제 방송된 숫자를 정확하게 기재
+			UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] BroadcastInitialValues: Broadcasted actual skill info for %d skills."), BroadcastedCount);
 		}
 	}
 }

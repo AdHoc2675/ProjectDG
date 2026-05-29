@@ -72,15 +72,26 @@ private:
 	void OnSkillCooldownChanged(FGameplayTag CooldownTag, float TimeRemaining, float Duration);
 
 protected:
-	// 자식 스킬 슬롯들이 붙을 UI 패널
+	// 스킬 슬롯
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UHorizontalBox> SkillSlotContainer;
+	TObjectPtr<UDGSkillSlotWidget> SkillSlot_LMB;
 
-	// 인스턴스화할 자식 위젯 클래스 리퍼런스
-	UPROPERTY(EditDefaultsOnly, Category = "UI|Skill")
-	TSubclassOf<UDGSkillSlotWidget> SkillSlotWidgetClass;
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UDGSkillSlotWidget> SkillSlot_RMB;
 
-	// 생성된 슬롯들을 관리하기 위한 배열
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UDGSkillSlotWidget> SkillSlot_1;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UDGSkillSlotWidget> SkillSlot_2;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UDGSkillSlotWidget> SkillSlot_3;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UDGSkillSlotWidget> SkillSlot_4;
+
+	// C++ 내부에서 반복문(for) 처리를 편하게 하기 위해 캐싱해둘 배열
 	UPROPERTY()
-	TArray<UDGSkillSlotWidget*> GeneratedSkillSlots;
+	TArray<UDGSkillSlotWidget*> AllSkillSlots;
 };

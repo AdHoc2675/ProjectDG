@@ -3,8 +3,8 @@
 
 #include "UI/Widget/DGSkillSlotWidget.h"
 #include "Components/ProgressBar.h"
-#include "Components/HorizontalBox.h"
 
+#include "Core/DG_GameplayTags.h"
 #include "Core/DG_Debug.h"
 
 void UDGPlayerStatWidget::BindToController(UDGOverlayWidgetController* Controller)
@@ -95,41 +95,55 @@ void UDGPlayerStatWidget::UpdateMentalBar()
 
 void UDGPlayerStatWidget::OnSkillInfoSet(const FUIPlayerSkillInfo& SkillInfo)
 {
-	// 1. 컨테이너와 생성할 위젯 클래스가 유효한지 확인
-	if (!SkillSlotContainer || !SkillSlotWidgetClass) return;
+	UDGSkillSlotWidget* TargetSlot = nullptr;
 
-	// 2. 혹시 이미 같은 슬롯에 아이템이 등록됐다면 덮어씌움
-	for (UDGSkillSlotWidget* SlotWidget : GeneratedSkillSlots)
+	// 넘어온 Input SlotTag를 매칭하여 적절한 위젯 슬롯을 찾음
+	if (SkillInfo.SlotTag == DGGameplayTags::Input_SkillSlot_LeftMouse)
 	{
-		if (SlotWidget && SlotWidget->MatchCooldownTag(SkillInfo.CooldownTag))
-		{
-			// 이미 있으면 갱신만
-			SlotWidget->InitSkillSlot(SkillInfo.SlotTag, SkillInfo.CooldownTag, SkillInfo.Icon);
-			return;
-		}
+		TargetSlot = SkillSlot_LMB;
+	}
+	else if (SkillInfo.SlotTag == DGGameplayTags::Input_SkillSlot_RightMouse)
+	{
+		TargetSlot = SkillSlot_RMB;
+	}
+	else if (SkillInfo.SlotTag == DGGameplayTags::Input_SkillSlot_Key1)
+	{
+		TargetSlot = SkillSlot_1;
+	}
+	else if (SkillInfo.SlotTag == DGGameplayTags::Input_SkillSlot_Key2)
+	{
+		TargetSlot = SkillSlot_2;
+	}
+	else if (SkillInfo.SlotTag == DGGameplayTags::Input_SkillSlot_Key3)
+	{
+		TargetSlot = SkillSlot_3;
+	}
+	else if (SkillInfo.SlotTag == DGGameplayTags::Input_SkillSlot_Key4)
+	{
+		TargetSlot = SkillSlot_4;
 	}
 
-	// 3. 자식 슬롯 위젯을 생성하고 초기화
-	UDGSkillSlotWidget* NewSlot = CreateWidget<UDGSkillSlotWidget>(this, SkillSlotWidgetClass);
-	if (NewSlot)
+	// 매칭된 대상 슬롯이 있다면 정보를 주입
+	if (TargetSlot)
 	{
-		NewSlot->InitSkillSlot(SkillInfo.SlotTag, SkillInfo.CooldownTag, SkillInfo.Icon);
-
-		// 4. 컨테이너 패널에 추가
-		SkillSlotContainer->AddChildToHorizontalBox(NewSlot);
-		GeneratedSkillSlots.Add(NewSlot);
+		TargetSlot->InitSkillSlot(SkillInfo.SlotTag, SkillInfo.CooldownTag, SkillInfo.Icon);
+		UE_LOG(LogTemp, Log, TEXT("[DGPlayerStatWidget] %s 슬롯 데이터 매핑 완료"), *SkillInfo.SlotTag.ToString());
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[DGPlayerStatWidget] 대응하는 스킬 슬롯을 찾지 못했습니다: %s"), *SkillInfo.SlotTag.ToString());
 	}
 }
 
 void UDGPlayerStatWidget::OnSkillCooldownChanged(FGameplayTag CooldownTag, float TimeRemaining, float Duration)
 {
-	// 해당하는 태그를 가진 슬롯에게 쿨타임 업데이트 지시
-	for (UDGSkillSlotWidget* SlotWidget : GeneratedSkillSlots)
+	// 미리 캐싱해둔 배열을 순회하면서 알맞은 쿨타임 태그가 등록된 슬롯을 찾음
+	for (UDGSkillSlotWidget* SlotWidget : AllSkillSlots)
 	{
 		if (SlotWidget && SlotWidget->MatchCooldownTag(CooldownTag))
 		{
 			SlotWidget->UpdateCooldown(TimeRemaining, Duration);
-			break; // 중복 태그가 없다면 바로 브레이크
+			break;
 		}
 	}
 }
