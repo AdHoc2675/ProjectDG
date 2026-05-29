@@ -11,6 +11,8 @@
 #include "Core/DG_Debug.h"
 #include "GameFramework/GameStateBase.h"
 
+#include "AbilitySystemComponent.h"
+
 UGA_MeleeAttackBase::UGA_MeleeAttackBase()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
@@ -249,26 +251,44 @@ void UGA_MeleeAttackBase::TryJumpToNextComboSection(int32 BranchComboIndex)
 {
 	const int32 ComboCount = GetSkillComboCount();
 
+	// 유효한 콤보 인덱스인지 확인
 	if (BranchComboIndex < 1 || BranchComboIndex > ComboCount)
 	{
 		return;
 	}
 
+	// 입력 버퍼가 없으면 공격 이어나가지 않음
 	if (!bComboInputBuffered)
 	{
 		return;
 	}
 
+	// 다음 콤보로 넘어가는 것이 확정이므로 초기화
 	bComboInputBuffered = false;
 
+	// 콤보 인덱스 계산
 	int32 NextComboIndex = BranchComboIndex + 1;
 	if (NextComboIndex > ComboCount)
 	{
 		NextComboIndex = 1;
 	}
 
+	// 콤보 인덱스 업데이트 및 몽타주 섹션 점프
 	CurrentComboIndex = NextComboIndex;
 	MontageJumpToSection(GetComboSectionName(CurrentComboIndex));
+
+	// =========================================================================
+	// [핵심 변경] 클라이언트에서도 Instant GE가 차단당하지 않도록 새 예측 윈도우를 엽니다.
+	// =========================================================================
+	if (UAbilitySystemComponent* ASC = CurrentActorInfo->AbilitySystemComponent.Get())
+	{
+
+		FScopedPredictionWindow ScopedPrediction(ASC, true);
+
+		UE_LOG(LogTemp, Log, TEXT("UGA_MeleeAttackBase::TryJumpToNextComboSection - Opened new prediction window for combo continuation. ComboIndex: %d"), CurrentComboIndex);
+		// 이제 클라이언트라도 새 예측 키가 발급되어 비용 및 정신력 회복 GE가 정상적으로 통과합니다.
+		ApplyCost(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
+	}
 }
 
 FName UGA_MeleeAttackBase::GetComboSectionName(int32 ComboIndex) const
