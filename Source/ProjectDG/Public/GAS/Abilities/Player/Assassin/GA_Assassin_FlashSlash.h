@@ -12,7 +12,7 @@ class UAbilityTask_WaitGameplayEvent;
  * 암살자 4번 스킬: 섬광 베기
  *
  * 타겟 획득 / Commit / 몽타주 / Hit 이벤트는 UGA_TargetMontageSkillBase를 사용하고,
- * 공격 후 타겟 반대 방향 이동만 이 클래스에서 처리한다.
+ * 타겟을 관통해 뒤쪽 위치로 이동하는 처리는 이 클래스에서 담당한다.
  */
 UCLASS()
 class PROJECTDG_API UGA_Assassin_FlashSlash : public UGA_TargetMontageSkillBase
@@ -32,13 +32,16 @@ public:
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "FlashSlash|Movement")
-	float BackStepDistance = 400.f;
+	float BehindTargetDistance = 160.f;
 
 	UPROPERTY()
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> MoveBeginTask = nullptr;
 
 	UPROPERTY()
-	TObjectPtr<UAbilityTask_ApplyRootMotionMoveToForce> BackStepMoveTask = nullptr;
+	TObjectPtr<UAbilityTask_ApplyRootMotionMoveToForce> MoveBehindTargetTask = nullptr;
+
+	UPROPERTY()
+	TObjectPtr<AActor> IgnoredDashTarget = nullptr;
 
 protected:
 	virtual void ResetTargetMontageState() override;
@@ -47,10 +50,19 @@ protected:
 
 	virtual void ExecuteTargetSkill(AActor* TargetActor, const FGameplayEventData& Payload) override;
 
-	bool BuildBackStepLocation(AActor* TargetActor, FVector& OutLocation) const;
+	bool BuildBehindTargetLocation(AActor* TargetActor, FVector& OutLocation) const;
 
-	void StartBackStep(float Duration);
+	void StartMoveBehindTarget(float Duration);
+
+	void IgnoreDashTargetCollision(AActor* TargetActor);
+
+	void ClearIgnoredDashTargetCollision();
+
+	void FaceTargetFromCurrentLocation();
 
 	UFUNCTION()
 	void OnMoveBegin(FGameplayEventData Payload);
+
+	UFUNCTION()
+	void OnMoveFinished();
 };

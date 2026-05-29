@@ -4,7 +4,9 @@
 
 #include "Abilities/Tasks/AbilityTask_ApplyRootMotionMoveToForce.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "Components/CapsuleComponent.h"
 #include "Core/DG_GameplayTags.h"
+#include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 UGA_Assassin_FlashSlash::UGA_Assassin_FlashSlash()
@@ -24,24 +26,28 @@ void UGA_Assassin_FlashSlash::EndAbility(
       bool bWasCancelled
 )
 {
-      MoveBeginTask = nullptr;
-      BackStepMoveTask = nullptr;
+	ClearIgnoredDashTargetCollision();
 
-      Super::EndAbility(
-              Handle,
-              ActorInfo,
-              ActivationInfo,
-              bReplicateEndAbility,
-              bWasCancelled
-      );
+	MoveBeginTask = nullptr;
+	MoveBehindTargetTask = nullptr;
+
+	Super::EndAbility(
+	      Handle,
+	      ActorInfo,
+	      ActivationInfo,
+	      bReplicateEndAbility,
+	      bWasCancelled
+	);
 }
 
 void UGA_Assassin_FlashSlash::ResetTargetMontageState()
 {
-      Super::ResetTargetMontageState();
+        ClearIgnoredDashTargetCollision();
 
-      MoveBeginTask = nullptr;
-      BackStepMoveTask = nullptr;
+        Super::ResetTargetMontageState();
+
+        MoveBeginTask = nullptr;
+        MoveBehindTargetTask = nullptr;
 }
 
 void UGA_Assassin_FlashSlash::StartTargetMontageEventTasks()
@@ -93,72 +99,142 @@ void UGA_Assassin_FlashSlash::ExecuteTargetSkill(AActor* TargetActor, const FGam
 
 void UGA_Assassin_FlashSlash::OnMoveBegin(FGameplayEventData Payload)
 {
-      if (!IsCurrentTargetStillValid())
-      {
-              EndTargetMontageAbility(true);
-              return;
-      }
+        if (!IsCurrentTargetStillValid())
+        {
+                EndTargetMontageAbility(true);
+                return;
+        }
 
-      FaceCurrentTarget();
+        FaceCurrentTarget();
 
-      const float MoveDuration = FMath::Max(Payload.EventMagnitude, 0.01f);
-      StartBackStep(MoveDuration);
+        const float MoveDuration = FMath::Max(Payload.EventMagnitude, 0.01f);
+        StartMoveBehindTarget(MoveDuration);
 }
 
-void UGA_Assassin_FlashSlash::StartBackStep(float Duration)
+void UGA_Assassin_FlashSlash::StartMoveBehindTarget(float Duration)
 {
-      FVector BackStepLocation;
-      if (!BuildBackStepLocation(CurrentTargetResult.TargetActor, BackStepLocation))
-      {
-              EndTargetMontageAbility(true);
-              return;
-      }
+        AActor* TargetActor = CurrentTargetResult.TargetActor;
+        if (!TargetActor)
+        {
+                EndTargetMontageAbility(true);
+                return;
+        }
 
-      BackStepMoveTask = UAbilityTask_ApplyRootMotionMoveToForce::ApplyRootMotionMoveToForce(
-              this,
-              TEXT("FlashSlashBackStep"),
-              BackStepLocation,
-              Duration,
-              false,
-              MOVE_Walking,
-              false,
-              nullptr,
-              ERootMotionFinishVelocityMode::SetVelocity,
-              FVector::ZeroVector,
-              0.f
-      );
+        FVector BehindTargetLocation;
+        if (!BuildBehindTargetLocation(TargetActor, BehindTargetLocation))
+        {
+                EndTargetMontageAbility(true);
+                return;
+        }
 
-      if (BackStepMoveTask)
-      {
-              BackStepMoveTask->ReadyForActivation();
-      }
+        IgnoreDashTargetCollision(TargetActor);
+
+        MoveBehindTargetTask = UAbilityTask_ApplyRootMotionMoveToForce::ApplyRootMotionMoveToForce(
+                this,
+                TEXT("FlashSlashMoveBehindTarget"),
+                BehindTargetLocation,
+                Duration,
+                false,
+                MOVE_Walking,
+                false,
+                nullptr,
+                ERootMotionFinishVelocityMode::SetVelocity,
+                FVector::ZeroVector,
+                0.f
+        );
+
+        if (MoveBehindTargetTask)
+        {
+                MoveBehindTargetTask->OnTimedOut.AddDynamic(this, &UGA_Assassin_FlashSlash::OnMoveFinished);
+                MoveBehindTargetTask->OnTimedOutAndDestinationReached.AddDynamic(this,
+  &UGA_Assassin_FlashSlash::OnMoveFinished);
+                MoveBehindTargetTask->ReadyForActivation();
+        }
 }
 
-bool UGA_Assassin_FlashSlash::BuildBackStepLocation(AActor* TargetActor, FVector& OutLocation) const
+bool UGA_Assassin_FlashSlash::BuildBehindTargetLocation(AActor* TargetActor, FVector& OutLocation) const
 {
-      AActor* AvatarActor = GetAvatarActorFromAbility();
-      if (!AvatarActor || !TargetActor)
-      {
-              return false;
-      }
+        AActor* AvatarActor = GetAvatarActorFromAbility();
+        if (!AvatarActor || !TargetActor)
+        {
+                return false;
+        }
 
-      const FVector AvatarLocation = AvatarActor->GetActorLocation();
-      const FVector TargetLocation = TargetActor->GetActorLocation();
+        const FVector AvatarLocation = AvatarActor->GetActorLocation();
+        const FVector TargetLocation = TargetActor->GetActorLocation();
 
-      FVector DirectionFromTarget = AvatarLocation - TargetLocation;
-      DirectionFromTarget.Z = 0.f;
+        FVector TargetBackward = -TargetActor->GetActorForwardVector();
+        TargetBackward.Z = 0.f;
 
-      if (!DirectionFromTarget.Normalize())
-      {
-              return false;
-      }
+        if (!TargetBackward.Normalize())
+        {
+                return false;
+        }
 
-      OutLocation = AvatarLocation + DirectionFromTarget * BackStepDistance;
-      OutLocation.Z = AvatarLocation.Z;
+        OutLocation = TargetLocation + TargetBackward * BehindTargetDistance;
+        OutLocation.Z = AvatarLocation.Z;
 
-      return true;
+        return true;
 }
 
+void UGA_Assassin_FlashSlash::IgnoreDashTargetCollision(AActor* TargetActor)
+{
+        ACharacter* AvatarCharacter = Cast<ACharacter>(GetAvatarActorFromAbility());
+        if (!AvatarCharacter || !TargetActor)
+        {
+                return;
+        }
 
+        UCapsuleComponent* Capsule = AvatarCharacter->GetCapsuleComponent();
+        if (!Capsule)
+        {
+                return;
+        }
 
+        Capsule->IgnoreActorWhenMoving(TargetActor, true);
+        IgnoredDashTarget = TargetActor;
+}
+
+void UGA_Assassin_FlashSlash::ClearIgnoredDashTargetCollision()
+{
+        ACharacter* AvatarCharacter = Cast<ACharacter>(GetAvatarActorFromAbility());
+        if (!AvatarCharacter || !IgnoredDashTarget)
+        {
+                IgnoredDashTarget = nullptr;
+                return;
+        }
+
+        UCapsuleComponent* Capsule = AvatarCharacter->GetCapsuleComponent();
+        if (Capsule)
+        {
+                Capsule->IgnoreActorWhenMoving(IgnoredDashTarget, false);
+        }
+
+        IgnoredDashTarget = nullptr;
+}
+
+void UGA_Assassin_FlashSlash::FaceTargetFromCurrentLocation()
+{
+        AActor* AvatarActor = GetAvatarActorFromAbility();
+        AActor* TargetActor = CurrentTargetResult.TargetActor;
+
+        if (!AvatarActor || !TargetActor)
+        {
+                return;
+        }
+
+        FVector DirectionToTarget = TargetActor->GetActorLocation() - AvatarActor->GetActorLocation();
+        DirectionToTarget.Z = 0.f;
+
+        if (DirectionToTarget.Normalize())
+        {
+                AvatarActor->SetActorRotation(DirectionToTarget.Rotation());
+        }
+}
+
+void UGA_Assassin_FlashSlash::OnMoveFinished()
+{
+        ClearIgnoredDashTargetCollision();
+        FaceTargetFromCurrentLocation();
+}
 
