@@ -43,6 +43,9 @@ namespace DGGameplayTags
 
 	// LeapingSlam(도약찍기) 몽타주 출력 시 타겟팅 대상에게 Leap 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그 
 	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Warrior_LeapingSlam_MoveBegin, "Event.Movement.Warrior.LeapingSlam.MoveBegin")
+	
+	// FlashSlash(섬광베기) 몽타주 출력 시 타겟 반대 방향 이동 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그
+	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Assassin_FlashSlash_MoveBegin, "Event.Movement.Assassin.FlashSlash.MoveBegin")
 
 
 	// 전사스킬 예리한일격 탭으로 전달 시 필요 태그
