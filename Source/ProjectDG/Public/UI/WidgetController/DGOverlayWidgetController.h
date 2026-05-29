@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "UI/WidgetController/DGWidgetController.h"
+#include "GameplayTagContainer.h"
 #include "DGOverlayWidgetController.generated.h"
 
 class UDG_AttributeSet;
@@ -32,6 +33,21 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMinimapMarkerUpdatedSignature, UD
 class ADG_PlayerState;
 // 파티 멤버 변경 델리게이트 (가입/탈퇴 모두 사용, 매개변수로 변경된 멤버의 PlayerState 전달)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPartyMemberChangedSignature, ADG_PlayerState*, MemberPS);
+
+
+// UI로 보낼 스킬 정보 구조체
+USTRUCT(BlueprintType)
+struct FUIPlayerSkillInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly) FGameplayTag SlotTag;
+	UPROPERTY(BlueprintReadOnly) FGameplayTag CooldownTag;
+	UPROPERTY(BlueprintReadOnly) UTexture2D* Icon = nullptr;
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSkillInfoSetSignature, const FUIPlayerSkillInfo&, SkillInfo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnSkillCooldownChangedSignature, FGameplayTag, CooldownTag, float, TimeRemaining, float, Duration);
 
 
 UCLASS()
@@ -162,4 +178,22 @@ protected:
 	// (추후 시스템 로직에서 호출해줄 헬퍼 함수도 만들 수 있습니다)
 	// void AddPartyMember(ADG_PlayerState* MemberPS) { OnPartyMemberJoined.Broadcast(MemberPS); }
 #pragma endregion
+
+
+#pragma region Skill Info
+
+public:
+	// 스킬이 등록될 때 1번 불림
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Skills")
+	FOnSkillInfoSetSignature OnSkillInfoSet;
+
+	// 쿨타임이 돌기 시작할 때 불림 (TimeRemaining이 0이면 쿨타임 종료)
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Skills")
+	FOnSkillCooldownChangedSignature OnSkillCooldownChanged;
+
+protected:
+	// 쿨타임 태그 이벤트 처리용
+	void OnCooldownTagChanged(const FGameplayTag InCooldownTag, int32 NewCount);
+
+#pragma region Skill Info
 };
