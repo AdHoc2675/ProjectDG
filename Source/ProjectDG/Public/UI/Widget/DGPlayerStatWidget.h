@@ -2,9 +2,13 @@
 
 #include "CoreMinimal.h"
 #include "UI/Widget/DGUserWidget.h"
+#include "GameplayTagContainer.h"
+#include "UI/WidgetController/DGOverlayWidgetController.h"
 #include "DGPlayerStatWidget.generated.h"
 
 class UProgressBar;
+class UHorizontalBox;
+class UDGSkillSlotWidget;
 
 UCLASS()
 class PROJECTDG_API UDGPlayerStatWidget : public UDGUserWidget
@@ -58,4 +62,25 @@ private:
 	float CurrentMaxStamina = 1.f;
 	float CurrentMental = 0.f;
 	float CurrentMaxMental = 1.f;
+
+private:
+	/* --- 스킬 연동 델리게이트용 함수 --- */
+	UFUNCTION()
+	void OnSkillInfoSet(const FUIPlayerSkillInfo& SkillInfo);
+
+	UFUNCTION()
+	void OnSkillCooldownChanged(FGameplayTag CooldownTag, float TimeRemaining, float Duration);
+
+protected:
+	// 자식 스킬 슬롯들이 붙을 UI 패널
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UHorizontalBox> SkillSlotContainer;
+
+	// 인스턴스화할 자식 위젯 클래스 리퍼런스
+	UPROPERTY(EditDefaultsOnly, Category = "UI|Skill")
+	TSubclassOf<UDGSkillSlotWidget> SkillSlotWidgetClass;
+
+	// 생성된 슬롯들을 관리하기 위한 배열
+	UPROPERTY()
+	TArray<UDGSkillSlotWidget*> GeneratedSkillSlots;
 };

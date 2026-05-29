@@ -9,6 +9,9 @@
 #include "GameFramework/DG_PlayerState.h"
 #include "GAS/Attributes/DG_EnemyAttributeSet.h"
 
+#include "Character/Player/PlayerCharacterBase.h"
+#include "Character/Player/Data/PlayerCharacterClassData.h"
+#include "Character/Player/Data/PlayerSkillData.h"
 
 void UDGOverlayWidgetController::BroadcastInitialValues()
 {
@@ -51,6 +54,27 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 				{
 					// 본인 체크 등 로직이 이미 HandlePartyMemberJoined에 잘 구현되어 있으므로 이를 재활용하여 호출
 					HandlePartyMemberJoined(DGPS);
+				}
+			}
+		}
+	}
+
+	// [추가] 플레이어의 캐릭터 클래스 데이터를 가져와 스킬 정보 세팅
+	if (APlayerCharacterBase* PlayerChar = Cast<APlayerCharacterBase>(PlayerController->GetPawn()))
+	{
+		if (UPlayerCharacterClassData* ClassData = PlayerChar->CharacterClassData)
+		{
+			for (const FSkillSlotDefinition& SlotDef : ClassData->SkillSlots)
+			{
+				if (SlotDef.SkillData && SlotDef.SkillData->Icon)
+				{
+					FUIPlayerSkillInfo Info;
+					Info.SlotTag = SlotDef.SlotTag;
+					Info.CooldownTag = SlotDef.SkillData->CooldownTag;
+					Info.Icon = SlotDef.SkillData->Icon;
+
+					// 위젯으로 기본 스킬 정보 브로드캐스트
+					OnSkillInfoSet.Broadcast(Info);
 				}
 			}
 		}
@@ -124,6 +148,27 @@ void UDGOverlayWidgetController::BindCallbacksToDependencies()
 		{
 			GameState->OnPlayerJoinedDelegate.AddDynamic(this, &UDGOverlayWidgetController::HandlePartyMemberJoined);
 			GameState->OnPlayerLeftDelegate.AddDynamic(this, &UDGOverlayWidgetController::HandlePartyMemberLeft);
+		}
+	}
+
+	// 플레이어 스킬의 쿨타임 태그들을 리스닝
+	if (AbilitySystemComponent)
+	{
+		if (APlayerCharacterBase* PlayerChar = Cast<APlayerCharacterBase>(PlayerController->GetPawn()))
+		{
+			if (UPlayerCharacterClassData* ClassData = PlayerChar->CharacterClassData)
+			{
+				for (const FSkillSlotDefinition& SlotDef : ClassData->SkillSlots)
+				{
+					if (SlotDef.SkillData && SlotDef.SkillData->CooldownTag.IsValid())
+					{
+						AbilitySystemComponent->RegisterGameplayTagEvent(
+							SlotDef.SkillData->CooldownTag,
+							EGameplayTagEventType::NewOrRemoved
+						).AddUObject(this, &UDGOverlayWidgetController::OnCooldownTagChanged);
+					}
+				}
+			}
 		}
 	}
 }
@@ -355,4 +400,43 @@ void UDGOverlayWidgetController::HandlePartyMemberLeft(ADG_PlayerState* LeavingM
 
 	// View(DGPartyListWidget)에게 파티원이 나갔다고 방송
 	OnPartyMemberLeft.Broadcast(LeavingMemberPS);
+}
+
+// 스킬 쿨타임 태그의 상태가 변할 때 호출됨
+void UDGOverlayWidgetController::OnCooldownTagChanged(const FGameplayTag InCooldownTag, int32 NewCount)
+{
+	if (!AbilitySystemComponent) return;
+
+	if (NewCount > 0)
+	{
+		// 쿨타임이 시작됨: 가장 긴 지속시간을 찾아서 전달
+		float TimeRemaining = 0.f;
+		float Duration = 0.f;
+
+		FGameplayEffectQuery Query = FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(FGameplayTagContainer(InCooldownTag));
+		TArray<float> Durations = AbilitySystemComponent->GetActiveEffectsTimeRemaining(Query);
+
+		if (Durations.Num() > 0)
+		{
+			TimeRemaining = Durations[0];
+
+			// 전체 Duration을 가져오는 방식 (핸들을 가져온 후 이펙트를 조회)
+			TArray<FActiveGameplayEffectHandle> ActiveEffects = AbilitySystemComponent->GetActiveEffects(Query);
+			if (ActiveEffects.Num() > 0)
+			{
+				const FActiveGameplayEffect* ActiveEffect = AbilitySystemComponent->GetActiveGameplayEffect(ActiveEffects[0]);
+				if (ActiveEffect)
+				{
+					Duration = ActiveEffect->GetDuration();
+				}
+			}
+		}
+
+		OnSkillCooldownChanged.Broadcast(InCooldownTag, TimeRemaining, Duration);
+	}
+	else
+	{
+		// 쿨타임이 종료됨
+		OnSkillCooldownChanged.Broadcast(InCooldownTag, 0.f, 0.f);
+	}
 }
