@@ -39,11 +39,14 @@ namespace DGGameplayTags
 	// MeleeAttack Combo Miss 완화
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combo_InputRequest)
 
-	// DoomStrike(파멸의 맹타) 몽타주 출력 시 타겟팅 대상에게 Dash 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그 
+	// Warrior DoomStrike(파멸의 맹타) 몽타주 출력 시 타겟팅 대상에게 Dash 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그 
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Movement_Warrior_DoomStrike_DashBegin)
 
-	// LeapingSlam(도약찍기) 몽타주 출력 시 타겟팅 대상에게 Leap 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그 
+	// Warrior LeapingSlam(도약찍기) 몽타주 출력 시 타겟팅 대상에게 Leap 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그 
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Movement_Warrior_LeapingSlam_MoveBegin)
+	
+	// FlashSlash(섬광베기) 몽타주 출력 시 타겟 반대 방향 이동 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Movement_Assassin_FlashSlash_MoveBegin)
 
 	// 전사스킬 예리한일격 탭으로 전달 시 필요 태그 (모든 스킬에 대해 필요한 건 아님, 콤보 공격 시 몽타주 ANS 내부에서 기다리는 태그)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Warrior_SharpStrike)
