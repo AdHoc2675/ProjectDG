@@ -47,6 +47,8 @@ namespace DGGameplayTags
 	// FlashSlash(섬광베기) 몽타주 출력 시 타겟 반대 방향 이동 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그
 	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Assassin_FlashSlash_MoveBegin, "Event.Movement.Assassin.FlashSlash.MoveBegin")
 
+	// ShadowAssult(암습) 몽타주 출력 시 타겟 반대 방향 이동 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그
+	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Assassin_ShadowAssault_MoveBegin, "Event.Movement.Assassin.ShadowAssault.MoveBegin")
 
 	// 전사스킬 예리한일격 탭으로 전달 시 필요 태그
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Warrior_SharpStrike, "Event.Input.Warrior.SharpStrike")
