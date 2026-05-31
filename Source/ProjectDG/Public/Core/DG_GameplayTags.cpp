@@ -61,6 +61,9 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Warrior_DoomStrike, "Event.Input.Warrior.DoomStrike")
 
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Archer_Snipe, "Event.Input.Archer.Snipe")
+	
+	// 암살자 콤보공격 '빠른 베기(QuickSlash)'에서 다음 콤보로 넘어가기 위한 InputEvent Tag
+	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Assassin_QuickSlash, "Event.Input.Assassin.QuickSlash")
 
 	// Skill.Common
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Common_Dodge, "Skill.Common.Dodge")
