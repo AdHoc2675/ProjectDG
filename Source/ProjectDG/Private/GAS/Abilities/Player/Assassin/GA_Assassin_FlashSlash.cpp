@@ -171,9 +171,50 @@ bool UGA_Assassin_FlashSlash::BuildBehindTargetLocation(AActor* TargetActor, FVe
                 return false;
         }
 
-        OutLocation = TargetLocation + TargetBackward * BehindTargetDistance;
-        OutLocation.Z = AvatarLocation.Z;
+        const FVector DesiredLocation = TargetLocation + TargetBackward * BehindTargetDistance;
 
+        UWorld* World = GetWorld();
+        if (!World)
+        {
+                OutLocation = DesiredLocation;
+                OutLocation.Z = AvatarLocation.Z;
+                return true;
+        }
+
+        FHitResult GroundHit;
+        const FVector TraceStart = DesiredLocation + FVector(0.f, 0.f, 500.f);
+        const FVector TraceEnd = DesiredLocation - FVector(0.f, 0.f, 1500.f);
+
+        FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(FlashSlashGroundTrace), false);
+        QueryParams.AddIgnoredActor(AvatarActor);
+        QueryParams.AddIgnoredActor(TargetActor);
+
+        const bool bHitGround = World->LineTraceSingleByChannel(
+                        GroundHit,
+                        TraceStart,
+                        TraceEnd,
+                        ECC_Visibility,
+                        QueryParams
+        );
+
+        if (bHitGround)
+        {
+                OutLocation = DesiredLocation;
+                OutLocation.Z = GroundHit.Location.Z;
+
+                if (const ACharacter* Character = Cast<ACharacter>(AvatarActor))
+                {
+                        if (const UCapsuleComponent* Capsule = Character->GetCapsuleComponent())
+                        {
+                                OutLocation.Z += Capsule->GetScaledCapsuleHalfHeight();
+                        }
+                }
+
+                return true;
+        }
+
+        OutLocation = DesiredLocation;
+        OutLocation.Z = AvatarLocation.Z;
         return true;
 }
 
