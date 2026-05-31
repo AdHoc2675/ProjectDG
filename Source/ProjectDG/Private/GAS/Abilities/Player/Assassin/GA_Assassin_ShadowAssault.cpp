@@ -153,27 +153,68 @@ void UGA_Assassin_ShadowAssault::StartMoveBehindTarget(float Duration)
 
 bool UGA_Assassin_ShadowAssault::BuildBehindTargetLocation(AActor* TargetActor, FVector& OutLocation) const
 {
-      AActor* AvatarActor = GetAvatarActorFromAbility();
-      if (!AvatarActor || !TargetActor)
-      {
-              return false;
-      }
+	AActor* AvatarActor = GetAvatarActorFromAbility();
+	if (!AvatarActor || !TargetActor)
+	{
+	      return false;
+	}
 
-      const FVector AvatarLocation = AvatarActor->GetActorLocation();
-      const FVector TargetLocation = TargetActor->GetActorLocation();
+	const FVector AvatarLocation = AvatarActor->GetActorLocation();
+	const FVector TargetLocation = TargetActor->GetActorLocation();
 
-      FVector TargetBackward = -TargetActor->GetActorForwardVector();
-      TargetBackward.Z = 0.f;
+	FVector TargetBackward = -TargetActor->GetActorForwardVector();
+	TargetBackward.Z = 0.f;
 
-      if (!TargetBackward.Normalize())
-      {
-              return false;
-      }
+	if (!TargetBackward.Normalize())
+	{
+	      return false;
+	}
 
-      OutLocation = TargetLocation + TargetBackward * BehindTargetDistance;
-      OutLocation.Z = AvatarLocation.Z;
+	const FVector DesiredLocation = TargetLocation + TargetBackward * BehindTargetDistance;
 
-      return true;
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		OutLocation = DesiredLocation;
+		OutLocation.Z = AvatarLocation.Z;
+		return true;
+	}
+
+	FHitResult GroundHit;
+	const FVector TraceStart = DesiredLocation + FVector(0.f, 0.f, 500.f);
+	const FVector TraceEnd = DesiredLocation - FVector(0.f, 0.f, 1500.f);
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(ShadowAssaultGroundTrace), false);
+	QueryParams.AddIgnoredActor(AvatarActor);
+	QueryParams.AddIgnoredActor(TargetActor);
+
+	const bool bHitGround = World->LineTraceSingleByChannel(
+					GroundHit,
+					TraceStart,
+					TraceEnd,
+					ECC_Visibility,
+					QueryParams
+	);
+
+	if (bHitGround)
+	{
+		OutLocation = DesiredLocation;
+		OutLocation.Z = GroundHit.Location.Z;
+
+		if (const ACharacter* Character = Cast<ACharacter>(AvatarActor))
+		{
+			if (const UCapsuleComponent* Capsule = Character->GetCapsuleComponent())
+			{
+				OutLocation.Z += Capsule->GetScaledCapsuleHalfHeight();
+			}
+		}
+
+		return true;
+	}
+
+	OutLocation = DesiredLocation;
+	OutLocation.Z = AvatarLocation.Z;
+	return true;
 }
 
 void UGA_Assassin_ShadowAssault::IgnoreDashTargetCollision(AActor* TargetActor)
