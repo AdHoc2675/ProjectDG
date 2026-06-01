@@ -143,6 +143,10 @@ public:
 	/** 공격력 계수 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Value")
 	float BaseDamageMultiplier = 1.f;
+	
+	/** 타수. Step DA에서 사용하며, 실제 1hit 배율은 BaseDamageMultiplier / HitCount로 계산한다. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Value", meta = (ClampMin = "1"))
+	int32 HitCount = 1;
 
 	/** 그로기 피해량 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Value")

@@ -21,10 +21,10 @@ ADG_PlayerState::ADG_PlayerState()
 
 	// ASC 생성 및 설정
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
-	
+
 	// ASC복제 활성화. 나중에 네트워크에서 GAS 조회시 복제가 필요
 	AbilitySystemComponent->SetIsReplicated(true);
-	
+
 	// 플레이어의 경우 Mixed 모드 권장 (자신의 GameplayEffect는 직접 시뮬레이션하고, 타인에게는 중요한 정보만 동기화)
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
@@ -61,7 +61,6 @@ void ADG_PlayerState::InitializeAttributesFromDataTable() const
 	 */
 	if (!AttributeInitDataTable)
 	{
-		Debug::Print(TEXT("[DG_PlayerState] AttributeInitDataTable is null."));
 		return;
 	}
 
@@ -70,7 +69,6 @@ void ADG_PlayerState::InitializeAttributesFromDataTable() const
 	 */
 	if (!AttributeSet)
 	{
-		Debug::Print(TEXT("[DG_PlayerState] AttributeSet is null."));
 		return;
 	}
 
@@ -90,19 +88,18 @@ void ADG_PlayerState::InitializeAttributesFromDataTable() const
 
 	if (!InitRow)
 	{
-		Debug::Print(TEXT("[DG_PlayerState] Failed to find row in DT_Attribute."));
 		return;
 	}
 
 	AttributeSet->InitHealth(InitRow->MaxHealth);
 	AttributeSet->InitMaxHealth(InitRow->MaxHealth);
-	
+
 	AttributeSet->InitMental(InitRow->MaxMental);
 	AttributeSet->InitMaxMental(InitRow->MaxMental);
-	
-	AttributeSet->InitStamina(InitRow->MaxStamina);    
+
+	AttributeSet->InitStamina(InitRow->MaxStamina);
 	AttributeSet->InitMaxStamina(InitRow->MaxStamina);
-	
+
 	AttributeSet->InitMainStat(InitRow->MainStat);
 	AttributeSet->InitAttackPower(InitRow->AttackPower);
 	AttributeSet->InitDefense(InitRow->Defense);
@@ -119,8 +116,6 @@ void ADG_PlayerState::InitializeAttributesFromDataTable() const
 	AttributeSet->InitMentalRecoveryIncrease(InitRow->MentalRecoveryIncrease);
 	AttributeSet->InitLifeSteal(InitRow->LifeSteal);
 	AttributeSet->InitGroggyDamageIncreaseRate(InitRow->GroggyDamageIncreaseRate);
-
-	Debug::Print(TEXT("[DG_PlayerState] Attributes initialized from DT_Attribute."));
 }
 
 float ADG_PlayerState::GetSkillComboServerTime() const
@@ -236,8 +231,8 @@ void ADG_PlayerState::AdvanceSkillComboStep(FGameplayTag SkillTag, int32 ComboCo
 
 	State->CurrentStepIndex = NextStepIndex;
 	State->ExpireServerTime = NextStepIndex == 0
-		? 0.f
-		: GetSkillComboServerTime() + FMath::Max(0.f, ExpireDuration);
+		                          ? 0.f
+		                          : GetSkillComboServerTime() + FMath::Max(0.f, ExpireDuration);
 
 	ForceNetUpdate();
 }
@@ -270,13 +265,11 @@ void ADG_PlayerState::InitializePlayerDataFromClassData(const UPlayerCharacterCl
 
 	if (!InClassData)
 	{
-		Debug::Print(TEXT("[DG_PlayerState] ClassData is null."));
 		return;
 	}
 
 	if (InClassData->AttributeRowName.IsNone())
 	{
-		Debug::Print(TEXT("[DG_PlayerState] AttributeRowName is none."));
 		return;
 	}
 
@@ -284,12 +277,6 @@ void ADG_PlayerState::InitializePlayerDataFromClassData(const UPlayerCharacterCl
 	AttributeInitRowName = InClassData->AttributeRowName;
 
 	InitializeAttributesFromDataTable();
-
-	Debug::Print(FString::Printf(
-			TEXT("[DG_PlayerState] Player data initialized. Class=%s Row=%s"),
-			*CharacterClassTag.ToString(),
-			*AttributeInitRowName.ToString()
-	));
 }
 
 void ADG_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

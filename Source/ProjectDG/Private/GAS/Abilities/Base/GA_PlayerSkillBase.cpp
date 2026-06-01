@@ -2,6 +2,7 @@
 
 #include "GAS/Abilities/Base/GA_PlayerSkillBase.h"
 
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Character/Player/PlayerCharacterBase.h"
 #include "Character/Player/Data/PlayerSkillData.h"
 #include "Core/DG_GameplayTags.h"
@@ -35,8 +36,11 @@ const FGameplayTagContainer* UGA_PlayerSkillBase::GetCooldownTags() const
 	return &TempCooldownTags;
 }
 
-void UGA_PlayerSkillBase::ApplyCooldown(const FGameplayAbilitySpecHandle Handle,
-	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
+void UGA_PlayerSkillBase::ApplyCooldown(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo
+) const
 {
 	const float Cooldown = GetSkillCooldown();
 	const FGameplayTag CooldownTag = GetSkillCooldownTag();
@@ -60,6 +64,25 @@ void UGA_PlayerSkillBase::ApplyCooldown(const FGameplayAbilitySpecHandle Handle,
 	SpecHandle.Data->DynamicGrantedTags.AddTag(CooldownTag);
 
 	ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);
+}
+
+void UGA_PlayerSkillBase::EndAbility(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	bool bReplicateEndAbility,
+	bool bWasCancelled
+)
+{
+	UnregisterSkillChainStepEvent();
+
+	Super::EndAbility(
+		Handle,
+		ActorInfo,
+		ActivationInfo,
+		bReplicateEndAbility,
+		bWasCancelled
+	);
 }
 
 FGameplayTag UGA_PlayerSkillBase::GetSkillCooldownTag() const
@@ -168,6 +191,55 @@ void UGA_PlayerSkillBase::ResetCurrentComboStep()
 	DGPlayerState->ResetSkillComboStep(BaseData->SkillTag);
 }
 
+void UGA_PlayerSkillBase::RegisterSkillChainStepEvent()
+{
+	if (SkillChainStepEventTask)
+	{
+		return;
+	}
+
+	SkillChainStepEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this,
+		DGGameplayTags::Event_Skill_ChainStep,
+		nullptr,
+		false,
+		true
+	);
+
+	if (!SkillChainStepEventTask)
+	{
+		return;
+	}
+
+	SkillChainStepEventTask->EventReceived.AddDynamic(
+		this,
+		&UGA_PlayerSkillBase::OnSkillChainStepEvent
+	);
+
+	SkillChainStepEventTask->ReadyForActivation();
+}
+
+void UGA_PlayerSkillBase::UnregisterSkillChainStepEvent()
+{
+	if (!SkillChainStepEventTask)
+	{
+		return;
+	}
+
+	SkillChainStepEventTask->EndTask();
+	SkillChainStepEventTask = nullptr;
+}
+
+void UGA_PlayerSkillBase::OnSkillChainStepEvent(FGameplayEventData Payload)
+{
+	HandleSkillChainStepEvent(Payload);
+}
+
+void UGA_PlayerSkillBase::HandleSkillChainStepEvent(const FGameplayEventData& Payload)
+{
+	// 자식 Base에서 override해서 실제 스킬 실행 처리
+}
+
 ADG_PlayerState* UGA_PlayerSkillBase::GetDGPlayerState() const
 {
 	const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo();
@@ -241,8 +313,20 @@ float UGA_PlayerSkillBase::GetSkillSpiritGain() const
 
 float UGA_PlayerSkillBase::GetSkillDamageMultiplier() const
 {
-	const UPlayerSkillData* Data = GetPlayerSkillData();
+	const UPlayerSkillData* Data = GetCurrentComboSkillData();
 	return Data ? Data->BaseDamageMultiplier : 1.f;
+}
+
+int32 UGA_PlayerSkillBase::GetSkillHitCount() const
+{
+	const UPlayerSkillData* Data = GetCurrentComboSkillData();
+	return Data ? FMath::Max(1, Data->HitCount) : 1;
+}
+
+float UGA_PlayerSkillBase::GetSkillDamageMultiplierPerHit() const
+{
+	const int32 HitCount = GetSkillHitCount();
+	return GetSkillDamageMultiplier() / static_cast<float>(FMath::Max(1, HitCount));
 }
 
 float UGA_PlayerSkillBase::GetSkillGroggyDamage() const

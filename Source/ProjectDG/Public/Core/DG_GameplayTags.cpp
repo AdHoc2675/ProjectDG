@@ -34,6 +34,11 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Attack_Hit, "Event.Attack.Hit")
 
 	UE_DEFINE_GAMEPLAY_TAG(Event_Attack_HitWindow_Begin, "Event.Attack.HitWindow.Begin")
+	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_ChainStep, "Event.Skill.ChainStep")
+	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_ChainInput_Open, "Event.Skill.ChainInput.Open")
+	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_ChainInput_Close, "Event.Skill.ChainInput.Close")
+	
+	
 	
 	// MeleeAttack Combo Miss 완화
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_InputRequest, "Event.Combo.InputRequest")
@@ -108,9 +113,9 @@ namespace DGGameplayTags
 
 	// Data
 	UE_DEFINE_GAMEPLAY_TAG(Data_Damage, "Data.Damage")
-	UE_DEFINE_GAMEPLAY_TAG(Data_BaseDamage, "Data_BaseDamage")
-	UE_DEFINE_GAMEPLAY_TAG(Data_DamageMultiplier, "Data_DamageMultiplier")	
-	UE_DEFINE_GAMEPLAY_TAG(Data_GroggyDamage, "Data_GroggyDamage")
+	UE_DEFINE_GAMEPLAY_TAG(Data_BaseDamage, "Data.BaseDamage")
+	UE_DEFINE_GAMEPLAY_TAG(Data_DamageMultiplier, "Data.DamageMultiplier")	
+	UE_DEFINE_GAMEPLAY_TAG(Data_GroggyDamage, "Data.GroggyDamage")
 	UE_DEFINE_GAMEPLAY_TAG(Data_Cooldown, "Data.Cooldown")
 
 	// Block
