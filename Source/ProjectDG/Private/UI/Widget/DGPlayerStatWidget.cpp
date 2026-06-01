@@ -1,8 +1,28 @@
 ﻿#include "UI/Widget/DGPlayerStatWidget.h"
 #include "UI/WidgetController/DGOverlayWidgetController.h"
+
+#include "UI/Widget/DGSkillSlotWidget.h"
 #include "Components/ProgressBar.h"
 
+#include "Core/DG_GameplayTags.h"
 #include "Core/DG_Debug.h"
+
+void UDGPlayerStatWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	// 캐싱 배열 비우고 슬롯 위젯 할당 (null 체크 포함)
+	AllSkillSlots.Empty();
+
+	if (SkillSlot_LMB) AllSkillSlots.Add(SkillSlot_LMB);
+	if (SkillSlot_RMB) AllSkillSlots.Add(SkillSlot_RMB);
+	if (SkillSlot_1) AllSkillSlots.Add(SkillSlot_1);
+	if (SkillSlot_2) AllSkillSlots.Add(SkillSlot_2);
+	if (SkillSlot_3) AllSkillSlots.Add(SkillSlot_3);
+	if (SkillSlot_4) AllSkillSlots.Add(SkillSlot_4);
+
+	UE_LOG(LogTemp, Log, TEXT("[DGPlayerStatWidget] %d개의 스킬 슬롯을 다이나믹 배열에 할당했습니다."), AllSkillSlots.Num());
+}
 
 void UDGPlayerStatWidget::BindToController(UDGOverlayWidgetController* Controller)
 {
@@ -18,6 +38,10 @@ void UDGPlayerStatWidget::BindToController(UDGOverlayWidgetController* Controlle
 	Controller->OnMaxStaminaChanged.AddDynamic(this, &UDGPlayerStatWidget::MaxStaminaChanged);
 	Controller->OnMentalChanged.AddDynamic(this, &UDGPlayerStatWidget::MentalChanged);
 	Controller->OnMaxMentalChanged.AddDynamic(this, &UDGPlayerStatWidget::MaxMentalChanged);
+
+	// 스킬 관련 이벤트 바인딩
+	Controller->OnSkillInfoSet.AddDynamic(this, &UDGPlayerStatWidget::OnSkillInfoSet);
+	Controller->OnSkillCooldownChanged.AddDynamic(this, &UDGPlayerStatWidget::OnSkillCooldownChanged);
 
 	Debug::Print(FString::Printf(TEXT("[DGPlayerStatWidget] successfully bound to controller: %s"), *Controller->GetName()));
 }
@@ -83,5 +107,60 @@ void UDGPlayerStatWidget::UpdateMentalBar()
 	{
 		float MentalPercent = CurrentMental / CurrentMaxMental;
 		PB_MentalBar->SetPercent(MentalPercent);
+	}
+}
+
+void UDGPlayerStatWidget::OnSkillInfoSet(const FUIPlayerSkillInfo& SkillInfo)
+{
+	UDGSkillSlotWidget* TargetSlot = nullptr;
+
+	// 넘어온 Input SlotTag를 매칭하여 적절한 위젯 슬롯을 찾음
+	if (SkillInfo.SlotTag == DGGameplayTags::Input_SkillSlot_LeftMouse)
+	{
+		TargetSlot = SkillSlot_LMB;
+	}
+	else if (SkillInfo.SlotTag == DGGameplayTags::Input_SkillSlot_RightMouse)
+	{
+		TargetSlot = SkillSlot_RMB;
+	}
+	else if (SkillInfo.SlotTag == DGGameplayTags::Input_SkillSlot_Key1)
+	{
+		TargetSlot = SkillSlot_1;
+	}
+	else if (SkillInfo.SlotTag == DGGameplayTags::Input_SkillSlot_Key2)
+	{
+		TargetSlot = SkillSlot_2;
+	}
+	else if (SkillInfo.SlotTag == DGGameplayTags::Input_SkillSlot_Key3)
+	{
+		TargetSlot = SkillSlot_3;
+	}
+	else if (SkillInfo.SlotTag == DGGameplayTags::Input_SkillSlot_Key4)
+	{
+		TargetSlot = SkillSlot_4;
+	}
+
+	// 매칭된 대상 슬롯이 있다면 정보를 주입
+	if (TargetSlot)
+	{
+		TargetSlot->InitSkillSlot(SkillInfo.SlotTag, SkillInfo.CooldownTag, SkillInfo.Icon);
+		UE_LOG(LogTemp, Log, TEXT("[DGPlayerStatWidget] %s 슬롯 데이터 매핑 완료"), *SkillInfo.SlotTag.ToString());
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[DGPlayerStatWidget] 대응하는 스킬 슬롯을 찾지 못했습니다: %s"), *SkillInfo.SlotTag.ToString());
+	}
+}
+
+void UDGPlayerStatWidget::OnSkillCooldownChanged(FGameplayTag CooldownTag, float TimeRemaining, float Duration)
+{
+	// 미리 캐싱해둔 배열을 순회하면서 알맞은 쿨타임 태그가 등록된 슬롯을 찾음
+	for (UDGSkillSlotWidget* SlotWidget : AllSkillSlots)
+	{
+		if (SlotWidget && SlotWidget->MatchCooldownTag(CooldownTag))
+		{
+			SlotWidget->UpdateCooldown(TimeRemaining, Duration);
+			break;
+		}
 	}
 }

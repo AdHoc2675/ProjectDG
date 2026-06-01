@@ -2,9 +2,13 @@
 
 #include "CoreMinimal.h"
 #include "UI/Widget/DGUserWidget.h"
+#include "GameplayTagContainer.h"
+#include "UI/WidgetController/DGOverlayWidgetController.h"
 #include "DGPlayerStatWidget.generated.h"
 
 class UProgressBar;
+class UHorizontalBox;
+class UDGSkillSlotWidget;
 
 UCLASS()
 class PROJECTDG_API UDGPlayerStatWidget : public UDGUserWidget
@@ -12,6 +16,8 @@ class PROJECTDG_API UDGPlayerStatWidget : public UDGUserWidget
 	GENERATED_BODY()
 
 public:
+	virtual void NativeConstruct() override;
+
 	// ASC 직접 참조 방식 대신, 컨트롤러를 받아 바인딩
 	void BindToController(class UDGOverlayWidgetController* Controller);
 
@@ -58,4 +64,36 @@ private:
 	float CurrentMaxStamina = 1.f;
 	float CurrentMental = 0.f;
 	float CurrentMaxMental = 1.f;
+
+private:
+	/* --- 스킬 연동 델리게이트용 함수 --- */
+	UFUNCTION()
+	void OnSkillInfoSet(const FUIPlayerSkillInfo& SkillInfo);
+
+	UFUNCTION()
+	void OnSkillCooldownChanged(FGameplayTag CooldownTag, float TimeRemaining, float Duration);
+
+protected:
+	// 스킬 슬롯
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UDGSkillSlotWidget> SkillSlot_LMB;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UDGSkillSlotWidget> SkillSlot_RMB;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UDGSkillSlotWidget> SkillSlot_1;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UDGSkillSlotWidget> SkillSlot_2;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UDGSkillSlotWidget> SkillSlot_3;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UDGSkillSlotWidget> SkillSlot_4;
+
+	// C++ 내부에서 반복문(for) 처리를 편하게 하기 위해 캐싱해둘 배열
+	UPROPERTY()
+	TArray<UDGSkillSlotWidget*> AllSkillSlots;
 };

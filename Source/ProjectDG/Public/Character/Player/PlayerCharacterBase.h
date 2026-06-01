@@ -291,10 +291,6 @@ public:
 	
 #pragma region Movement
 protected:
-	// --- 신규 데이터 에셋 (MovementData를 포함하는 범용적 데이터) ---
-	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Data")
-	TObjectPtr<UPlayerCharacterClassData> CharacterClassData;
-	
 	// 데이터 에셋으로 받아오는 movement stat 초기화함수
 	void InitializeMovementStats();
 	
@@ -302,6 +298,10 @@ protected:
 	FVector2D CurrentMoveInput = FVector2D::ZeroVector;
 	
 public:
+	// --- 신규 데이터 에셋 (MovementData를 포함하는 범용적 데이터) ---
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Data")
+	TObjectPtr<UPlayerCharacterClassData> CharacterClassData;
+
 	/** GA에서 현재 상황에 맞는 몽타주를 가져가기 위한 Getter */
 	UFUNCTION(BlueprintCallable, Category = "PlayerCharacterBase|Animation")
 	const FPlayerMovementAnimationSet& GetCurrentMovementAnims() const;
