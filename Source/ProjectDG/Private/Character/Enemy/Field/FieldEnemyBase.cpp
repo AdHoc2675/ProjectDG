@@ -8,6 +8,9 @@
 #include "Character/Enemy/Field/Data/FieldCharacterClassData.h"
 #include "Core/DG_GameplayTags.h"
 #include "GAS/Attributes/DG_EnemyAttributeSet.h"
+#include "Components/WidgetComponent.h"
+#include "UI/Widget/Enemy/DGFieldEnemyHealthWidget.h"
+#include "GAS/Attributes/DG_AttributeSet.h"
 
 AFieldEnemyBase::AFieldEnemyBase() {
   // 기본값 초기화
@@ -21,6 +24,17 @@ AFieldEnemyBase::AFieldEnemyBase() {
 
   EnemyAttributeSet =
       CreateDefaultSubobject<UDG_EnemyAttributeSet>(TEXT("EnemyAttributeSet"));
+
+
+  // --- 머리 위 체력바 위젯 컴포넌트 세팅 ---
+  SimpleHealthBarComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("SimpleHealthBarComponent"));
+  SimpleHealthBarComponent->SetupAttachment(GetRootComponent());
+
+  SimpleHealthBarComponent->SetWidgetSpace(EWidgetSpace::Screen); // Screen으로 설정하면 카메라가 빌보드처럼 항상 정면을 바라봄
+
+  // 머리 위로 올리기 위한 기본 Z축 오프셋
+  SimpleHealthBarComponent->SetRelativeLocation(FVector(0.f, 0.f, 100.f));
+
 }
 
 // Field Class Data에서 태그 초기화
@@ -143,6 +157,15 @@ void AFieldEnemyBase::OnGroggyGaugeChanged(const FOnAttributeChangeData &Data) {
                                               &Payload);
 }
 
+void AFieldEnemyBase::OnHealthChanged(const FOnAttributeChangeData &Data) {
+    float CurrentHealth = Data.NewValue;
+    // MaxHealth 가져오기
+    float MaxHealth = AttributeSet->GetMaxHealth();
+
+	// 체력바 UI 업데이트
+	UpdateHealthBar(CurrentHealth, MaxHealth);
+}
+
 void AFieldEnemyBase::StartReturnToOrigin() {
   if (bIsReturning) {
     return;
@@ -205,6 +228,10 @@ void AFieldEnemyBase::CompleteReturnToOrigin() {
       BBComp->SetValueAsBool(IsReturningKeyName, false);
     }
   }
+}
+
+void AFieldEnemyBase::UpdateHealthBar(float CurrentHealth, float MaxHealth)
+{
 }
 
 void AFieldEnemyBase::UpdateBlackboardValues() {

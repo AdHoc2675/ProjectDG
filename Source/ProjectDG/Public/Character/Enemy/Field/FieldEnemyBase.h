@@ -9,6 +9,8 @@
 
 class UFieldCharacterClassData;
 class UDG_EnemyAttributeSet;
+class UWidgetComponent;
+class UDGFieldEnemyHealthBarWidget;
 
 /**
  * AFieldEnemyBase
@@ -86,6 +88,12 @@ protected:
   UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FieldEnemy|Loot")
   int32 MaxRewardGold = 30;
 
+  // --- 5. UI (머리 위 체력바) 시스템 ---
+
+  /** 몬스터 머리 위에 띄울 체력바 위젯 컴포넌트 */
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FieldEnemy|UI")
+  TObjectPtr<UWidgetComponent> SimpleHealthBarComponent;
+
 public:
   // Getters / Setters
   FORCEINLINE FVector GetSpawnOriginLocation() const {
@@ -105,6 +113,9 @@ public:
   // Groggy Attribute 변경 콜백 (ASC Delegate로 바인딩)
   void OnGroggyGaugeChanged(const FOnAttributeChangeData& Data);
 
+  // Health Attribute 변경 콜백 (ASC Delegate로 바인딩)
+  void OnHealthChanged(const FOnAttributeChangeData& Data);
+
   /** 복귀 시작 처리 (AI 및 무적 상태 부여 등에 활용) */
   UFUNCTION(BlueprintCallable, Category = "FieldEnemy|Leash")
   virtual void StartReturnToOrigin();
@@ -112,6 +123,10 @@ public:
   /** 복귀 완료 처리 */
   UFUNCTION(BlueprintCallable, Category = "FieldEnemy|Leash")
   virtual void CompleteReturnToOrigin();
+
+  /** 피격 등 체력 변동 시 호출되어 머리 위 UI를 갱신해주는 함수 */
+  UFUNCTION(BlueprintCallable, Category = "FieldEnemy|UI")
+  virtual void UpdateHealthBar(float CurrentHealth, float MaxHealth);
 
 protected:
   // --- 5. GAS 귀환 상태 연동 ---
