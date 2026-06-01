@@ -39,6 +39,9 @@ protected:
 	float GroundSpeed;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	float VelocityZ;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bIsAccelerating;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
@@ -79,12 +82,6 @@ protected:
 	// 달리기의 blendspace 속도 조정
 	UPROPERTY(BlueprintReadOnly, Category = "Movement")
 	float RunBlendSpacePlayRate = 1.f;
-
-	// UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
-	// float SharpStrikeRunBlendSpacePlayRate = 0.6f;
-	//
-	// UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
-	// float RunBlendSpacePlayRateInterpSpeed = 8.f;
 	
 private:
 	float SmoothedMeleeTwist = 0.f;

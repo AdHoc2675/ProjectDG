@@ -46,6 +46,8 @@ void UPlayerCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	// blendspace 달리기 변수 업데이트
 	const FVector WorldVelocity = PlayerCharacter->GetVelocity();
+	VelocityZ = WorldVelocity.Z;
+	
 	const FVector LocalVelocity =
 	PlayerCharacter->GetActorTransform().InverseTransformVectorNoScale(WorldVelocity);
 
@@ -72,36 +74,4 @@ void UPlayerCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 			-1.f,
 			1.f
 	);
-	
-	// Warrior 관련 함수 -> WarriorAnimInstance로 이전
-	
-	// float TargetRunBlendSpacePlayRate = 1.f;
-	//
-	// if (UAbilitySystemComponent* ASC = PlayerCharacter->GetCharacterAbilitySystemComponent())
-	// {
-	// 	const bool bIsSharpStrikeActive =
-	// 			ASC->HasMatchingGameplayTag(DGGameplayTags::State_Skill_Warrior_SharpStrike_Active.GetTag());
-	//
-	// 	if (bIsSharpStrikeActive)
-	// 	{
-	// 		TargetRunBlendSpacePlayRate = SharpStrikeRunBlendSpacePlayRate;
-	// 	}
-	// }
-
-	// CurrentRunBlendSpacePlayRate = FMath::FInterpTo(
-	// 		CurrentRunBlendSpacePlayRate,
-	// 		TargetRunBlendSpacePlayRate,
-	// 		DeltaSeconds,
-	// 		RunBlendSpacePlayRateInterpSpeed
-	// );
-
-	// RunBlendSpacePlayRate = CurrentRunBlendSpacePlayRate;
-	
-	// if (FMath::Abs(MeleeTwist) > KINDA_SMALL_NUMBER)
-	// {
-	// 	// UE_LOG(LogTemp, Log, TEXT("MeleeTwist=%.2f Normalized=%.2f FinalMoveRight=%.2f"),
-	// 	// 		MeleeTwist,
-	// 	// 		NormalizedMeleeTwist,
-	// 	// 		FinalMoveRight);
-	// }
 }

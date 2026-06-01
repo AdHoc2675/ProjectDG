@@ -42,13 +42,22 @@ namespace DGGameplayTags
 	// MeleeAttack Combo Miss 완화
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combo_InputRequest)
 
-	// DoomStrike(파멸의 맹타) 몽타주 출력 시 타겟팅 대상에게 Dash 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그 
+	// Warrior DoomStrike(파멸의 맹타) 몽타주 출력 시 타겟팅 대상에게 Dash 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그 
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Movement_Warrior_DoomStrike_DashBegin)
 
-	// LeapingSlam(도약찍기) 몽타주 출력 시 타겟팅 대상에게 Leap 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그 
+	// Warrior LeapingSlam(도약찍기) 몽타주 출력 시 타겟팅 대상에게 Leap 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그 
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Movement_Warrior_LeapingSlam_MoveBegin)
+	
+	// FlashSlash(섬광베기) 몽타주 출력 시 타겟 반대 방향 이동 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Movement_Assassin_FlashSlash_MoveBegin)
+	
+	// ShadowAssault(암습) 몽타주 출력 시 타겟 반대 방향 이동 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Movement_Assassin_ShadowAssault_MoveBegin)
+	
+	// Infiltration(침투) 몽타주 출력 시 타겟 반대 방향 이동 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Movement_Assassin_Infiltration_MoveBegin)
 
-	// 전사스킬 예리한일격 탭으로 전달 시 필요 태그
+	// 전사스킬 예리한일격 탭으로 전달 시 필요 태그 (모든 스킬에 대해 필요한 건 아님, 콤보 공격 시 몽타주 ANS 내부에서 기다리는 태그)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Warrior_SharpStrike)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Warrior_CuttingSmash)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Warrior_LeapingSlam)
@@ -56,7 +65,9 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Warrior_DoomStrike)
 	
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Archer_Snipe)
-
+	
+	// 암살자 콤보공격 '빠른 베기(QuickSlash)'에서 다음 콤보로 넘어가기 위한 InputEvent Tag
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Assassin_QuickSlash)
 
 	// Skill_Common
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Common_Dodge)
@@ -86,6 +97,23 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Archer_PiercingArrow)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Archer_GaleArrow)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Archer_AimedArrow)
+	
+	
+	// Skill_Assassin
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Assassin_QuickSlash)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Assassin_Ambush)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Assassin_ShadowAssault)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Assassin_FlashSlash)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Assassin_HeartStab)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Assassin_Infiltration)
+	
+	// Skill_Assassin_Cooldown
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Assassin_QuickSlash)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Assassin_Ambush)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Assassin_ShadowAssault)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Assassin_FlashSlash)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Assassin_HeartStab)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Assassin_Infiltration)
 
 
 	// Skill_Boss
@@ -95,7 +123,8 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Dodge)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Sprint)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Jump)
-
+	
+	// Warrior Skill State (해당 스킬 사용 중 다른 스킬을 사용하지 못하게 하는 등의 방식으로 사용 가능) 
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_SharpStrike_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_CuttingSmash_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_GroundSlam_Active)
@@ -104,11 +133,21 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_DoomStrike_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_LeapingSlam_Active)
 
+	// Archer Skill State
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Archer_Snipe_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Archer_RapidShot_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Archer_PiercingArrow_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Archer_GaleArrow_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Archer_AimedArrow_Active)
+	
+	
+	// Assassin Skill State
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Assassin_QuickSlash_Active)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Assassin_Ambush_Active)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Assassin_ShadowAssault_Active)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Assassin_FlashSlash_Active)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Assassin_HeartStab_Active)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Assassin_Infiltration_Active)
 	
 	
 
@@ -117,8 +156,7 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_BaseDamage)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_DamageMultiplier)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_GroggyDamage)
-
-
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_MentalCost)
 
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Cooldown)
 
@@ -128,6 +166,9 @@ namespace DGGameplayTags
 
 	// Enemy State
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Enemy_Dead)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Enemy_Returning)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Enemy_Groggy)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Enemy_Groggy)
 
 	// Boss Phase
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Boss_Phase_1)

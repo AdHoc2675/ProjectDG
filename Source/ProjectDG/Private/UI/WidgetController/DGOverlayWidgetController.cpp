@@ -9,6 +9,9 @@
 #include "GameFramework/DG_PlayerState.h"
 #include "GAS/Attributes/DG_EnemyAttributeSet.h"
 
+#include "Character/Player/PlayerCharacterBase.h"
+#include "Character/Player/Data/PlayerCharacterClassData.h"
+#include "Character/Player/Data/PlayerSkillData.h"
 
 void UDGOverlayWidgetController::BroadcastInitialValues()
 {
@@ -21,9 +24,8 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 		OnMaxHealthChanged.Broadcast(DGAS->GetMaxHealth());
 		OnStaminaChanged.Broadcast(DGAS->GetStamina());
 		OnMaxStaminaChanged.Broadcast(DGAS->GetMaxStamina());
-
-		UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] BroadcastInitialValues called. Health: %f, MaxHealth: %f, Stamina: %f, MaxStamina: %f"),
-			DGAS->GetHealth(), DGAS->GetMaxHealth(), DGAS->GetStamina(), DGAS->GetMaxStamina());
+		OnMentalChanged.Broadcast(DGAS->GetMental());
+		OnMaxMentalChanged.Broadcast(DGAS->GetMaxMental());
 	}
 
 	// 미니맵 초기 마커 
@@ -36,7 +38,7 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 				OnMarkerAdded.Broadcast(Marker);
 			}
 
-			UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] BroadcastInitialValues called. Initial Minimap Markers Count: %d"), MinimapSubsystem->GetActiveMarkers().Num());
+			//UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] BroadcastInitialValues called. Initial Minimap Markers Count: %d"), MinimapSubsystem->GetActiveMarkers().Num());
 		}
 	}
 
@@ -54,6 +56,37 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 					HandlePartyMemberJoined(DGPS);
 				}
 			}
+		}
+	}
+
+	// 플레이어의 캐릭터 클래스 데이터를 가져와 스킬 정보 세팅
+	if (APlayerCharacterBase* PlayerChar = Cast<APlayerCharacterBase>(PlayerController->GetPawn()))
+	{
+		if (UPlayerCharacterClassData* ClassData = PlayerChar->CharacterClassData)
+		{
+			int32 BroadcastedCount = 0; // 실제로 바인딩된 개수 카운트
+			for (const FSkillSlotDefinition& SlotDef : ClassData->SkillSlots)
+			{
+				// Icon이 null이라도 바인딩을 진행하게 && 조건에서 제거
+				if (SlotDef.SkillData)
+				{
+					FUIPlayerSkillInfo Info;
+
+					// [방어 코드] ClassData 구조체에 SlotTag가 비어있다면 PlayerSkillData의 DefaultSlotTag를 당겨옴
+					Info.SlotTag = SlotDef.SlotTag.IsValid() ? SlotDef.SlotTag : SlotDef.SkillData->DefaultSlotTag;
+					Info.CooldownTag = SlotDef.SkillData->CooldownTag;
+					Info.Icon = SlotDef.SkillData->Icon; // null이어도 넘길 수 있음
+
+					// 위젯으로 기본 스킬 정보 브로드캐스트
+					OnSkillInfoSet.Broadcast(Info);
+					BroadcastedCount++;
+
+					//UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] 브로드캐스트 스킬: %s (태그: %s)"), *SlotDef.SkillData->SkillName.ToString(), *Info.SlotTag.ToString());
+				}
+			}
+
+			// 이제 실제 방송된 숫자를 정확하게 기재
+			//UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] BroadcastInitialValues: Broadcasted actual skill info for %d skills."), BroadcastedCount);
 		}
 	}
 }
@@ -91,6 +124,20 @@ void UDGOverlayWidgetController::BindCallbacksToDependencies()
 				OnMaxStaminaChanged.Broadcast(Data.NewValue);
 			}
 		);
+
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(DGAS->GetMentalAttribute()).AddLambda(
+			[this](const FOnAttributeChangeData& Data)
+			{
+				OnMentalChanged.Broadcast(Data.NewValue);
+			}
+		);
+
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(DGAS->GetMaxMentalAttribute()).AddLambda(
+			[this](const FOnAttributeChangeData& Data)
+			{
+				OnMaxMentalChanged.Broadcast(Data.NewValue);
+			}
+		);
 	}
 
 
@@ -111,6 +158,43 @@ void UDGOverlayWidgetController::BindCallbacksToDependencies()
 		{
 			GameState->OnPlayerJoinedDelegate.AddDynamic(this, &UDGOverlayWidgetController::HandlePartyMemberJoined);
 			GameState->OnPlayerLeftDelegate.AddDynamic(this, &UDGOverlayWidgetController::HandlePartyMemberLeft);
+		}
+	}
+
+	// 플레이어 스킬의 쿨타임 태그들을 리스닝
+	if (AbilitySystemComponent)
+	{
+		APlayerCharacterBase* PlayerChar = Cast<APlayerCharacterBase>(PlayerController->GetPawn());
+
+		if (!PlayerChar)
+		{
+			//UE_LOG(LogTemp, Error, TEXT("[DGOverlayWidgetController] BindCallbacksToDependencies 실패, 현재 PlayerController에 유효한 Pawn이 빙의되어 있지 않음."));
+		}
+		else
+		{
+			UPlayerCharacterClassData* ClassData = PlayerChar->CharacterClassData;
+			if (!ClassData)
+			{
+				//UE_LOG(LogTemp, Error, TEXT("[DGOverlayWidgetController] BindCallbacksToDependencies 실패, 빙의된 Pawn(%s)에 CharacterClassData가 없음"), *PlayerChar->GetName());
+			}
+			else
+			{
+				int32 BoundCount = 0;
+				for (const FSkillSlotDefinition& SlotDef : ClassData->SkillSlots)
+				{
+					if (SlotDef.SkillData && SlotDef.SkillData->CooldownTag.IsValid())
+					{
+						AbilitySystemComponent->RegisterGameplayTagEvent(
+							SlotDef.SkillData->CooldownTag,
+							EGameplayTagEventType::NewOrRemoved
+						).AddUObject(this, &UDGOverlayWidgetController::OnCooldownTagChanged);
+
+						BoundCount++;
+						//UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] 쿨타임 이벤트 바인딩 완료 - 태그: %s"), *SlotDef.SkillData->CooldownTag.ToString());
+					}
+				}
+				//UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] 총 %d개의 쿨타임 이벤트를 바인딩"), BoundCount);
+			}
 		}
 	}
 }
@@ -342,4 +426,43 @@ void UDGOverlayWidgetController::HandlePartyMemberLeft(ADG_PlayerState* LeavingM
 
 	// View(DGPartyListWidget)에게 파티원이 나갔다고 방송
 	OnPartyMemberLeft.Broadcast(LeavingMemberPS);
+}
+
+// 스킬 쿨타임 태그의 상태가 변할 때 호출됨
+void UDGOverlayWidgetController::OnCooldownTagChanged(const FGameplayTag InCooldownTag, int32 NewCount)
+{
+	if (!AbilitySystemComponent) return;
+
+	if (NewCount > 0)
+	{
+		// 쿨타임이 시작됨: 가장 긴 지속시간을 찾아서 전달
+		float TimeRemaining = 0.f;
+		float Duration = 0.f;
+
+		FGameplayEffectQuery Query = FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(FGameplayTagContainer(InCooldownTag));
+		TArray<float> Durations = AbilitySystemComponent->GetActiveEffectsTimeRemaining(Query);
+
+		if (Durations.Num() > 0)
+		{
+			TimeRemaining = Durations[0];
+
+			// 전체 Duration을 가져오는 방식 (핸들을 가져온 후 이펙트를 조회)
+			TArray<FActiveGameplayEffectHandle> ActiveEffects = AbilitySystemComponent->GetActiveEffects(Query);
+			if (ActiveEffects.Num() > 0)
+			{
+				const FActiveGameplayEffect* ActiveEffect = AbilitySystemComponent->GetActiveGameplayEffect(ActiveEffects[0]);
+				if (ActiveEffect)
+				{
+					Duration = ActiveEffect->GetDuration();
+				}
+			}
+		}
+
+		OnSkillCooldownChanged.Broadcast(InCooldownTag, TimeRemaining, Duration);
+	}
+	else
+	{
+		// 쿨타임이 종료됨
+		OnSkillCooldownChanged.Broadcast(InCooldownTag, 0.f, 0.f);
+	}
 }
