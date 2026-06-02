@@ -33,10 +33,10 @@ void UDGInventoryComponent::AddItem(UDGItemDefinition* NewItemDef, int32 Quantit
 {
 	if (!NewItemDef || Quantity <= 0 || !GetOwner()->HasAuthority()) return;
 
-	// 1. 서버 본인의 인벤토리 배열에 먼저 아이템 추가
+	// 서버 본인의 인벤토리 배열에 먼저 아이템 추가
 	InternalAddItemConfig(NewItemDef, Quantity, Grade);
 
-	// 2. 만약 습득한 주체(플레이어)가 호스트(Listen Server 본인)가 아닌 원격 클라이언트라면,
+	// 만약 습득한 주체(플레이어)가 호스트(Listen Server 본인)가 아닌 원격 클라이언트라면,
 	// 클라이언트 쪽 화면에도 아이템을 추가하라고 RPC 전송
 	APawn* OwningPawn = Cast<APawn>(GetOwner());
 	if (OwningPawn && !OwningPawn->IsLocallyControlled())

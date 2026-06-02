@@ -99,7 +99,7 @@ void ADGLootItemActor::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent,
         if (Inventory)
         {
             // 인벤토리에 아이템을 지급
-            Inventory->AddItem(ItemDef, Quantity);
+            Inventory->AddItem(ItemDef, Quantity, ReplicatedGrade);
 
             UE_LOG(LogTemp, Log, TEXT("[DGLootItemActor] [%s]가 %s (x%d) 를 획득"), *Player->GetName(), *ItemDef->ItemName.ToString(), Quantity);
 
