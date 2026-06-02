@@ -35,8 +35,9 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_Branch, "Event.Combo.Branch")
 
 	UE_DEFINE_GAMEPLAY_TAG(Event_Attack_Hit, "Event.Attack.Hit")
-
+	UE_DEFINE_GAMEPLAY_TAG(Event_Attack_HitCheck, "Event.Attack.HitCheck")
 	UE_DEFINE_GAMEPLAY_TAG(Event_Attack_HitWindow_Begin, "Event.Attack.HitWindow.Begin")
+	
 	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_ChainStep, "Event.Skill.ChainStep")
 	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_ChainInput_Open, "Event.Skill.ChainInput.Open")
 	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_ChainInput_Close, "Event.Skill.ChainInput.Close")

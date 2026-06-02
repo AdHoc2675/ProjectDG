@@ -111,6 +111,15 @@ protected:
 protected:
 	/** AN_SkillChainStep 이벤트를 받았을 때 저장형 체인 Step을 갱신한다. */
 	virtual void HandleSkillChainStepEvent(const FGameplayEventData& Payload) override;
+	
+	/** AN_SkillHit 이벤트를 받았을 때 Melee 판정을 실행한다. */
+	virtual void HandleSkillHitCheckEvent(const FGameplayEventData& Payload) override;
+	
+	void ExecuteForwardBoxHitCheckFromSkillData();
+
+	void CollectForwardBoxHitActorsFromSkillData(TArray<AActor*>& OutHitActors) const;
+
+	bool IsValidMeleeHitActor(AActor* AvatarActor, AActor* TargetActor) const;
 
 	UFUNCTION()
 	void OnAttackHit(FGameplayEventData Payload);
