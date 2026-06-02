@@ -10,6 +10,7 @@
 class UGameplayEffect;
 class AFieldEnemyBase;
 class UBehaviorTree;
+class UGameplayAbility;
 
 /**
  * UFieldCharacterClassData
@@ -30,6 +31,10 @@ public:
 	/** 이 몬스터가 사용할 AI Behavior Tree */
 	UPROPERTY(EditDefaultsOnly, Category = "FieldEnemy|AI")
 	TObjectPtr<UBehaviorTree> BehaviorTree;
+
+	/** 이 몬스터가 사용할 수 있는 공격용 어빌리티(GA) 목록. 랜덤으로 하나가 선택되어 실행됩니다. */
+	UPROPERTY(EditDefaultsOnly, Category = "FieldEnemy|Ability")
+	TArray<TSubclassOf<UGameplayAbility>> AttackAbilities;
 
 	// --- 몬스터 스탯 정보 ---
 

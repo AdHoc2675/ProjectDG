@@ -11,7 +11,8 @@
 #include "Core/DG_Debug.h"
 #include "Core/DG_GameplayTags.h"
 #include "GAS/Attributes/DG_AttributeSet.h"
-
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 
 AEnemyCharacterBase::AEnemyCharacterBase() {
   AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(
@@ -22,6 +23,12 @@ AEnemyCharacterBase::AEnemyCharacterBase() {
   // 드롭 컴포넌트 생성
   LootDropComponent = CreateDefaultSubobject<UDGLootDropComponent>(TEXT("LootDropComponent"));
 
+
+  // 서버에서도 소켓 기반 트레이스가 정상 작동하도록 애니메이션 본을 항상 갱신하게 설정
+  if (USkeletalMeshComponent* MeshComp = GetMesh())
+  {
+      MeshComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+  }
 }
 
 void AEnemyCharacterBase::BeginPlay() {
@@ -146,6 +153,33 @@ void AEnemyCharacterBase::MulticastPlayDeathMontage_Implementation() {
       AnimInstance->Montage_Play(DeathMontage);
     }
   }
+}
+
+void AEnemyCharacterBase::Multicast_SpawnAOETelegraph_Implementation(UNiagaraSystem* VFX, FVector Location, FName ScaleParamName, float Scale)
+{
+	if (!VFX) return;
+
+	if (AOETelegraphComponent)
+	{
+		AOETelegraphComponent->DeactivateImmediate();
+		AOETelegraphComponent = nullptr;
+	}
+
+	AOETelegraphComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, VFX, Location);
+
+	if (AOETelegraphComponent && ScaleParamName != NAME_None)
+	{
+		AOETelegraphComponent->SetVariableFloat(ScaleParamName, Scale);
+	}
+}
+
+void AEnemyCharacterBase::Multicast_DestroyAOETelegraph_Implementation()
+{
+	if (AOETelegraphComponent)
+	{
+		AOETelegraphComponent->DeactivateImmediate();
+		AOETelegraphComponent = nullptr;
+	}
 }
 
 void AEnemyCharacterBase::OnHealthChanged_DeathCheck(

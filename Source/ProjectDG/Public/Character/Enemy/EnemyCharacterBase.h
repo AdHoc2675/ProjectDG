@@ -13,6 +13,8 @@ class UDG_AttributeSet;
 class UGameplayAbility;
 class UGameplayEffect;
 class UAnimMontage;
+class UNiagaraSystem;
+class UNiagaraComponent;
 struct FOnAttributeChangeData;
 class UDGLootDropComponent;
 
@@ -95,5 +97,15 @@ public:
 	
 	//AI컨트롤러가 Posses 할때 GAS를 초기화 할 수 있도록 Override
 	virtual void PossessedBy(AController* NewController) override;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_SpawnAOETelegraph(UNiagaraSystem* VFX, FVector Location, FName ScaleParamName, float Scale);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_DestroyAOETelegraph();
+
+protected:
+	UPROPERTY()
+	TObjectPtr<UNiagaraComponent> AOETelegraphComponent;
 
 };

@@ -9,6 +9,7 @@
 
 class UFieldCharacterClassData;
 class UDG_EnemyAttributeSet;
+class UGameplayAbility;
 
 /**
  * AFieldEnemyBase
@@ -44,6 +45,9 @@ protected:
 
   // Apply startup effects from class data
   virtual void ApplyDefaultEffects() override;
+
+  // DataAsset의 AttackAbilities를 ASC에 부여
+  virtual void GrantDefaultAbilities() override;
 
   // --- 1. 제자리 복귀 (Leashing) 시스템 ---
 
@@ -94,6 +98,14 @@ public:
   FORCEINLINE float GetPatrolRadius() const { return PatrolRadius; }
   FORCEINLINE int32 GetEnemyLevel() const { return EnemyLevel; }
   FORCEINLINE bool IsReturning() const { return bIsReturning; }
+
+  /** 설정된 DataAsset 반환 */
+  UFUNCTION(BlueprintCallable, Category = "FieldEnemy|Data")
+  UFieldCharacterClassData* GetFieldClassData() const { return FieldClassData; }
+
+  /** 등록된 공격 어빌리티 중 무작위로 하나를 선택하여 반환 */
+  UFUNCTION(BlueprintCallable, Category = "FieldEnemy|Ability")
+  TSubclassOf<UGameplayAbility> GetRandomAttackAbilityClass() const;
 
   UFUNCTION(BlueprintCallable, Category = "FieldEnemy|ASC")
   UDG_EnemyAttributeSet* GetEnemyAttributeSet() const { return EnemyAttributeSet; }

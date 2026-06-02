@@ -29,6 +29,9 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_AOE_OverlapWindow_Begin, "Event.AOE.OverlapWindow.Begin")
 	UE_DEFINE_GAMEPLAY_TAG(Event_AOE_OverlapWindow_End, "Event.AOE.OverlapWindow.End")
 
+	UE_DEFINE_GAMEPLAY_TAG(Event_Enemy_AOE_Telegraph_Begin, "Event.Enemy.AOE.Telegraph.Begin")
+	UE_DEFINE_GAMEPLAY_TAG(Event_Enemy_AOE_Telegraph_End, "Event.Enemy.AOE.Telegraph.End")
+
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_Branch, "Event.Combo.Branch")
 
 	UE_DEFINE_GAMEPLAY_TAG(Event_Attack_Hit, "Event.Attack.Hit")
