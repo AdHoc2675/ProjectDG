@@ -102,6 +102,7 @@ APlayerCharacterBase::APlayerCharacterBase()
 	InventoryComponent = CreateDefaultSubobject<UDGInventoryComponent>(TEXT("InventoryComponent"));
 
 	MinimapMarkerComponent->MarkerType = EMinimapMarkerType::Player;
+	MinimapMarkerComponent->bTrackRotation = true;
 
 	// 네트워크 컬 거리(기본값은 225,000,000 = 약 150미터)를 엄청나게 크게 설정
 	// 맵이 너무 넓거나 동접자가 높으면 연산량과 트래픽 패킷 낭비가 심해진다는 단점 있음

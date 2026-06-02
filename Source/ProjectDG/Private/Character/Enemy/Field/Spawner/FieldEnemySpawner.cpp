@@ -8,6 +8,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "NavigationSystem.h"
+#include "Components/SphereComponent.h"
 
 AFieldEnemySpawner::AFieldEnemySpawner()
 {
@@ -15,6 +16,25 @@ AFieldEnemySpawner::AFieldEnemySpawner()
 	
 	// 에디터에서 영역을 시각적으로 확인하기 위해 Sphere 컴포넌트를 루트로 설정 가능
 	// 여기서는 단순히 Actor 로케이션을 사용합니다.
+	SpawnAreaComponent = CreateDefaultSubobject<USphereComponent>(TEXT("SpawnAreaComponent"));
+	RootComponent = SpawnAreaComponent;
+
+	// 인게임에서는 보이지 않게 하고, 충돌 처리는 완전히 끔
+	SpawnAreaComponent->SetHiddenInGame(true);
+	SpawnAreaComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	SpawnAreaComponent->ShapeColor = FColor::Green; // 에디터에서 보일 선 색상(자유롭게 변경)
+	SpawnAreaComponent->InitSphereRadius(SpawnRadius);
+}
+
+void AFieldEnemySpawner::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	// 에디터 디테일 패널에서 SpawnRadius 값을 수정하면 실시간으로 구의 크기에 반영
+	if (SpawnAreaComponent)
+	{
+		SpawnAreaComponent->SetSphereRadius(SpawnRadius);
+	}
 }
 
 void AFieldEnemySpawner::BeginPlay()
@@ -23,14 +43,8 @@ void AFieldEnemySpawner::BeginPlay()
 
 	if (HasAuthority() && EnemyDataToSpawn)
 	{
-		int32 TargetCount = CalculateTargetSpawnCount();
-		for (int32 i = 0; i < TargetCount; ++i)
-		{
-			TrySpawnEnemy();
-		}
-
-		// 지속적인 리스폰 및 풀 복귀 체크를 위해 주기적 타이머 시작
-		GetWorld()->GetTimerManager().SetTimer(RespawnTimerHandle, this, &AFieldEnemySpawner::HandleRespawnTimer, RespawnTime, false);
+		// 시작과 동시에 스폰하지 않고, 플레이어와의 거리를 체크하는 1초 주기 타이머만 킴
+		GetWorld()->GetTimerManager().SetTimer(ProximityCheckTimerHandle, this, &AFieldEnemySpawner::CheckProximity, 1.0f, true);
 	}
 }
 
@@ -39,6 +53,7 @@ void AFieldEnemySpawner::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (HasAuthority())
 	{
 		GetWorld()->GetTimerManager().ClearTimer(RespawnTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(ProximityCheckTimerHandle);
 	}
 	Super::EndPlay(EndPlayReason);
 }
@@ -159,12 +174,13 @@ void AFieldEnemySpawner::TrySpawnEnemy()
 
 void AFieldEnemySpawner::HandleRespawnTimer()
 {
-	if (!HasAuthority()) return;
+	// 스포너가 거리가 멀어져 비활성화된 상태라면 리스폰하지 않음
+	if (!HasAuthority() || !bIsActiveState) return;
 
 	// 죽어서 풀로 돌아간 몬스터(비활성화 상태)를 ActiveEnemies에서 정리
 	ActiveEnemies.RemoveAll([](AFieldEnemyBase* Enemy) {
 		return !IsValid(Enemy) || Enemy->IsHidden();
-	});
+		});
 
 	int32 TargetCount = CalculateTargetSpawnCount();
 	int32 CurrentCount = ActiveEnemies.Num();
@@ -177,9 +193,71 @@ void AFieldEnemySpawner::HandleRespawnTimer()
 			TrySpawnEnemy();
 		}
 	}
-	
+
 	// 계속 주기적으로 체크하여 리스폰 관리
 	GetWorld()->GetTimerManager().SetTimer(RespawnTimerHandle, this, &AFieldEnemySpawner::HandleRespawnTimer, RespawnTime, false);
+
+}
+
+void AFieldEnemySpawner::CheckProximity()
+{
+	if (!HasAuthority()) return;
+
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	float MinDistSq = MAX_flt;
+	bool bFoundPlayer = false;
+
+	// 가장 가까운 플레이어를 찾습니다.
+	TArray<AActor*> PlayerPawns;
+	UGameplayStatics::GetAllActorsOfClass(World, APawn::StaticClass(), PlayerPawns);
+
+	for (AActor* PawnActor : PlayerPawns)
+	{
+		if (APawn* Pawn = Cast<APawn>(PawnActor))
+		{
+			if (Pawn->IsPlayerControlled())
+			{
+				float DistSq = FVector::DistSquared(Pawn->GetActorLocation(), GetActorLocation());
+				MinDistSq = FMath::Min(MinDistSq, DistSq);
+				bFoundPlayer = true;
+			}
+		}
+	}
+
+	if (!bFoundPlayer) return;
+
+	// 비활성 상태 -> 활성 상태 진입 (깨어남)
+	if (!bIsActiveState && MinDistSq <= FMath::Square(ActivationDistance))
+	{
+		bIsActiveState = true;
+		HandleRespawnTimer(); // 즉시 리스폰 및 타이머 시작
+	}
+	// 활성 상태 -> 비활성 상태 진입 (잠듦)
+	else if (bIsActiveState && MinDistSq > FMath::Square(DeactivationDistance))
+	{
+		bIsActiveState = false;
+
+		// 스폰 타이머 중지
+		GetWorld()->GetTimerManager().ClearTimer(RespawnTimerHandle);
+
+		// 나와있는 몬스터들을 풀(Pool)로 모두 돌려보냄
+		UFieldEnemyPoolSubsystem* PoolSubsystem = World->GetSubsystem<UFieldEnemyPoolSubsystem>();
+		if (PoolSubsystem)
+		{
+			for (AFieldEnemyBase* Enemy : ActiveEnemies)
+			{
+				if (IsValid(Enemy) && !Enemy->IsHidden())
+				{
+					PoolSubsystem->ReturnEnemy(Enemy);
+				}
+			}
+		}
+
+		// 관리 배열 비우기
+		ActiveEnemies.Empty();
+	}
 }
 
 void AFieldEnemySpawner::OnEnemyDied(AActor* DestroyedActor)

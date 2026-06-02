@@ -2,9 +2,13 @@
 
 #include "GAS/Abilities/Base/GA_MeleeAttackBase.h"
 
+#include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "Character/Player/Data/PlayerSkillData.h"
+#include "Character/Player/PlayerCharacterBase.h"
+#include "Engine/OverlapResult.h"
 #include "TimerManager.h"
 #include "Core/DG_Debug.h"
 #include "Core/DG_GameplayTags.h"
@@ -42,9 +46,10 @@ void UGA_MeleeAttackBase::ActivateAbility(
 	ActiveHitCount = GetSkillHitCount();
 	ActiveDamageMultiplierPerHit = GetSkillDamageMultiplierPerHit();
 
-	
 
 	RegisterSkillChainStepEvent();
+	RegisterSkillHitCheckEvent();
+
 	StartMeleeEventTasks();
 	PlayMeleeMontage();
 }
@@ -235,7 +240,6 @@ void UGA_MeleeAttackBase::TryRequestNextChainFromHeldInput()
 	const bool bHeld = IsSkillInputHeld(SkillTag);
 
 
-
 	if (!bHeld)
 	{
 		return;
@@ -265,7 +269,6 @@ void UGA_MeleeAttackBase::RequestNextChainActivation()
 	bPendingChainActivation = true;
 	bBufferedNextChainInput = false;
 
-	
 
 	EndMeleeAbility();
 }
@@ -298,8 +301,6 @@ void UGA_MeleeAttackBase::ActivateNextChainOnNextTick(FGameplayTag SkillTag)
 			}
 
 			const bool bActivated = WeakASC->TryActivateAbilitiesByTag(SkillTagContainer);
-
-			
 		})
 	);
 }
@@ -321,8 +322,171 @@ void UGA_MeleeAttackBase::HandleSkillChainStepEvent(const FGameplayEventData& Pa
 	const int32 PreviousStepIndex = GetCurrentComboStepIndex();
 
 	AdvanceCurrentComboStep();
+}
 
-	
+void UGA_MeleeAttackBase::HandleSkillHitCheckEvent(const FGameplayEventData& Payload)
+{
+	if (!HasAuthorityAvatar())
+	{
+		return;
+	}
+
+	ExecuteForwardBoxHitCheckFromSkillData();
+}
+
+void UGA_MeleeAttackBase::ExecuteForwardBoxHitCheckFromSkillData()
+{
+	AActor* AvatarActor = GetAvatarActorFromAbility();
+	if (!AvatarActor || !AvatarActor->HasAuthority())
+	{
+		return;
+	}
+
+	TArray<AActor*> HitActors;
+	CollectForwardBoxHitActorsFromSkillData(HitActors);
+
+	if (HitActors.Num() <= 0)
+	{
+		return;
+	}
+
+	const FVector AvatarLocation = AvatarActor->GetActorLocation();
+
+	HitActors.Sort([AvatarLocation](const AActor& A, const AActor& B)
+	{
+		return FVector::DistSquared(AvatarLocation, A.GetActorLocation()) <
+			FVector::DistSquared(AvatarLocation, B.GetActorLocation());
+	});
+
+	const UPlayerSkillData* CurrentSkillData = GetCurrentComboSkillData();
+	const int32 MaxHitTargets = CurrentSkillData ? FMath::Max(1, CurrentSkillData->MaxHitTargets) : 1;
+
+	if (HitActors.Num() > MaxHitTargets)
+	{
+		HitActors.SetNum(MaxHitTargets);
+	}
+
+	const int32 HitCount = FMath::Max(1, ActiveHitCount);
+	const float DamageMultiplierPerHit = GetCurrentComboDamage();
+
+	for (AActor* HitActor : HitActors)
+	{
+		if (!IsValidMeleeHitActor(AvatarActor, HitActor))
+		{
+			continue;
+		}
+
+		for (int32 HitIndex = 0; HitIndex < HitCount; ++HitIndex)
+		{
+			ApplyDamageToTarget(
+				HitActor,
+				0.f,
+				DamageMultiplierPerHit,
+				GetSkillTag(),
+				HitActor->GetActorLocation(),
+				true
+			);
+		}
+	}
+}
+
+void UGA_MeleeAttackBase::CollectForwardBoxHitActorsFromSkillData(TArray<AActor*>& OutHitActors) const
+{
+	OutHitActors.Reset();
+
+	AActor* AvatarActor = GetAvatarActorFromAbility();
+	const UPlayerSkillData* CurrentSkillData = GetCurrentComboSkillData();
+
+	if (!AvatarActor || !CurrentSkillData)
+	{
+		return;
+	}
+
+	UWorld* World = AvatarActor->GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	const FVector Forward = AvatarActor->GetActorForwardVector();
+
+	const FVector Center =
+		AvatarActor->GetActorLocation() +
+		Forward * CurrentSkillData->BoxForwardOffset;
+
+	const FQuat BoxRotation = AvatarActor->GetActorQuat();
+	const FVector BoxHalfExtent = CurrentSkillData->BoxExtent;
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(MeleeSkillForwardBoxHitCheck), false, AvatarActor);
+	QueryParams.AddIgnoredActor(AvatarActor);
+
+	TArray<FOverlapResult> OverlapResults;
+
+	World->OverlapMultiByChannel(
+		OverlapResults,
+		Center,
+		BoxRotation,
+		ECC_Pawn,
+		FCollisionShape::MakeBox(BoxHalfExtent),
+		QueryParams
+	);
+
+	TSet<TWeakObjectPtr<AActor>> UniqueActors;
+
+	for (const FOverlapResult& OverlapResult : OverlapResults)
+	{
+		AActor* HitActor = OverlapResult.GetActor();
+
+		if (!IsValidMeleeHitActor(AvatarActor, HitActor))
+		{
+			continue;
+		}
+
+		if (UniqueActors.Contains(HitActor))
+		{
+			continue;
+		}
+
+		UniqueActors.Add(HitActor);
+		OutHitActors.Add(HitActor);
+	}
+
+	if (CurrentSkillData->bDrawHitDebug)
+	{
+		if (APlayerCharacterBase* PlayerCharacter = Cast<APlayerCharacterBase>(AvatarActor))
+		{
+			PlayerCharacter->ClientDrawAttackBoxDebug(
+				Center,
+				BoxHalfExtent,
+				BoxRotation.Rotator(),
+				OutHitActors.Num() > 0 ? FColor::Green : FColor::Red,
+				1.5f
+			);
+		}
+	}
+}
+
+bool UGA_MeleeAttackBase::IsValidMeleeHitActor(AActor* AvatarActor, AActor* TargetActor) const
+{
+	if (!AvatarActor || !TargetActor)
+	{
+		return false;
+	}
+
+	if (AvatarActor == TargetActor)
+	{
+		return false;
+	}
+
+	UAbilitySystemComponent* TargetASC =
+		UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
+
+	if (!TargetASC)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 void UGA_MeleeAttackBase::OnAttackHit(FGameplayEventData Payload)
@@ -369,8 +533,6 @@ void UGA_MeleeAttackBase::OnAttackHit(FGameplayEventData Payload)
 			false
 		);
 	}
-
-	
 }
 
 void UGA_MeleeAttackBase::OnSkillInputEventReceived(FGameplayEventData Payload)
@@ -392,8 +554,6 @@ void UGA_MeleeAttackBase::OnSkillInputEventReceived(FGameplayEventData Payload)
 	}
 
 	bBufferedNextChainInput = true;
-
-	
 }
 
 void UGA_MeleeAttackBase::OnSkillChainInputOpened(FGameplayEventData Payload)
