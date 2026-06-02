@@ -54,6 +54,23 @@ void AFieldEnemyBase::InitializeFieldTagFromClassData() {
   }
 }
 
+void AFieldEnemyBase::GrantDefaultAbilities() {
+  // 부모 클래스의 DefaultAbilities 배열 부여
+  Super::GrantDefaultAbilities();
+
+  // DataAsset의 AttackAbilities 배열도 ASC에 부여
+  if (!HasAuthority() || !AbilitySystemComponent || !FieldClassData) {
+    return;
+  }
+
+  for (const auto& AbilityClass : FieldClassData->AttackAbilities) {
+    if (AbilityClass) {
+      AbilitySystemComponent->GiveAbility(
+          FGameplayAbilitySpec(AbilityClass, 1));
+    }
+  }
+}
+
 void AFieldEnemyBase::ApplyDefaultEffects() {
   if (!HasAuthority() || !AbilitySystemComponent) {
     return;
@@ -374,3 +391,18 @@ void AFieldEnemyBase::Multicast_OnReturnedToPool_Implementation() {
   SetActorEnableCollision(false);
   SetActorTickEnabled(false);
 }
+
+TSubclassOf<UGameplayAbility> AFieldEnemyBase::GetRandomAttackAbilityClass() const {
+  if (!FieldClassData) {
+    return nullptr;
+  }
+
+  const TArray<TSubclassOf<UGameplayAbility>>& Abilities = FieldClassData->AttackAbilities;
+  if (Abilities.Num() == 0) {
+    return nullptr;
+  }
+
+  const int32 RandomIndex = FMath::RandRange(0, Abilities.Num() - 1);
+  return Abilities[RandomIndex];
+}
+
