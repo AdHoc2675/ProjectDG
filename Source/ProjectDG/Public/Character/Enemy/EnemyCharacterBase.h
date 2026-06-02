@@ -17,6 +17,7 @@ class UNiagaraSystem;
 class UNiagaraComponent;
 struct FOnAttributeChangeData;
 class UDGLootDropComponent;
+class UDGMinimapMarkerComponent;
 
 /**
  * AEnemyCharacterBase
@@ -87,6 +88,11 @@ protected:
 	// 아이템 드롭 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|Loot")
 	TObjectPtr<UDGLootDropComponent> LootDropComponent = nullptr;
+
+	// 미니맵 마커 컴포넌트
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|Minimap")
+	TObjectPtr<UDGMinimapMarkerComponent> MinimapMarkerComponent;
+
 
 public:
 	//BaseCharacter 공용 ASC getter 

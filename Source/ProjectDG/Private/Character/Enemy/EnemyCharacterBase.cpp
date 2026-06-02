@@ -13,6 +13,7 @@
 #include "GAS/Attributes/DG_AttributeSet.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
+#include "Components/UI/DGMinimapMarkerComponent.h"
 
 AEnemyCharacterBase::AEnemyCharacterBase() {
   AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(
@@ -23,6 +24,9 @@ AEnemyCharacterBase::AEnemyCharacterBase() {
   // 드롭 컴포넌트 생성
   LootDropComponent = CreateDefaultSubobject<UDGLootDropComponent>(TEXT("LootDropComponent"));
 
+  // 미니맵 마커 생성 및 기본 타입 설정
+  MinimapMarkerComponent = CreateDefaultSubobject<UDGMinimapMarkerComponent>(TEXT("MinimapMarkerComponent"));
+  MinimapMarkerComponent->MarkerType = EMinimapMarkerType::Enemy;
 
   // 서버에서도 소켓 기반 트레이스가 정상 작동하도록 애니메이션 본을 항상 갱신하게 설정
   if (USkeletalMeshComponent* MeshComp = GetMesh())
