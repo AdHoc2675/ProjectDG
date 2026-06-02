@@ -14,6 +14,7 @@
 #include "System/FieldEnemyPoolSubsystem.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Components/UI/DGMinimapMarkerComponent.h"
 
 AFieldEnemyBase::AFieldEnemyBase() {
   // 기본값 초기화
@@ -369,6 +370,11 @@ void AFieldEnemyBase::Multicast_OnSpawnedFromPool_Implementation() {
     if (UAnimInstance* AnimInstance = MeshComp->GetAnimInstance()) {
       AnimInstance->StopAllMontages(0.0f);
     }
+  }
+
+  // 부활 시 미니맵에 다시 마커 등록
+  if (MinimapMarkerComponent) {
+      MinimapMarkerComponent->RegisterToSubsystem();
   }
 
   // 사망 시 완전히 껐던 컴포넌트들의 충돌 및 물리/이동 상태 복구

@@ -8,6 +8,7 @@
 
 class UFieldCharacterClassData;
 class AFieldEnemyBase;
+class USphereComponent;
 
 /**
  * AFieldEnemySpawner
@@ -21,6 +22,9 @@ class PROJECTDG_API AFieldEnemySpawner : public AActor
 	
 public:	
 	AFieldEnemySpawner();
+
+	// 에디터에서 프로퍼티가 변경될 때마다 호출되어 범위를 실시간으로 그려줌
+	virtual void OnConstruction(const FTransform& Transform) override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -69,6 +73,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawner")
 	float MinSpawnDistanceFromPlayer = 800.f;
 
+	/** 스포너 활성화 거리 (플레이어가 이 반경 내에 오면 깨어나서 스폰 시작) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawner|Optimization")
+	float ActivationDistance = 15000.f; // Landscape 크기에 맞춰 넉넉하게 잡았습니다.
+
+	/** 스포너 비활성화 거리 (플레이어가 이 반경 밖으로 나가면 잠들고 몬스터 회수) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawner|Optimization")
+	float DeactivationDistance = 18000.f;
+
 private:
 	/** 현재 활성화되어 관리중인 몬스터 목록 */
 	UPROPERTY()
@@ -77,4 +89,17 @@ private:
 	FTimerHandle RespawnTimerHandle;
 
 	void HandleRespawnTimer();
+
+	/** 스포너가 현재 동작 중인지 여부 */
+	bool bIsActiveState = false;
+
+	/** 플레이어 거리를 주기적으로 재는 타이머 핸들 */
+	FTimerHandle ProximityCheckTimerHandle;
+
+	/** 1초마다 플레이어 거리를 체크하여 활성/비활성을 전환 */
+	void CheckProximity();
+
+	/** 에디터에서 스폰 반경을 시각적으로 확인하기 위한 컴포넌트 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spawner", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USphereComponent> SpawnAreaComponent;
 };
