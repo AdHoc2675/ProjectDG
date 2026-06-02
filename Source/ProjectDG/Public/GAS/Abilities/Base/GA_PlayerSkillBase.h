@@ -25,6 +25,7 @@ class UAbilityTask_WaitGameplayEvent;
  * - 플레이어 스킬 입력 유지 상태 확인
  * - 저장형 체인 스킬 StepData 조회
  * - AN_SkillChainStep GameplayEvent 수신 공통 뼈대 제공
+ * - AN_SkillHit GameplayEvent 수신 공통 뼈대 제공
  */
 UCLASS()
 class PROJECTDG_API UGA_PlayerSkillBase : public UGameplayAbilityBase
@@ -34,8 +35,17 @@ class PROJECTDG_API UGA_PlayerSkillBase : public UGameplayAbilityBase
 public:
 	UGA_PlayerSkillBase();
 
-	virtual bool CheckCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
-	virtual void ApplyCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const override;
+	virtual bool CheckCost(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		OUT FGameplayTagContainer* OptionalRelevantTags = nullptr
+	) const override;
+
+	virtual void ApplyCost(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo
+	) const override;
 
 protected:
 	/** 이 GA가 사용할 스킬 데이터 */
@@ -45,16 +55,20 @@ protected:
 	/** AN_SkillChainStep 이벤트 수신용 Task */
 	UPROPERTY()
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillChainStepEventTask = nullptr;
+
+	/** AN_SkillHit 이벤트 수신용 Task */
+	UPROPERTY()
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillHitCheckEventTask = nullptr;
 	
-	//쿨타임 관련 스킬 공통 로직
+	// 쿨타임 관련 스킬 공통 로직
 public:
 	virtual const FGameplayTagContainer* GetCooldownTags() const override;
 
 protected:
 	virtual void ApplyCooldown(
-			const FGameplayAbilitySpecHandle Handle,
-			const FGameplayAbilityActorInfo* ActorInfo,
-			const FGameplayAbilityActivationInfo ActivationInfo
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo
 	) const override;
 
 	virtual void EndAbility(
@@ -94,6 +108,15 @@ protected:
 
 	/** 자식 Base에서 override해서 실제 스킬 실행 처리 */
 	virtual void HandleSkillChainStepEvent(const FGameplayEventData& Payload);
+
+	void RegisterSkillHitCheckEvent();
+	void UnregisterSkillHitCheckEvent();
+
+	UFUNCTION()
+	void OnSkillHitCheckEvent(FGameplayEventData Payload);
+
+	/** 자식 Base에서 override해서 실제 판정 처리 */
+	virtual void HandleSkillHitCheckEvent(const FGameplayEventData& Payload);
 
 	ADG_PlayerState* GetDGPlayerState() const;
 
