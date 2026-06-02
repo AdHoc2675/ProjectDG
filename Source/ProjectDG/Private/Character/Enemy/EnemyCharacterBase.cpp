@@ -12,11 +12,16 @@
 #include "Core/DG_GameplayTags.h"
 #include "GAS/Attributes/DG_AttributeSet.h"
 
+
 AEnemyCharacterBase::AEnemyCharacterBase() {
   AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(
       TEXT("AbilitySystemComponent"));
 
   AttributeSet = CreateDefaultSubobject<UDG_AttributeSet>(TEXT("AttributeSet"));
+
+  // 드롭 컴포넌트 생성
+  LootDropComponent = CreateDefaultSubobject<UDGLootDropComponent>(TEXT("LootDropComponent"));
+
 }
 
 void AEnemyCharacterBase::BeginPlay() {
@@ -112,6 +117,12 @@ void AEnemyCharacterBase::HandleDeath() {
 
   if (HasAuthority()) {
     MulticastPlayDeathMontage();
+  }
+
+  // (서버에서만) 아이템 드롭 로직 호출
+  if (HasAuthority() && LootDropComponent) {
+      // 몬스터의 현재 위치를 드롭 좌표로 사용
+      LootDropComponent->ProcessDrop(GetActorLocation());
   }
 
   Super::HandleDeath();

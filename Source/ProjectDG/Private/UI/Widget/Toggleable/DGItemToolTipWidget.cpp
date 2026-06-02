@@ -35,7 +35,8 @@ void UDGItemToolTipWidget::UpdateToolTip_Implementation(UDGItemInstance* ItemIns
 	// 2. 파밍/장비 타입
 	if (ItemTypeText)
 	{
-		TypeString += (ItemInstance->Grade == EDGItemGrade::Hero) ? TEXT(" (영웅)") :
+		TypeString += (ItemInstance->Grade == EDGItemGrade::Normal) ? TEXT(" (일반)") :
+					  (ItemInstance->Grade == EDGItemGrade::Hero) ? TEXT(" (영웅)") :
 					  (ItemInstance->Grade == EDGItemGrade::Legendary) ? TEXT(" (전설)") :
 					  (ItemInstance->Grade == EDGItemGrade::Ancient) ? TEXT(" (고대)") : TEXT("");
 		ItemTypeText->SetText(FText::FromString(TypeString));

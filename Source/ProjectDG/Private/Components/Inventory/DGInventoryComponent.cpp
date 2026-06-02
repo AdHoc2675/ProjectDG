@@ -29,6 +29,62 @@ bool UDGInventoryComponent::EnhanceItem(UDGItemInstance* TargetItem)
 	return false;
 }
 
+void UDGInventoryComponent::AddItem(UDGItemDefinition* NewItemDef, int32 Quantity, EDGItemGrade Grade)
+{
+	if (!NewItemDef || Quantity <= 0 || !GetOwner()->HasAuthority()) return;
+
+	// 서버 본인의 인벤토리 배열에 먼저 아이템 추가
+	InternalAddItemConfig(NewItemDef, Quantity, Grade);
+
+	// 만약 습득한 주체(플레이어)가 호스트(Listen Server 본인)가 아닌 원격 클라이언트라면,
+	// 클라이언트 쪽 화면에도 아이템을 추가하라고 RPC 전송
+	APawn* OwningPawn = Cast<APawn>(GetOwner());
+	if (OwningPawn && !OwningPawn->IsLocallyControlled())
+	{
+		ClientAddItem(NewItemDef, Quantity, Grade);
+	}
+
+}
+
+// Client RPC 구현부: 서버의 명령을 받은 클라이언트가 자기 컴퓨터에서 실행함
+void UDGInventoryComponent::ClientAddItem_Implementation(UDGItemDefinition* NewItemDef, int32 Quantity, EDGItemGrade Grade)
+{
+	// 클라이언트 자신의 로컬 인벤토리 배열에 아이템 추가 (UI 업데이트용)
+	InternalAddItemConfig(NewItemDef, Quantity, Grade);
+}
+
+// 실제 UObject를 구워서 배열에 밀어넣는 핵심 로직 (서버, 클라 모두 각각 실행하게 됨)
+void UDGInventoryComponent::InternalAddItemConfig(UDGItemDefinition* NewItemDef, int32 Quantity, EDGItemGrade Grade)
+{
+	EDGItemType Type = NewItemDef->ItemType;
+
+	// 아이템 인스턴스(UObject) 생성
+	UDGItemInstance* NewItemInstance = NewObject<UDGItemInstance>(this);
+	NewItemInstance->ItemDef = NewItemDef;
+	NewItemInstance->Quantity = Quantity;
+	NewItemInstance->Grade = Grade;
+
+	// 타입에 따라 해당 배열(인벤토리)에 Add
+	switch (Type)
+	{
+	case EDGItemType::Equipment:
+		InventoryEquipmentItems.Add(NewItemInstance);
+		UE_LOG(LogTemp, Log, TEXT("[DGInventoryComponent][%s] 장비 추가: %s"), *GetOwner()->GetName(), *NewItemDef->ItemName.ToString());
+		break;
+
+	case EDGItemType::Consumable:
+		InventoryConsumableItems.Add(NewItemInstance);
+		UE_LOG(LogTemp, Log, TEXT("[DGInventoryComponent][%s] 소모품 추가: %s (+%d)"), *GetOwner()->GetName(), *NewItemDef->ItemName.ToString(), Quantity);
+		break;
+
+	case EDGItemType::Material:
+		InventoryCraftingMaterialItems.Add(NewItemInstance);
+		UE_LOG(LogTemp, Log, TEXT("[DGInventoryComponent][%s] 재료 추가: %s (+%d)"), *GetOwner()->GetName(), *NewItemDef->ItemName.ToString(), Quantity);
+		break;
+	}
+
+}
+
 void UDGInventoryComponent::EquipItem(UDGItemInstance* ItemToEquip)
 {
 	if (!ItemToEquip || !ItemToEquip->ItemDef) return;

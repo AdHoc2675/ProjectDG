@@ -26,6 +26,7 @@ enum class EDGEquipmentType : uint8
 UENUM(BlueprintType)
 enum class EDGItemGrade : uint8
 {
+	Normal		UMETA(DisplayName = "일반"),
 	Hero		UMETA(DisplayName = "영웅"),
 	Legendary	UMETA(DisplayName = "전설"),
 	Ancient		UMETA(DisplayName = "고대")

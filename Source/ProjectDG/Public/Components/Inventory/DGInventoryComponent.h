@@ -36,6 +36,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DG|Inventory")
 	TArray<UDGItemInstance*> GetInventoryCraftingMaterialItems() const { return InventoryCraftingMaterialItems; }
 
+	// 아이템 습득 시 호출할 함수 (드롭 액터에서 호출, 서버 진입점)
+	UFUNCTION(BlueprintCallable, Category = "DG|Inventory")
+	void AddItem(UDGItemDefinition* NewItemDef, int32 Quantity, EDGItemGrade Grade = EDGItemGrade::Hero);
+
 protected:
 	// 플레이어가 소유한 장비 인스턴스들의 리스트
 	UPROPERTY(EditAnywhere, Instanced, Category = "DG|Inventory")
@@ -48,6 +52,14 @@ protected:
 	// 플레이어가 소유한 제작 재료 인스턴스들의 리스트
 	UPROPERTY(EditAnywhere, Instanced, Category = "DG|Inventory")
 	TArray<TObjectPtr<UDGItemInstance>> InventoryCraftingMaterialItems;
+
+
+	// 서버가 클라이언트에게 "로컬 인벤토리에 아이템 추가"를 지시하는 RPC
+	UFUNCTION(Client, Reliable)
+	void ClientAddItem(UDGItemDefinition* NewItemDef, int32 Quantity, EDGItemGrade Grade);
+
+	// 실제로 UObject를 생성하고 배열에 넣는 공통 내부 로직
+	void InternalAddItemConfig(UDGItemDefinition* NewItemDef, int32 Quantity, EDGItemGrade Grade);
 
 
 #pragma region 장비 장착/해제 관련
