@@ -6,6 +6,7 @@
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
 #include "AttributeSet.h"
+#include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Core/DG_Debug.h"
 #include "Core/DG_GameplayTags.h"
@@ -117,11 +118,19 @@ void AEnemyCharacterBase::HandleDeath() {
 }
 
 void AEnemyCharacterBase::MulticastPlayDeathMontage_Implementation() {
+  // 사망 시 플레이어가 시체를 통과할 수 있도록 Pawn과의 충돌을 무시(Ignore)로 변경합니다.
+  if (UCapsuleComponent* Capsule = GetCapsuleComponent()) {
+    Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+  }
+  if (USkeletalMeshComponent* MeshComp = GetMesh()) {
+    MeshComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+  }
+
   if (!DeathMontage) {
     return;
   }
 
-  if (USkeletalMeshComponent *MeshComp = GetMesh()) {
+  if (USkeletalMeshComponent* MeshComp = GetMesh()) {
     if (UAnimInstance *AnimInstance = MeshComp->GetAnimInstance()) {
       AnimInstance->Montage_Play(DeathMontage);
     }
