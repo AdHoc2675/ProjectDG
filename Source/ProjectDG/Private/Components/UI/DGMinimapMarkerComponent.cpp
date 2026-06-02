@@ -12,28 +12,14 @@ void UDGMinimapMarkerComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 나 자신을 MinimapSubsystem에 등록
-	if (UWorld* World = GetWorld())
-	{
-		if (UDGMinimapSubsystem* MinimapSubsystem = World->GetSubsystem<UDGMinimapSubsystem>())
-		{
-			MinimapSubsystem->RegisterMarker(this);
-		}
-	}
+	RegisterToSubsystem();
 }
 
 void UDGMinimapMarkerComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 
-	// 액터가 사라지면 MinimapSubsystem에서도 삭제
-	if (UWorld* World = GetWorld())
-	{
-		if (UDGMinimapSubsystem* MinimapSubsystem = World->GetSubsystem<UDGMinimapSubsystem>())
-		{
-			MinimapSubsystem->UnregisterMarker(this);
-		}
-	}
+	UnregisterFromSubsystem();
 }
 
 bool UDGMinimapMarkerComponent::IsLocalPlayerMarker() const
@@ -52,4 +38,28 @@ void UDGMinimapMarkerComponent::NotifyClicked()
 {
 	// 나를 구독하고 있는 대상(웨이포인트 등)에게 클릭 사실을 알림
 	OnMarkerClicked.Broadcast(this);
+}
+
+void UDGMinimapMarkerComponent::RegisterToSubsystem()
+{
+	// 나 자신을 MinimapSubsystem에 등록
+	if (UWorld* World = GetWorld())
+	{
+		if (UDGMinimapSubsystem* MinimapSubsystem = World->GetSubsystem<UDGMinimapSubsystem>())
+		{
+			MinimapSubsystem->RegisterMarker(this);
+		}
+	}
+}
+
+void UDGMinimapMarkerComponent::UnregisterFromSubsystem()
+{
+	// 액터가 사라지면 MinimapSubsystem에서도 삭제
+	if (UWorld* World = GetWorld())
+	{
+		if (UDGMinimapSubsystem* MinimapSubsystem = World->GetSubsystem<UDGMinimapSubsystem>())
+		{
+			MinimapSubsystem->UnregisterMarker(this);
+		}
+	}
 }

@@ -148,6 +148,11 @@ void AEnemyCharacterBase::MulticastPlayDeathMontage_Implementation() {
     MeshComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
   }
 
+  // 사망과 동시에 미니맵에서 마커 지우기
+  if (MinimapMarkerComponent) {
+      MinimapMarkerComponent->UnregisterFromSubsystem();
+  }
+
   if (!DeathMontage) {
     return;
   }
