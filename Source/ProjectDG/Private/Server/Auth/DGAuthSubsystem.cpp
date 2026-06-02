@@ -9,11 +9,6 @@ void UDGAuthSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 	BackendClient = NewObject<UDGBackendClient>(this);
 	BackendClient->Initialize(BackendBaseUrl);
-
-	Debug::Print(FString::Printf(
-		TEXT("[DGAuthSubsystem] Initialized. BackendBaseUrl=%s"),
-		*BackendBaseUrl
-	));
 }
 
 void UDGAuthSubsystem::Deinitialize()
@@ -26,7 +21,6 @@ void UDGAuthSubsystem::Deinitialize()
 	CurrentDisplayName.Empty();
 	CachedCharacters.Empty();
 
-	Debug::Print(TEXT("[DGAuthSubsystem] Deinitialized."));
 
 	Super::Deinitialize();
 }
@@ -41,7 +35,7 @@ void UDGAuthSubsystem::RegisterAccount(
 	{
 		const FString ErrorMessage = TEXT("[DGAuthSubsystem] BackendClient is null.");
 
-		Debug::Print(ErrorMessage);
+
 		OnAuthFailed.Broadcast(ErrorMessage);
 		return;
 	}
@@ -56,10 +50,6 @@ void UDGAuthSubsystem::RegisterAccount(
 	RequestData.Password = Password;
 	RequestData.DisplayName = DisplayName;
 
-	Debug::Print(FString::Printf(
-		TEXT("[DGAuthSubsystem] Request Register. LoginId=%s"),
-		*LoginId
-	));
 
 	BackendClient->RegisterAccount(
 		RequestData,
@@ -79,7 +69,7 @@ void UDGAuthSubsystem::Login(
 	{
 		const FString ErrorMessage = TEXT("[DGAuthSubsystem] BackendClient is null.");
 
-		Debug::Print(ErrorMessage);
+
 		OnAuthFailed.Broadcast(ErrorMessage);
 		return;
 	}
@@ -93,10 +83,6 @@ void UDGAuthSubsystem::Login(
 	RequestData.LoginId = LoginId;
 	RequestData.Password = Password;
 
-	Debug::Print(FString::Printf(
-		TEXT("[DGAuthSubsystem] Request Login. LoginId=%s"),
-		*LoginId
-	));
 
 	BackendClient->Login(
 		RequestData,
@@ -113,7 +99,7 @@ void UDGAuthSubsystem::RequestCharacterList()
 	{
 		const FString ErrorMessage = TEXT("[DGAuthSubsystem] BackendClient is null.");
 
-		Debug::Print(ErrorMessage);
+
 		OnCharacterListFailed.Broadcast(ErrorMessage);
 		return;
 	}
@@ -122,15 +108,11 @@ void UDGAuthSubsystem::RequestCharacterList()
 	{
 		const FString ErrorMessage = TEXT("[DGAuthSubsystem] CurrentAccountId is invalid.");
 
-		Debug::Print(ErrorMessage);
+
 		OnCharacterListFailed.Broadcast(ErrorMessage);
 		return;
 	}
 
-	Debug::Print(FString::Printf(
-		TEXT("[DGAuthSubsystem] Request Character List. AccountId=%lld"),
-		CurrentAccountId
-	));
 
 	BackendClient->GetCharacters(
 		CurrentAccountId,
@@ -145,7 +127,6 @@ bool UDGAuthSubsystem::SelectCharacterById(int64 CharacterId)
 {
 	if (CharacterId <= 0)
 	{
-		Debug::Print(TEXT("[DGAuthSubsystem] SelectCharacterById failed. CharacterId is invalid."));
 		return false;
 	}
 
@@ -155,23 +136,12 @@ bool UDGAuthSubsystem::SelectCharacterById(int64 CharacterId)
 		{
 			SelectedCharacterId = Character.CharacterId;
 
-			Debug::Print(FString::Printf(
-				TEXT("[DGAuthSubsystem] Character Selected. CharacterId=%lld Name=%s Class=%s Level=%d"),
-				SelectedCharacterId,
-				*Character.CharacterName,
-				*Character.ClassTag,
-				Character.Level
-			));
 
 			OnCharacterSelected.Broadcast(Character);
 			return true;
 		}
 	}
 
-	Debug::Print(FString::Printf(
-		TEXT("[DGAuthSubsystem] SelectCharacterById failed. Character not found. CharacterId=%lld"),
-		CharacterId
-	));
 
 	return false;
 }
@@ -219,13 +189,9 @@ void UDGAuthSubsystem::HandleRegisterCompleted(
 	if (!bSuccess)
 	{
 		const FString ErrorMessage = Result.ErrorMessage.IsEmpty()
-			? TEXT("Register failed.")
-			: Result.ErrorMessage;
+			                             ? TEXT("Register failed.")
+			                             : Result.ErrorMessage;
 
-		Debug::Print(FString::Printf(
-			TEXT("[DGAuthSubsystem] Register Failed. Error=%s"),
-			*ErrorMessage
-		));
 
 		OnAuthFailed.Broadcast(ErrorMessage);
 		return;
@@ -237,12 +203,6 @@ void UDGAuthSubsystem::HandleRegisterCompleted(
 	SelectedCharacterId = 0;
 	CachedCharacters.Empty();
 
-	Debug::Print(FString::Printf(
-		TEXT("[DGAuthSubsystem] Register Success. AccountId=%lld LoginId=%s DisplayName=%s"),
-		CurrentAccountId,
-		*CurrentLoginId,
-		*CurrentDisplayName
-	));
 
 	OnRegisterSucceeded.Broadcast(Result);
 
@@ -257,13 +217,8 @@ void UDGAuthSubsystem::HandleLoginCompleted(
 	if (!bSuccess)
 	{
 		const FString ErrorMessage = Result.ErrorMessage.IsEmpty()
-			? TEXT("Login failed.")
-			: Result.ErrorMessage;
-
-		Debug::Print(FString::Printf(
-			TEXT("[DGAuthSubsystem] Login Failed. Error=%s"),
-			*ErrorMessage
-		));
+			                             ? TEXT("Login failed.")
+			                             : Result.ErrorMessage;
 
 		OnAuthFailed.Broadcast(ErrorMessage);
 		return;
@@ -275,12 +230,6 @@ void UDGAuthSubsystem::HandleLoginCompleted(
 	SelectedCharacterId = 0;
 	CachedCharacters.Empty();
 
-	Debug::Print(FString::Printf(
-		TEXT("[DGAuthSubsystem] Login Success. AccountId=%lld LoginId=%s DisplayName=%s"),
-		CurrentAccountId,
-		*CurrentLoginId,
-		*CurrentDisplayName
-	));
 
 	OnLoginSucceeded.Broadcast(Result);
 
@@ -295,13 +244,9 @@ void UDGAuthSubsystem::HandleCharacterListCompleted(
 	if (!bSuccess)
 	{
 		const FString ErrorMessage = Result.ErrorMessage.IsEmpty()
-			? TEXT("Character list request failed.")
-			: Result.ErrorMessage;
+			                             ? TEXT("Character list request failed.")
+			                             : Result.ErrorMessage;
 
-		Debug::Print(FString::Printf(
-			TEXT("[DGAuthSubsystem] Character List Failed. Error=%s"),
-			*ErrorMessage
-		));
 
 		OnCharacterListFailed.Broadcast(ErrorMessage);
 		return;
@@ -309,10 +254,6 @@ void UDGAuthSubsystem::HandleCharacterListCompleted(
 
 	CachedCharacters = Result.Characters;
 
-	Debug::Print(FString::Printf(
-		TEXT("[DGAuthSubsystem] Character List Loaded. Count=%d"),
-		CachedCharacters.Num()
-	));
 
 	OnCharacterListLoaded.Broadcast(Result);
 
@@ -331,10 +272,6 @@ bool UDGAuthSubsystem::ValidateLoginInput(
 	{
 		const FString ErrorMessage = TEXT("LoginId is empty.");
 
-		Debug::Print(FString::Printf(
-			TEXT("[DGAuthSubsystem] %s"),
-			*ErrorMessage
-		));
 
 		OnAuthFailed.Broadcast(ErrorMessage);
 		return false;
@@ -344,10 +281,6 @@ bool UDGAuthSubsystem::ValidateLoginInput(
 	{
 		const FString ErrorMessage = TEXT("Password is empty.");
 
-		Debug::Print(FString::Printf(
-			TEXT("[DGAuthSubsystem] %s"),
-			*ErrorMessage
-		));
 
 		OnAuthFailed.Broadcast(ErrorMessage);
 		return false;

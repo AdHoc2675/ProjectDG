@@ -158,7 +158,7 @@ void UGA_TargetMontageSkillBase::ExecuteTargetSkill(AActor* TargetActor, const F
       ApplyDamageToTarget(
               TargetActor,
               0.f,
-              GetSkillDamageMultiplier(),
+              GetSkillDamageMultiplierPerHit(),
               GetSkillTag(),
               CurrentTargetResult.AimPoint,
               CurrentTargetResult.bHasTarget
