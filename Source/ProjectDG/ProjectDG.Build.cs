@@ -26,7 +26,8 @@ public class ProjectDG : ModuleRules
 			"Niagara",
 			"HTTP",
 			"Json",
-			"JsonUtilities"
+			"JsonUtilities",
+			"NavigationSystem"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "GameplayAbilities", "GameplayTags", "GameplayTasks", "Slate", "SlateCore" });

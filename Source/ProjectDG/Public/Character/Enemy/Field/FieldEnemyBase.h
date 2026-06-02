@@ -51,9 +51,8 @@ protected:
   UPROPERTY(BlueprintReadOnly, Category = "FieldEnemy|Leash")
   FVector SpawnOriginLocation;
 
-  /** 원점으로부터 플레이어를 추격할 수 있는 최대 거리 (이 거리를 넘으면 복귀
-   * 시작) */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FieldEnemy|Leash")
+  /** 원점으로부터 플레이어를 추격할 수 있는 최대 거리 (이 거리를 넘으면 복귀 시작) */
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FieldEnemy|Leash")
   float LeashDistance = 1500.f;
 
   /** 현재 스폰 원점으로 복귀 중인 상태인지 여부 */
@@ -63,27 +62,27 @@ protected:
   // --- 2. 순찰 (Patrol) 시스템 ---
 
   /** 스폰 원점 기준 무작위 순찰을 돌 반경 */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FieldEnemy|AI")
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FieldEnemy|AI")
   float PatrolRadius = 800.f;
 
   // --- 3. 레벨 및 스탯 ---
 
   /** 몬스터 레벨 (GAS Attribute 초기화 및 스케일링에 활용) */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FieldEnemy|Stats")
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FieldEnemy|Stats")
   int32 EnemyLevel = 1;
 
   // --- 4. 드롭 및 보상 (Loot) 시스템 ---
 
   /** 사망 시 지급할 경험치 */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FieldEnemy|Loot")
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FieldEnemy|Loot")
   int32 RewardExp = 50;
 
   /** 사망 시 지급할 최소 골드 */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FieldEnemy|Loot")
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FieldEnemy|Loot")
   int32 MinRewardGold = 10;
 
   /** 사망 시 지급할 최대 골드 */
-  UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FieldEnemy|Loot")
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FieldEnemy|Loot")
   int32 MaxRewardGold = 30;
 
 public:
@@ -113,11 +112,35 @@ public:
   UFUNCTION(BlueprintCallable, Category = "FieldEnemy|Leash")
   virtual void CompleteReturnToOrigin();
 
+  // --- 7. 풀링 및 DataAsset 관리 ---
+  
+  /** DataAsset으로부터 스탯 및 정보를 초기화합니다. */
+  UFUNCTION(BlueprintCallable, Category = "FieldEnemy|Pool")
+  virtual void InitFromDataAsset(UFieldCharacterClassData* Data);
+
+  /** 풀에서 스폰되어 재활용될 때 호출 */
+  virtual void OnSpawnedFromPool(const FVector& SpawnLocation);
+
+  /** 풀로 반환될 때 호출 (초기화 및 비활성화) */
+  virtual void OnReturnedToPool();
+
+  /** 사망 애니메이션(Montage) 완료 시 AnimNotify에서 호출 */
+  UFUNCTION(BlueprintCallable, Category = "FieldEnemy|Death")
+  virtual void OnDeathAnimationFinished();
+
+  /** 풀 재활용 시 클라이언트(모두)에게 알림 */
+  UFUNCTION(NetMulticast, Reliable)
+  void Multicast_OnSpawnedFromPool();
+
+  /** 풀 반환 시 클라이언트(모두)에게 알림 */
+  UFUNCTION(NetMulticast, Reliable)
+  void Multicast_OnReturnedToPool();
+
 protected:
   // --- 5. GAS 귀환 상태 연동 ---
 
   /** 귀환(무적 + 대량 리젠) 상태에 돌입할 때 적용할 GameplayEffect 클래스 */
-  UPROPERTY(EditDefaultsOnly, Category = "FieldEnemy|GAS")
+  UPROPERTY(VisibleAnywhere, Category = "FieldEnemy|GAS")
   TSubclassOf<UGameplayEffect> ReturningEffectClass;
 
   /** 활성화된 귀환 이펙트의 핸들 (귀환 종료 시 이펙트 제거용) */

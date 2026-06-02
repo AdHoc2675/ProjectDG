@@ -3,11 +3,17 @@
 #include "Character/Enemy/Field/FieldEnemyBase.h"
 
 #include "AIController.h"
+#include "AI/Controller/AIControllerBase.h"
+#include "BrainComponent.h"
 #include "AbilitySystemComponent.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Character/Enemy/Field/Data/FieldCharacterClassData.h"
 #include "Core/DG_GameplayTags.h"
 #include "GAS/Attributes/DG_EnemyAttributeSet.h"
+#include "GAS/Attributes/DG_AttributeSet.h"
+#include "System/FieldEnemyPoolSubsystem.h"
+#include "Components/CapsuleComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 AFieldEnemyBase::AFieldEnemyBase() {
   // 기본값 초기화
@@ -18,6 +24,9 @@ AFieldEnemyBase::AFieldEnemyBase() {
   MinRewardGold = 10;
   MaxRewardGold = 30;
   bIsReturning = false;
+
+  // 풀링되는 액터는 월드 파티션 그리드에 의해 언로드되지 않도록 공간 로딩을 끕니다.
+  bIsSpatiallyLoaded = false;
 
   EnemyAttributeSet =
       CreateDefaultSubobject<UDG_EnemyAttributeSet>(TEXT("EnemyAttributeSet"));
@@ -39,7 +48,7 @@ void AFieldEnemyBase::InitializeFieldTagFromClassData() {
 
   FieldTag = FieldClassData->FieldTag;
 
-  if (AbilitySystemComponent) {
+  if (AbilitySystemComponent && !AbilitySystemComponent->HasMatchingGameplayTag(FieldTag)) {
     AbilitySystemComponent->AddLooseGameplayTag(
         FieldTag, 1, EGameplayTagReplicationState::TagOnly);
   }
@@ -216,4 +225,152 @@ void AFieldEnemyBase::UpdateBlackboardValues() {
       BBComp->SetValueAsBool(IsReturningKeyName, bIsReturning);
     }
   }
+}
+
+void AFieldEnemyBase::InitFromDataAsset(UFieldCharacterClassData* Data) {
+  if (!Data) {
+    return;
+  }
+
+  FieldClassData = Data;
+  EnemyLevel = Data->EnemyLevel;
+  PatrolRadius = Data->PatrolRadius;
+  LeashDistance = Data->LeashDistance;
+  RewardExp = Data->RewardExp;
+  MinRewardGold = Data->MinRewardGold;
+  MaxRewardGold = Data->MaxRewardGold;
+  ReturningEffectClass = Data->ReturningEffectClass;
+
+  // Initialize tags and effects if already possessed
+  if (HasAuthority()) {
+    InitializeFieldTagFromClassData();
+    // Blackboard needs to be updated with new patrol/leash stats
+    UpdateBlackboardValues();
+  }
+}
+
+void AFieldEnemyBase::OnSpawnedFromPool(const FVector& SpawnLocation) {
+  if (!HasAuthority()) {
+    return;
+  }
+
+  // 생존 상태로 초기화 (사망 플래그 및 태그 해제)
+  bIsDead = false;
+  if (AbilitySystemComponent) {
+    AbilitySystemComponent->RemoveLooseGameplayTag(DGGameplayTags::State_Enemy_Dead, 99);
+    
+    // 체력을 MaxHealth로 복구 (Instant GE로 깎인 체력 복원)
+    if (AttributeSet) {
+      AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetHealthAttribute(), AttributeSet->GetMaxHealth());
+    }
+  }
+
+  // 이전 데스 몽타주가 계속 루프 돌고 있었다면 강제 정지
+  if (USkeletalMeshComponent* MeshComp = GetMesh()) {
+    if (UAnimInstance* AnimInstance = MeshComp->GetAnimInstance()) {
+      AnimInstance->StopAllMontages(0.0f);
+    }
+  }
+  // 캡슐 절반 높이만큼 올려서 바닥에 박히는 현상 방지
+  FVector AdjustedLocation = SpawnLocation;
+  if (UCapsuleComponent* Capsule = GetCapsuleComponent()) {
+    AdjustedLocation.Z += Capsule->GetScaledCapsuleHalfHeight();
+  }
+  SetActorLocation(AdjustedLocation);
+  SpawnOriginLocation = AdjustedLocation;
+  bIsReturning = false;
+
+  // 모든 클라이언트(및 서버)에 스폰되었음을 알림
+  // (액터 가시성, 콜리전, 틱, 컴포넌트 콜리전 복구 포함)
+  Multicast_OnSpawnedFromPool();
+
+  // AI 재활성화 및 BT 실행
+  if (AAIController* AIController = Cast<AAIController>(GetController())) {
+    // AAIControllerBase의 사망 시 정지 플래그 및 감각 복구
+    if (AAIControllerBase* AIBase = Cast<AAIControllerBase>(AIController)) {
+      AIBase->RestartAIFromPool();
+    }
+    
+    AIController->GetBrainComponent()->RestartLogic();
+    if (FieldClassData && FieldClassData->BehaviorTree) {
+      AIController->RunBehaviorTree(FieldClassData->BehaviorTree);
+    }
+    UpdateBlackboardValues();
+  }
+
+  // (주의) ApplyDefaultEffects()를 여기서 다시 호출하면 Instant 형태의 스탯 증가 효과가
+  // 매 스폰마다 중첩(Stacking)되므로 호출하지 않습니다. 스탯은 유지되고 체력만 위에서 리셋됩니다.
+}
+
+void AFieldEnemyBase::OnReturnedToPool() {
+  if (!HasAuthority()) {
+    return;
+  }
+
+  // 클라이언트(및 서버)에 풀 반환 알림
+  Multicast_OnReturnedToPool();
+
+  // AI 정지
+  if (AAIController* AIController = Cast<AAIController>(GetController())) {
+    if (AIController->GetBrainComponent()) {
+      AIController->GetBrainComponent()->StopLogic(TEXT("Returned to Pool"));
+    }
+  }
+
+  // 기존 걸려있는 이펙트, 타이머 등을 정리해야 한다면 여기서 처리
+  if (AbilitySystemComponent) {
+    AbilitySystemComponent->RemoveAllGameplayCues();
+    
+    // 풀로 돌아갈 때 모든 활성 GE(버프, 디버프, 스탯 등)를 지워서 재스폰 시 중첩을 막음
+    FGameplayEffectQuery Query;
+    AbilitySystemComponent->RemoveActiveEffects(Query);
+  }
+}
+
+void AFieldEnemyBase::OnDeathAnimationFinished() {
+  if (!HasAuthority()) {
+    return;
+  }
+  
+  if (UWorld* World = GetWorld()) {
+    if (UFieldEnemyPoolSubsystem* PoolSubsystem = World->GetSubsystem<UFieldEnemyPoolSubsystem>()) {
+      PoolSubsystem->ReturnEnemy(this);
+    } else {
+      Destroy(); // fallback
+    }
+  }
+}
+
+void AFieldEnemyBase::Multicast_OnSpawnedFromPool_Implementation() {
+  // 액터 레벨 상태 복구 (서버+클라이언트 모두에서 실행)
+  SetActorHiddenInGame(false);
+  SetActorEnableCollision(true);
+  SetActorTickEnabled(true);
+
+  // 이전 데스 몽타주가 계속 루프 돌고 있었다면 강제 정지 (클라이언트 필수)
+  if (USkeletalMeshComponent* MeshComp = GetMesh()) {
+    if (UAnimInstance* AnimInstance = MeshComp->GetAnimInstance()) {
+      AnimInstance->StopAllMontages(0.0f);
+    }
+  }
+
+  // 사망 시 완전히 껐던 컴포넌트들의 충돌 및 물리/이동 상태 복구
+  if (UCapsuleComponent* Capsule = GetCapsuleComponent()) {
+    Capsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+  }
+  if (USkeletalMeshComponent* MeshComp = GetMesh()) {
+    MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    MeshComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+  }
+  if (UCharacterMovementComponent* MoveComp = GetCharacterMovement()) {
+    MoveComp->SetMovementMode(MOVE_Walking);
+  }
+}
+
+void AFieldEnemyBase::Multicast_OnReturnedToPool_Implementation() {
+  // 풀로 돌아간 액터는 화면에서 숨기고 충돌을 완전히 해제 (보이지 않는 벽 방지)
+  SetActorHiddenInGame(true);
+  SetActorEnableCollision(false);
+  SetActorTickEnabled(false);
 }

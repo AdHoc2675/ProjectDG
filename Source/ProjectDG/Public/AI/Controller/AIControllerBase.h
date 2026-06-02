@@ -26,6 +26,9 @@ public:
 	void StopAIOnDeath();
 
 	UFUNCTION(BlueprintCallable, Category = "AI|State")
+	void RestartAIFromPool();
+
+	UFUNCTION(BlueprintCallable, Category = "AI|State")
 	bool IsAIStoppedByDeath() const { return bAIStoppedByDeath; }
 
 protected:

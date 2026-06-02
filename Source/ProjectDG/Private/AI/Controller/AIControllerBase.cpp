@@ -93,3 +93,14 @@ void AAIControllerBase::StopAIOnDeath()
 		EnemyPerceptionComponent->SetComponentTickEnabled(false);
 	}
 }
+
+void AAIControllerBase::RestartAIFromPool()
+{
+	bAIStoppedByDeath = false;
+
+	if (EnemyPerceptionComponent)
+	{
+		EnemyPerceptionComponent->SetActive(true);
+		EnemyPerceptionComponent->SetComponentTickEnabled(true);
+	}
+}
