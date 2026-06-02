@@ -20,6 +20,10 @@ AEnemyCharacterBase::AEnemyCharacterBase() {
 
   AttributeSet = CreateDefaultSubobject<UDG_AttributeSet>(TEXT("AttributeSet"));
 
+  // 드롭 컴포넌트 생성
+  LootDropComponent = CreateDefaultSubobject<UDGLootDropComponent>(TEXT("LootDropComponent"));
+
+
   // 서버에서도 소켓 기반 트레이스가 정상 작동하도록 애니메이션 본을 항상 갱신하게 설정
   if (USkeletalMeshComponent* MeshComp = GetMesh())
   {
@@ -120,6 +124,12 @@ void AEnemyCharacterBase::HandleDeath() {
 
   if (HasAuthority()) {
     MulticastPlayDeathMontage();
+  }
+
+  // (서버에서만) 아이템 드롭 로직 호출
+  if (HasAuthority() && LootDropComponent) {
+      // 몬스터의 현재 위치를 드롭 좌표로 사용
+      LootDropComponent->ProcessDrop(GetActorLocation());
   }
 
   Super::HandleDeath();

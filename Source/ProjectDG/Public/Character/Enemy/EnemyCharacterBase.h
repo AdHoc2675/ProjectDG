@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Character/BaseCharacter.h"
+#include "Components/Item/DGLootDropComponent.h"
 #include "EnemyCharacterBase.generated.h"
 
 class UAbilitySystemComponent;
@@ -15,6 +16,7 @@ class UAnimMontage;
 class UNiagaraSystem;
 class UNiagaraComponent;
 struct FOnAttributeChangeData;
+class UDGLootDropComponent;
 
 /**
  * AEnemyCharacterBase
@@ -82,6 +84,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "EnemyCharacterBase|GAS")
 	TArray<TSubclassOf<UGameplayEffect>> DefaultEffects;
 	
+	// 아이템 드롭 컴포넌트
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|Loot")
+	TObjectPtr<UDGLootDropComponent> LootDropComponent = nullptr;
+
 public:
 	//BaseCharacter 공용 ASC getter 
 	virtual UAbilitySystemComponent* GetCharacterAbilitySystemComponent() const override;

@@ -34,7 +34,7 @@
 #include "Components/UI/DGMinimapCaptureComponent.h"
 #include "Components/UI/DGMinimapMarkerComponent.h"
 #include "Components/Targeting/LockOnComponent.h"
-
+#include "Components/Inventory/DGInventoryComponent.h"
 
 APlayerCharacterBase::APlayerCharacterBase()
 {
@@ -98,6 +98,8 @@ APlayerCharacterBase::APlayerCharacterBase()
 	MinimapMarkerComponent = CreateDefaultSubobject<UDGMinimapMarkerComponent>(TEXT("MinimapMarkerComponent"));
 
 	LockOnComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOnComponent"));
+
+	InventoryComponent = CreateDefaultSubobject<UDGInventoryComponent>(TEXT("InventoryComponent"));
 
 	MinimapMarkerComponent->MarkerType = EMinimapMarkerType::Player;
 

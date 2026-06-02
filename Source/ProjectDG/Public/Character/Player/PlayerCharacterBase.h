@@ -21,6 +21,7 @@ class UAIPerceptionStimuliSourceComponent;
 class UDGMinimapCaptureComponent;
 class UDGMinimapMarkerComponent;
 class ULockOnComponent;
+class UDGInventoryComponent;
 
 /**
  * APlayerCharacterBase
@@ -324,4 +325,15 @@ protected:
 	// 미니맵 캡처용 컴포넌트 추가
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacterBase|Minimap")
 	TObjectPtr<UDGMinimapMarkerComponent> MinimapMarkerComponent;
+
+protected:
+	// 인벤토리 컴포넌트
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacterBase|Inventory")
+	TObjectPtr<UDGInventoryComponent> InventoryComponent;
+
+public:
+	// 인벤토리 컴포넌트 Getter
+	UFUNCTION(BlueprintCallable, Category = "PlayerCharacterBase|Inventory")
+	UDGInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
+
 };
