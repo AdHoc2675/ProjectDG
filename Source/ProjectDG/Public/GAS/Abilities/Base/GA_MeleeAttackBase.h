@@ -17,11 +17,15 @@ class UAbilityTask_WaitGameplayEvent;
  * - 현재 체인 Step SkillData 기준 몽타주 재생
  * - AN_SkillChainStep GameplayEvent 기반 체인 Step 갱신
  * - ANS_SkillChainInput GameplayEvent 기반 다음 체인 입력 처리
- * - AnimNotify GameplayEvent 기반 근접 타격 처리
+ * - AN_SkillHit GameplayEvent 기반 근접 판정 처리
  * - 서버 권한 데미지 적용
  *
  * ComboCount가 1이면 단발 근접 스킬처럼 동작하고,
  * ComboCount가 2 이상이면 대표 SkillData의 ComboSkillDataList에서 현재 Step SkillData를 선택해 동작한다.
+ *
+ * 체인 스킬 처리 기준:
+ * - Cost는 각 Step Ability 발동 시 즉시 소모한다.
+ * - Cooldown은 체인 도중에는 적용하지 않고, 마지막 체인 종료 시점에 적용한다.
  */
 UCLASS()
 class PROJECTDG_API UGA_MeleeAttackBase : public UGA_PlayerSkillBase
@@ -82,12 +86,15 @@ protected:
 
 	/** ANS_SkillChainInput 구간이 열려 있는지 */
 	bool bChainInputWindowOpen = false;
-	
+
 	/** ChainInputWindow가 열리기 전에 들어온 다음 체인 입력을 1회 예약했는지 */
 	bool bBufferedNextChainInput = false;
 
 	/** 다음 체인 Ability 재발동을 이미 요청했는지 */
 	bool bPendingChainActivation = false;
+
+	/** 이번 Ability 실행에서 Cost Commit이 성공했는지 */
+	bool bMeleeCostCommitted = false;
 
 	TMap<int32, TSet<TWeakObjectPtr<AActor>>> HitActorsByCombo;
 
@@ -105,19 +112,23 @@ protected:
 	void TryRequestNextChainFromHeldInput();
 
 	void RequestNextChainActivation();
-	
+
 	void ActivateNextChainOnNextTick(FGameplayTag SkillTag);
 
 protected:
 	/** AN_SkillChainStep 이벤트를 받았을 때 저장형 체인 Step을 갱신한다. */
 	virtual void HandleSkillChainStepEvent(const FGameplayEventData& Payload) override;
-	
+
 	/** AN_SkillHit 이벤트를 받았을 때 Melee 판정을 실행한다. */
 	virtual void HandleSkillHitCheckEvent(const FGameplayEventData& Payload) override;
-	
+
 	void ExecuteForwardBoxHitCheckFromSkillData();
 
-	void CollectForwardBoxHitActorsFromSkillData(TArray<AActor*>& OutHitActors) const;
+	void CollectForwardBoxHitActorsFromSkillData(TArray<AActor*>& OutBoxHitActors) const;
+
+	void ExecuteRadiusHitCheckFromSkillData();
+
+	void CollectRadiusHitActorsFromSkillData(TArray<AActor*>& OutRadiusHitActors) const;
 
 	bool IsValidMeleeHitActor(AActor* AvatarActor, AActor* TargetActor) const;
 

@@ -692,6 +692,11 @@ void APlayerCharacterBase::MoveAction(const FInputActionValue& InputActionValue)
 {
 	CurrentMoveInput = InputActionValue.Get<FVector2D>();
 
+	if (IsMovementInputLocked())
+	{
+		return;
+	}
+
 	if (CurrentMoveInput.IsNearlyZero())
 	{
 		return;
@@ -702,6 +707,17 @@ void APlayerCharacterBase::MoveAction(const FInputActionValue& InputActionValue)
 		GetCameraRightOnPlane() * CurrentMoveInput.X;
 
 	AddMovementInput(MoveDirection.GetSafeNormal());
+}
+
+bool APlayerCharacterBase::IsMovementInputLocked() const
+{
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC)
+	{
+		return false;
+	}
+
+	return ASC->HasMatchingGameplayTag(DGGameplayTags::State_Movement_Locked);
 }
 
 void APlayerCharacterBase::ShiftActionStarted()
@@ -727,10 +743,23 @@ void APlayerCharacterBase::ShiftActionStarted()
 		return;
 	}
 
-	const FVector DesiredDir = GetDesiredMoveDirection();
-	const bool bHasInput = !CurrentMoveInput.IsNearlyZero();
+	FVector DesiredDir = FVector::ZeroVector;
+	bool bHasInput = false;
 
-	// 1. 여기서 이벤트를 발생시키면, 클라이언트 GAS는 '스태미나가 깎일 것'이라고 믿고 애니메이션을 틉니다.
+	if (!CurrentMoveInput.IsNearlyZero())
+	{
+		DesiredDir = GetDesiredMoveDirection();
+		bHasInput = true;
+	}
+	else
+	{
+		DesiredDir = -GetActorForwardVector();
+		DesiredDir.Z = 0.f;
+		DesiredDir = DesiredDir.GetSafeNormal();
+
+		bHasInput = true;
+	}
+
 	SendDodgeEvent(DesiredDir, bHasInput);
 }
 

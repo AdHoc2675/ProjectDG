@@ -1,3 +1,5 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -16,11 +18,11 @@ public:
 	UGA_Warrior_DoomStrike();
 
 	virtual void EndAbility(
-			const FGameplayAbilitySpecHandle Handle,
-			const FGameplayAbilityActorInfo* ActorInfo,
-			const FGameplayAbilityActivationInfo ActivationInfo,
-			bool bReplicateEndAbility,
-			bool bWasCancelled
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		bool bReplicateEndAbility,
+		bool bWasCancelled
 	) override;
 
 protected:
@@ -36,11 +38,21 @@ protected:
 protected:
 	virtual void ResetTargetMontageState() override;
 
+	virtual void ContinueTargetMontageAbility() override;
+
 	virtual void StartTargetMontageEventTasks() override;
 
 	virtual bool IsHitActorAcceptable(AActor* HitActor) const override;
 
 	virtual void ExecuteTargetSkill(AActor* TargetActor, const FGameplayEventData& Payload) override;
+
+	virtual void HandleSkillHitCheckEvent(const FGameplayEventData& Payload) override;
+
+	void ExecuteForwardBoxHitCheckFromSkillData(const FGameplayEventData& Payload);
+
+	void CollectForwardBoxHitActorsFromSkillData(TArray<AActor*>& OutHitActors) const;
+
+	bool IsValidForwardBoxHitActor(AActor* AvatarActor, AActor* TargetActor) const;
 
 	bool BuildDashTargetLocation(AActor* TargetActor, FVector& OutLocation) const;
 
