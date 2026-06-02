@@ -74,6 +74,7 @@ void ADGLootItemActor::OnRep_Grade()
 
     switch (ReplicatedGrade)
     {
+    case EDGItemGrade::Normal:		TargetFX = NormalFX;	break;
     case EDGItemGrade::Hero:		TargetFX = HeroFX;		break;
     case EDGItemGrade::Legendary:	TargetFX = LegendaryFX;	break;
     case EDGItemGrade::Ancient:		TargetFX = AncientFX;	break;

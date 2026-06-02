@@ -14,7 +14,7 @@ void UDGLootDropComponent::ProcessDrop(const FVector& DropLocation)
 
 	if (!LootItemClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("LootDropComponent: LootItemClass가 할당되지 않았습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("[DGLootDropComponent] LootItemClass가 할당되지 않음"));
 		return;
 	}
 
