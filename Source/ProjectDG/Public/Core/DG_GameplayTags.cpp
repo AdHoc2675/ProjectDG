@@ -41,7 +41,9 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_ChainInput_Open, "Event.Skill.ChainInput.Open")
 	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_ChainInput_Close, "Event.Skill.ChainInput.Close")
 	
-	
+	// Weapon GameplayCue Event
+	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_Blade_BasicTrail_Begin, "Event.Weapon.Blade.BasicTrail.Begin")
+	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_Blade_BasicTrail_End, "Event.Weapon.Blade.BasicTrail.End")
 	
 	// MeleeAttack Combo Miss 완화
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_InputRequest, "Event.Combo.InputRequest")
@@ -72,6 +74,9 @@ namespace DGGameplayTags
 	
 	// 암살자 콤보공격 '빠른 베기(QuickSlash)'에서 다음 콤보로 넘어가기 위한 InputEvent Tag
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Assassin_QuickSlash, "Event.Input.Assassin.QuickSlash")
+	
+	// GameplayCue
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Weapon_Blade_BasicTrail, "GameplayCue.Weapon.Blade.BasicTrail")
 
 	// Skill.Common
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Common_Dodge, "Skill.Common.Dodge")
