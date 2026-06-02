@@ -15,18 +15,12 @@ void UDGSessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 	BackendClient = NewObject<UDGBackendClient>(this);
 	BackendClient->Initialize(BackendBaseUrl);
-
-	Debug::Print(FString::Printf(
-		TEXT("[DGSessionSubsystem] Initialized. BackendBaseUrl=%s"),
-		*BackendBaseUrl
-	));
 }
 
 void UDGSessionSubsystem::Deinitialize()
 {
 	BackendClient = nullptr;
 
-	Debug::Print(TEXT("[DGSessionSubsystem] Deinitialized."));
 
 	Super::Deinitialize();
 }
@@ -43,7 +37,7 @@ void UDGSessionSubsystem::CreateRoomAndTravel(
 	{
 		const FString ErrorMessage = TEXT("[DGSessionSubsystem] BackendClient is null.");
 
-		Debug::Print(ErrorMessage);
+
 		OnSessionRequestFailed.Broadcast(ErrorMessage);
 		return;
 	}
@@ -60,10 +54,6 @@ void UDGSessionSubsystem::CreateRoomAndTravel(
 	RequestData.RoomName = RoomName;
 	RequestData.RoomPassword = RoomPassword;
 
-	Debug::Print(FString::Printf(
-		TEXT("[DGSessionSubsystem] Request Create Room. RoomName=%s"),
-		*RoomName
-	));
 
 	BackendClient->CreateSession(
 		RequestData,
@@ -85,7 +75,7 @@ void UDGSessionSubsystem::JoinRoomAndTravel(
 	{
 		const FString ErrorMessage = TEXT("[DGSessionSubsystem] BackendClient is null.");
 
-		Debug::Print(ErrorMessage);
+
 		OnSessionRequestFailed.Broadcast(ErrorMessage);
 		return;
 	}
@@ -101,10 +91,6 @@ void UDGSessionSubsystem::JoinRoomAndTravel(
 	RequestData.AccountId = AccountId;
 	RequestData.CharacterId = CharacterId;
 
-	Debug::Print(FString::Printf(
-		TEXT("[DGSessionSubsystem] Request Join Room. RoomName=%s"),
-		*RoomName
-	));
 
 	BackendClient->JoinSession(
 		RequestData,
@@ -119,13 +105,11 @@ void UDGSessionSubsystem::TravelToLastSession()
 {
 	if (!LastSessionConnectionInfo.bSuccess)
 	{
-		Debug::Print(TEXT("[DGSessionSubsystem] LastSessionConnectionInfo is not valid."));
 		return;
 	}
 
 	if (LastSessionConnectionInfo.ServerIP.IsEmpty() || LastSessionConnectionInfo.ServerPort <= 0)
 	{
-		Debug::Print(TEXT("[DGSessionSubsystem] Last session server address is invalid."));
 		return;
 	}
 
@@ -150,11 +134,6 @@ void UDGSessionSubsystem::InitializeBackendBaseUrlFromCommandLine()
 			BackendBaseUrl = CommandLineBackendUrl;
 		}
 	}
-
-	Debug::Print(FString::Printf(
-		TEXT("[DGSessionSubsystem] BackendBaseUrl=%s"),
-		*BackendBaseUrl
-	));
 }
 
 void UDGSessionSubsystem::HandleCreateSessionCompleted(
@@ -164,23 +143,12 @@ void UDGSessionSubsystem::HandleCreateSessionCompleted(
 {
 	if (!bSuccess)
 	{
-		Debug::Print(FString::Printf(
-			TEXT("[DGSessionSubsystem] Create Room Failed. Error=%s"),
-			*Result.ErrorMessage
-		));
-
 		OnSessionRequestFailed.Broadcast(Result.ErrorMessage);
 		return;
 	}
 
 	LastSessionConnectionInfo = Result;
 
-	Debug::Print(FString::Printf(
-		TEXT("[DGSessionSubsystem] Create Room Success. SessionId=%s Server=%s:%d"),
-		*Result.SessionId,
-		*Result.ServerIP,
-		Result.ServerPort
-	));
 
 	OnSessionCreated.Broadcast(Result.SessionId);
 
@@ -194,23 +162,12 @@ void UDGSessionSubsystem::HandleJoinSessionCompleted(
 {
 	if (!bSuccess)
 	{
-		Debug::Print(FString::Printf(
-			TEXT("[DGSessionSubsystem] Join Room Failed. Error=%s"),
-			*Result.ErrorMessage
-		));
-
 		OnSessionRequestFailed.Broadcast(Result.ErrorMessage);
 		return;
 	}
 
 	LastSessionConnectionInfo = Result;
 
-	Debug::Print(FString::Printf(
-		TEXT("[DGSessionSubsystem] Join Room Success. SessionId=%s Server=%s:%d"),
-		*Result.SessionId,
-		*Result.ServerIP,
-		Result.ServerPort
-	));
 
 	TravelToDedicatedServer(Result);
 }
@@ -223,7 +180,6 @@ void UDGSessionSubsystem::TravelToDedicatedServer(
 
 	if (!World)
 	{
-		Debug::Print(TEXT("[DGSessionSubsystem] World is null."));
 		return;
 	}
 
@@ -231,25 +187,21 @@ void UDGSessionSubsystem::TravelToDedicatedServer(
 
 	if (!PlayerController)
 	{
-		Debug::Print(TEXT("[DGSessionSubsystem] PlayerController is null."));
 		return;
 	}
 
 	if (ConnectionInfo.ServerIP.IsEmpty() || ConnectionInfo.ServerPort <= 0)
 	{
-		Debug::Print(TEXT("[DGSessionSubsystem] Server address is invalid."));
 		return;
 	}
 
 	if (ConnectionInfo.SessionId.IsEmpty())
 	{
-		Debug::Print(TEXT("[DGSessionSubsystem] SessionId is empty."));
 		return;
 	}
 
 	if (ConnectionInfo.JoinToken.IsEmpty())
 	{
-		Debug::Print(TEXT("[DGSessionSubsystem] JoinToken is empty."));
 		return;
 	}
 
@@ -261,10 +213,6 @@ void UDGSessionSubsystem::TravelToDedicatedServer(
 		*ConnectionInfo.JoinToken
 	);
 
-	Debug::Print(FString::Printf(
-		TEXT("[DGSessionSubsystem] ClientTravel To %s"),
-		*TravelUrl
-	));
 
 	PlayerController->ClientTravel(TravelUrl, TRAVEL_Absolute);
 }
@@ -278,10 +226,6 @@ bool UDGSessionSubsystem::ValidateRoomInput(
 	{
 		const FString ErrorMessage = TEXT("RoomName is empty.");
 
-		Debug::Print(FString::Printf(
-			TEXT("[DGSessionSubsystem] %s"),
-			*ErrorMessage
-		));
 
 		OnSessionRequestFailed.Broadcast(ErrorMessage);
 		return false;
@@ -291,10 +235,6 @@ bool UDGSessionSubsystem::ValidateRoomInput(
 	{
 		const FString ErrorMessage = TEXT("RoomPassword is empty.");
 
-		Debug::Print(FString::Printf(
-			TEXT("[DGSessionSubsystem] %s"),
-			*ErrorMessage
-		));
 
 		OnSessionRequestFailed.Broadcast(ErrorMessage);
 		return false;

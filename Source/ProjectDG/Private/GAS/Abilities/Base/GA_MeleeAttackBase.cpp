@@ -1,17 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "GAS/Abilities/Base/GA_MeleeAttackBase.h"
-#include "GAS/Abilities/Base/GA_PlayerSkillBase.h"
-#include "Character/Player/Data/PlayerSkillData.h"
-#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
-#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
-#include "Character/Player/PlayerCharacterBase.h"
-#include "Core/DG_GameplayTags.h"
-#include "Core/DG_Debug.h"
-#include "GameFramework/GameStateBase.h"
 
 #include "AbilitySystemComponent.h"
+#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "TimerManager.h"
+#include "Core/DG_Debug.h"
+#include "Core/DG_GameplayTags.h"
 
 UGA_MeleeAttackBase::UGA_MeleeAttackBase()
 {
@@ -26,13 +22,8 @@ void UGA_MeleeAttackBase::ActivateAbility(
 	const FGameplayEventData* TriggerEventData
 )
 {
-	
-	
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
+	bEndingMeleeAbility = false;
+	ResetMeleeState();
 
 	if (!GetSkillMontage())
 	{
@@ -40,11 +31,22 @@ void UGA_MeleeAttackBase::ActivateAbility(
 		return;
 	}
 
-	bEndingMeleeAbility = false;
-	ResetMeleeState();
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 
+	ActiveChainStepIndex = GetCurrentComboStepIndex();
+	ActiveHitGroupIndex = ActiveChainStepIndex + 1;
+	ActiveHitCount = GetSkillHitCount();
+	ActiveDamageMultiplierPerHit = GetSkillDamageMultiplierPerHit();
+
+	
+
+	RegisterSkillChainStepEvent();
 	StartMeleeEventTasks();
-	PlayMeleeMontageFromStart();
+	PlayMeleeMontage();
 }
 
 void UGA_MeleeAttackBase::EndAbility(
@@ -55,7 +57,16 @@ void UGA_MeleeAttackBase::EndAbility(
 	bool bWasCancelled
 )
 {
+	const bool bShouldActivateNextChain = bPendingChainActivation;
+	const FGameplayTag NextChainSkillTag = GetSkillTag();
+
 	ResetMeleeState();
+
+	MontageTask = nullptr;
+	AttackHitTask = nullptr;
+	SkillInputEventTask = nullptr;
+	ChainInputOpenTask = nullptr;
+	ChainInputCloseTask = nullptr;
 
 	Super::EndAbility(
 		Handle,
@@ -64,109 +75,30 @@ void UGA_MeleeAttackBase::EndAbility(
 		bReplicateEndAbility,
 		bWasCancelled
 	);
+
+	if (bShouldActivateNextChain && NextChainSkillTag.IsValid())
+	{
+		ActivateNextChainOnNextTick(NextChainSkillTag);
+	}
 }
 
 void UGA_MeleeAttackBase::ResetMeleeState()
 {
-	CurrentComboIndex = 1;
-	bComboInputWindowOpen = false;
-	bComboInputBuffered = false;
-	ComboInputWindowOpenedServerTime = 0.f;
-	ComboInputWindowClosedServerTime = 0.f;
+	ActiveChainStepIndex = 0;
+	ActiveHitGroupIndex = 1;
+	ActiveHitCount = 1;
+	ActiveDamageMultiplierPerHit = 1.f;
+
+	bSkillChainStepAdvanced = false;
+	bChainInputWindowOpen = false;
+	bBufferedNextChainInput = false;
+	bPendingChainActivation = false;
+
 	HitActorsByCombo.Reset();
 }
 
 void UGA_MeleeAttackBase::StartMeleeEventTasks()
 {
-	const FGameplayTag SkillInputEventTag = GetSkillInputEventTag();
-	if (SkillInputEventTag.IsValid())
-	{
-		SkillInputEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-				this,
-				SkillInputEventTag,
-				nullptr,
-				false,
-				true
-		);
-
-		if (SkillInputEventTask)
-		{
-			SkillInputEventTask->EventReceived.AddDynamic(
-					this,
-					&UGA_MeleeAttackBase::OnSkillInputEventReceived
-			);
-			SkillInputEventTask->ReadyForActivation();
-		}
-	}
-	
-	ComboInputWindowOpenTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-		this,
-		DGGameplayTags::Event_Combo_InputWindow_Open.GetTag(),
-		nullptr,
-		false,
-		true
-	);
-
-	if (ComboInputWindowOpenTask)
-	{
-		ComboInputWindowOpenTask->EventReceived.AddDynamic(
-			this,
-			&UGA_MeleeAttackBase::OnComboInputWindowOpened
-		);
-		ComboInputWindowOpenTask->ReadyForActivation();
-	}
-
-	ComboInputWindowCloseTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-		this,
-		DGGameplayTags::Event_Combo_InputWindow_Close.GetTag(),
-		nullptr,
-		false,
-		true
-	);
-
-	if (ComboInputWindowCloseTask)
-	{
-		ComboInputWindowCloseTask->EventReceived.AddDynamic(
-			this,
-			&UGA_MeleeAttackBase::OnComboInputWindowClosed
-		);
-		ComboInputWindowCloseTask->ReadyForActivation();
-	}
-
-	ComboBranchTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-		this,
-		DGGameplayTags::Event_Combo_Branch.GetTag(),
-		nullptr,
-		false,
-		true
-	);
-
-	if (ComboBranchTask)
-	{
-		ComboBranchTask->EventReceived.AddDynamic(
-			this,
-			&UGA_MeleeAttackBase::OnComboBranch
-		);
-		ComboBranchTask->ReadyForActivation();
-	}
-
-	AttackHitWindowBeginTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-		this,
-		DGGameplayTags::Event_Attack_HitWindow_Begin.GetTag(),
-		nullptr,
-		false,
-		true
-	);
-
-	if (AttackHitWindowBeginTask)
-	{
-		AttackHitWindowBeginTask->EventReceived.AddDynamic(
-			this,
-			&UGA_MeleeAttackBase::OnAttackHitWindowBegin
-		);
-		AttackHitWindowBeginTask->ReadyForActivation();
-	}
-
 	AttackHitTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this,
 		DGGameplayTags::Event_Attack_Hit.GetTag(),
@@ -181,28 +113,70 @@ void UGA_MeleeAttackBase::StartMeleeEventTasks()
 			this,
 			&UGA_MeleeAttackBase::OnAttackHit
 		);
+
 		AttackHitTask->ReadyForActivation();
 	}
-	
-	ComboInputRequestTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-	  this,
-	  DGGameplayTags::Event_Combo_InputRequest.GetTag(),
-	  nullptr,
-	  false,
-	  true
-);
 
-	if (ComboInputRequestTask)
+	const FGameplayTag SkillInputEventTag = GetSkillInputEventTag();
+	if (SkillInputEventTag.IsValid())
 	{
-		ComboInputRequestTask->EventReceived.AddDynamic(
-				this,
-				&UGA_MeleeAttackBase::OnComboInputRequest
+		SkillInputEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+			this,
+			SkillInputEventTag,
+			nullptr,
+			false,
+			true
 		);
-		ComboInputRequestTask->ReadyForActivation();
+
+		if (SkillInputEventTask)
+		{
+			SkillInputEventTask->EventReceived.AddDynamic(
+				this,
+				&UGA_MeleeAttackBase::OnSkillInputEventReceived
+			);
+
+			SkillInputEventTask->ReadyForActivation();
+		}
+	}
+
+	ChainInputOpenTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this,
+		DGGameplayTags::Event_Skill_ChainInput_Open,
+		nullptr,
+		false,
+		true
+	);
+
+	if (ChainInputOpenTask)
+	{
+		ChainInputOpenTask->EventReceived.AddDynamic(
+			this,
+			&UGA_MeleeAttackBase::OnSkillChainInputOpened
+		);
+
+		ChainInputOpenTask->ReadyForActivation();
+	}
+
+	ChainInputCloseTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this,
+		DGGameplayTags::Event_Skill_ChainInput_Close,
+		nullptr,
+		false,
+		true
+	);
+
+	if (ChainInputCloseTask)
+	{
+		ChainInputCloseTask->EventReceived.AddDynamic(
+			this,
+			&UGA_MeleeAttackBase::OnSkillChainInputClosed
+		);
+
+		ChainInputCloseTask->ReadyForActivation();
 	}
 }
 
-void UGA_MeleeAttackBase::PlayMeleeMontageFromStart()
+void UGA_MeleeAttackBase::PlayMeleeMontage()
 {
 	UAnimMontage* SkillMontage = GetSkillMontage();
 	if (!SkillMontage)
@@ -216,7 +190,7 @@ void UGA_MeleeAttackBase::PlayMeleeMontageFromStart()
 		TEXT("MeleeMontageTask"),
 		SkillMontage,
 		1.0f,
-		GetComboSectionName(1)
+		NAME_None
 	);
 
 	if (!MontageTask)
@@ -233,73 +207,10 @@ void UGA_MeleeAttackBase::PlayMeleeMontageFromStart()
 	MontageTask->ReadyForActivation();
 }
 
-void UGA_MeleeAttackBase::TryBufferComboInputFromHeldState()
-{
-	const FGameplayTag SkillTag = GetSkillTag();
-	if (!SkillTag.IsValid())
-	{
-		return;
-	}
-
-	if (IsSkillInputHeld(SkillTag))
-	{
-		bComboInputBuffered = true;
-	}
-}
-
-void UGA_MeleeAttackBase::TryJumpToNextComboSection(int32 BranchComboIndex)
-{
-	const int32 ComboCount = GetSkillComboCount();
-
-	// 유효한 콤보 인덱스인지 확인
-	if (BranchComboIndex < 1 || BranchComboIndex > ComboCount)
-	{
-		return;
-	}
-
-	// 입력 버퍼가 없으면 공격 이어나가지 않음
-	if (!bComboInputBuffered)
-	{
-		return;
-	}
-
-	// 다음 콤보로 넘어가는 것이 확정이므로 초기화
-	bComboInputBuffered = false;
-
-	// 콤보 인덱스 계산
-	int32 NextComboIndex = BranchComboIndex + 1;
-	if (NextComboIndex > ComboCount)
-	{
-		NextComboIndex = 1;
-	}
-
-	// 콤보 인덱스 업데이트 및 몽타주 섹션 점프
-	CurrentComboIndex = NextComboIndex;
-	MontageJumpToSection(GetComboSectionName(CurrentComboIndex));
-
-	// =========================================================================
-	// [핵심 변경] 클라이언트에서도 Instant GE가 차단당하지 않도록 새 예측 윈도우를 엽니다.
-	// =========================================================================
-	if (UAbilitySystemComponent* ASC = CurrentActorInfo->AbilitySystemComponent.Get())
-	{
-
-		FScopedPredictionWindow ScopedPrediction(ASC, true);
-
-		UE_LOG(LogTemp, Log, TEXT("UGA_MeleeAttackBase::TryJumpToNextComboSection - Opened new prediction window for combo continuation. ComboIndex: %d"), CurrentComboIndex);
-		// 이제 클라이언트라도 새 예측 키가 발급되어 비용 및 정신력 회복 GE가 정상적으로 통과합니다.
-		ApplyCost(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo);
-	}
-}
-
-FName UGA_MeleeAttackBase::GetComboSectionName(int32 ComboIndex) const
-{
-	return FName(*FString::Printf(TEXT("Combo_%d"), ComboIndex));
-}
-
 float UGA_MeleeAttackBase::GetCurrentComboDamage() const
 {
 	// ExecCalc에서 SourceAttackPower * DamageMultiplier로 최종 IncomingDamage를 계산한다.
-	return GetSkillDamageMultiplier();
+	return ActiveDamageMultiplierPerHit;
 }
 
 void UGA_MeleeAttackBase::EndMeleeAbility()
@@ -313,77 +224,105 @@ void UGA_MeleeAttackBase::EndMeleeAbility()
 	K2_EndAbility();
 }
 
-void UGA_MeleeAttackBase::SendComboInputRequestToServer()
+void UGA_MeleeAttackBase::TryRequestNextChainFromHeldInput()
 {
-	APlayerCharacterBase* PlayerCharacter = GetAvatarPlayerCharacter();
-	if (!PlayerCharacter)
+	const FGameplayTag SkillTag = GetSkillTag();
+	if (!SkillTag.IsValid())
 	{
 		return;
 	}
 
-	float ClientInputServerTime = 0.f;
-	if (const UWorld* World = GetWorld())
+	const bool bHeld = IsSkillInputHeld(SkillTag);
+
+
+
+	if (!bHeld)
 	{
-		if (const AGameStateBase* GameState = World->GetGameState())
-		{
-			ClientInputServerTime = GameState->GetServerWorldTimeSeconds();
-		}
+		return;
 	}
 
-	PlayerCharacter->ServerRequestMeleeComboInput(
-			GetSkillTag(),
-			CurrentComboIndex,
-			ClientInputServerTime
+	RequestNextChainActivation();
+}
+
+void UGA_MeleeAttackBase::RequestNextChainActivation()
+{
+	if (bPendingChainActivation)
+	{
+		return;
+	}
+
+	if (!bSkillChainStepAdvanced)
+	{
+		return;
+	}
+
+	const FGameplayTag SkillTag = GetSkillTag();
+	if (!SkillTag.IsValid())
+	{
+		return;
+	}
+
+	bPendingChainActivation = true;
+	bBufferedNextChainInput = false;
+
+	
+
+	EndMeleeAbility();
+}
+
+void UGA_MeleeAttackBase::ActivateNextChainOnNextTick(FGameplayTag SkillTag)
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (!ASC)
+	{
+		return;
+	}
+
+	TWeakObjectPtr<UAbilitySystemComponent> WeakASC = ASC;
+
+	FGameplayTagContainer SkillTagContainer;
+	SkillTagContainer.AddTag(SkillTag);
+
+	World->GetTimerManager().SetTimerForNextTick(
+		FTimerDelegate::CreateLambda([WeakASC, SkillTagContainer]()
+		{
+			if (!WeakASC.IsValid())
+			{
+				return;
+			}
+
+			const bool bActivated = WeakASC->TryActivateAbilitiesByTag(SkillTagContainer);
+
+			
+		})
 	);
 }
 
-void UGA_MeleeAttackBase::OnComboInputWindowOpened(FGameplayEventData Payload)
+void UGA_MeleeAttackBase::HandleSkillChainStepEvent(const FGameplayEventData& Payload)
 {
-	bComboInputWindowOpen = true;
-
-	if (HasAuthorityAvatar())
-	{
-		if (const UWorld* World = GetWorld())
-		{
-			ComboInputWindowOpenedServerTime = World->GetTimeSeconds();
-			ComboInputWindowClosedServerTime = 0.f;
-		}
-	}
-	else
-	{
-		TryBufferComboInputFromHeldState();
-	}
-}
-
-void UGA_MeleeAttackBase::OnComboInputWindowClosed(FGameplayEventData Payload)
-{
-	bComboInputWindowOpen = false;
-	
-	if (HasAuthorityAvatar())
-	{
-		if (const UWorld* World = GetWorld())
-		{
-			ComboInputWindowClosedServerTime = World->GetTimeSeconds();
-		}
-	}
-}
-
-void UGA_MeleeAttackBase::OnComboBranch(FGameplayEventData Payload)
-{
-	const int32 BranchComboIndex = FMath::RoundToInt(Payload.EventMagnitude);
-	TryJumpToNextComboSection(BranchComboIndex);
-}
-
-void UGA_MeleeAttackBase::OnAttackHitWindowBegin(FGameplayEventData Payload)
-{
-	const int32 HitWindowComboIndex = FMath::RoundToInt(Payload.EventMagnitude);
-
-	if (HitWindowComboIndex < 1 || HitWindowComboIndex > GetSkillComboCount())
+	if (bSkillChainStepAdvanced)
 	{
 		return;
 	}
 
-	HitActorsByCombo.FindOrAdd(HitWindowComboIndex).Reset();
+	bSkillChainStepAdvanced = true;
+
+	if (!HasAuthorityAvatar())
+	{
+		return;
+	}
+
+	const int32 PreviousStepIndex = GetCurrentComboStepIndex();
+
+	AdvanceCurrentComboStep();
+
+	
 }
 
 void UGA_MeleeAttackBase::OnAttackHit(FGameplayEventData Payload)
@@ -400,10 +339,10 @@ void UGA_MeleeAttackBase::OnAttackHit(FGameplayEventData Payload)
 		return;
 	}
 
-	const int32 HitComboIndex = FMath::RoundToInt(Payload.EventMagnitude);
-	if (HitComboIndex < 1 || HitComboIndex > GetSkillComboCount())
+	int32 HitComboIndex = FMath::RoundToInt(Payload.EventMagnitude);
+	if (HitComboIndex <= 0)
 	{
-		return;
+		HitComboIndex = ActiveHitGroupIndex;
 	}
 
 	TSet<TWeakObjectPtr<AActor>>& HitActorsForCombo =
@@ -416,41 +355,67 @@ void UGA_MeleeAttackBase::OnAttackHit(FGameplayEventData Payload)
 
 	HitActorsForCombo.Add(TargetActor);
 
-	ApplyDamageToTarget(
-	TargetActor,
-	0.f,
-	GetCurrentComboDamage(),
-	GetSkillTag(),
-	FVector::ZeroVector,
-	false
-);
+	const int32 HitCount = FMath::Max(1, ActiveHitCount);
+	const float DamageMultiplierPerHit = GetCurrentComboDamage();
+
+	for (int32 HitIndex = 0; HitIndex < HitCount; ++HitIndex)
+	{
+		ApplyDamageToTarget(
+			TargetActor,
+			0.f,
+			DamageMultiplierPerHit,
+			GetSkillTag(),
+			FVector::ZeroVector,
+			false
+		);
+	}
+
+	
 }
 
 void UGA_MeleeAttackBase::OnSkillInputEventReceived(FGameplayEventData Payload)
 {
-	if (HasAuthorityAvatar())
-	{
-		return;
-	}
-	
 	if (Payload.EventTag != GetSkillInputEventTag())
 	{
 		return;
 	}
-	
-	if (!bComboInputWindowOpen)
+
+	if (bPendingChainActivation)
 	{
 		return;
 	}
 
-	bComboInputBuffered = true;
+	if (bChainInputWindowOpen)
+	{
+		RequestNextChainActivation();
+		return;
+	}
+
+	bBufferedNextChainInput = true;
+
 	
-	SendComboInputRequestToServer();
+}
+
+void UGA_MeleeAttackBase::OnSkillChainInputOpened(FGameplayEventData Payload)
+{
+	bChainInputWindowOpen = true;
+
+	TryRequestNextChainFromHeldInput();
+}
+
+void UGA_MeleeAttackBase::OnSkillChainInputClosed(FGameplayEventData Payload)
+{
+	bChainInputWindowOpen = false;
 }
 
 void UGA_MeleeAttackBase::OnMontageCompleted()
 {
-	EndMeleeAbility();
+	TryRequestNextChainFromHeldInput();
+
+	if (!bPendingChainActivation)
+	{
+		EndMeleeAbility();
+	}
 }
 
 void UGA_MeleeAttackBase::OnMontageInterrupted()
@@ -460,53 +425,15 @@ void UGA_MeleeAttackBase::OnMontageInterrupted()
 
 void UGA_MeleeAttackBase::OnMontageBlendOut()
 {
-	EndMeleeAbility();
+	TryRequestNextChainFromHeldInput();
+
+	if (!bPendingChainActivation)
+	{
+		EndMeleeAbility();
+	}
 }
 
 void UGA_MeleeAttackBase::OnMontageCancelled()
 {
 	EndMeleeAbility();
-}
-
-void UGA_MeleeAttackBase::OnComboInputRequest(FGameplayEventData Payload)
-{
-	if (!HasAuthorityAvatar())
-	{
-		return;
-	}
-
-	const FGameplayTag SkillTag = GetSkillTag();
-	if (!SkillTag.IsValid() || !Payload.InstigatorTags.HasTagExact(SkillTag))
-	{
-		return;
-	}
-
-	if (!bComboInputWindowOpen)
-	{
-		return;
-	}
-
-	const int32 RequestedComboIndex = FMath::RoundToInt(Payload.EventMagnitude);
-	if (RequestedComboIndex != CurrentComboIndex)
-	{
-		return;
-	}
-	
-	const float ClientInputServerTime =
-			 static_cast<float>(Payload.TargetData.UniqueId) / 1000.f;
-
-	const float MinAllowedTime =
-			ComboInputWindowOpenedServerTime - ComboInputServerTimeTolerance;
-
-	const float MaxAllowedTime =
-			ComboInputWindowClosedServerTime > 0.f
-					? ComboInputWindowClosedServerTime + ComboInputServerTimeTolerance
-					: GetWorld()->GetTimeSeconds() + ComboInputServerTimeTolerance;
-
-	if (ClientInputServerTime < MinAllowedTime || ClientInputServerTime > MaxAllowedTime)
-	{
-		return;
-	}
-
-	bComboInputBuffered = true;
 }

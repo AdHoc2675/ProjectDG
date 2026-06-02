@@ -7,5 +7,5 @@
 AArcherCharacter::AArcherCharacter()
 {
 	BowMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BowMesh"));
-	BowMesh->SetupAttachment(GetMesh(), TEXT("BowSocket"));
+	BowMesh->SetupAttachment(GetMesh(), TEXT("BowWeaponSocket"));
 }
