@@ -56,9 +56,15 @@ void ADGLootItemActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 // Called when the game starts or when spawned
 void ADGLootItemActor::BeginPlay()
 {
+    Super::BeginPlay();
+
     if (HasAuthority())
     {
         PickupSphere->OnComponentBeginOverlap.AddDynamic(this, &ADGLootItemActor::OnSphereOverlap);
+    }
+    else {
+        // 클라이언트 측에서는 이미 ReplicatedGrade가 세팅되어 있을 수 있으므로, BeginPlay에서도 VFX를 켜줌
+		OnRep_Grade();
     }
 }
 
@@ -92,8 +98,8 @@ void ADGLootItemActor::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent,
         UDGInventoryComponent* Inventory = Player->FindComponentByClass<UDGInventoryComponent>();
         if (Inventory)
         {
-            // TODO: 인벤토리에 아이템을 지급하는 로직을 InventoryComponent에 추가해야 함
-            // 예: Inventory->AddItem(ItemDef, Quantity);
+            // 인벤토리에 아이템을 지급
+            Inventory->AddItem(ItemDef, Quantity);
 
             UE_LOG(LogTemp, Log, TEXT("[DGLootItemActor] [%s]가 %s (x%d) 를 획득"), *Player->GetName(), *ItemDef->ItemName.ToString(), Quantity);
 

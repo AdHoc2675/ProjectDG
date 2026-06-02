@@ -21,6 +21,7 @@ public:
 	ADGLootItemActor();
 
 	// 생성 시 컴포넌트에서 호출하여 아이템 데이터를 세팅
+	UFUNCTION(BlueprintCallable, Category = "DG|Loot")
 	void InitializeLoot(UDGItemDefinition* InItemDef, int32 InQuantity, EDGItemGrade InGrade = EDGItemGrade::Hero);
 protected:
 	// Called when the game starts or when spawned
