@@ -127,6 +127,8 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Dodge)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Sprint)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Jump)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Locked)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Active)
 	
 	// Warrior Skill State (해당 스킬 사용 중 다른 스킬을 사용하지 못하게 하는 등의 방식으로 사용 가능) 
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Warrior_SharpStrike_Active)
