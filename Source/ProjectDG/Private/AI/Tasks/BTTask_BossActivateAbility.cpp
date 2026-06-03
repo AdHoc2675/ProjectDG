@@ -1,29 +1,31 @@
-#include "AI/Tasks/BTTask_ZikelActivateAbility.h"
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#include "AI/Tasks/BTTask_BossActivateAbility.h"
 
 #include "AIController.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayAbilitySpec.h"
 #include "Character/BaseCharacter.h"
-#include "Character/Enemy/Boss/Boss_Zikel.h"
+#include "Character/Enemy/Boss/BossCharacterBase.h"
 
-struct FBTZikelActivateAbilityMemory
+struct FBTBossActivateAbilityMemory
 {
 	TWeakObjectPtr<UAbilitySystemComponent> ASC;
 	TSubclassOf<UGameplayAbility> ActivatedAbilityClass;
 };
 
-UBTTask_ZikelActivateAbility::UBTTask_ZikelActivateAbility()
+UBTTask_BossActivateAbility::UBTTask_BossActivateAbility()
 {
-	NodeName = TEXT("Zikel Activate Ability");
+	NodeName = TEXT("Boss Activate Ability");
 	bNotifyTick = true;
 }
 
-uint16 UBTTask_ZikelActivateAbility::GetInstanceMemorySize() const
+uint16 UBTTask_BossActivateAbility::GetInstanceMemorySize() const
 {
-	return sizeof(FBTZikelActivateAbilityMemory);
+	return sizeof(FBTBossActivateAbilityMemory);
 }
 
-EBTNodeResult::Type UBTTask_ZikelActivateAbility::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
+EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
 	AAIController* AIController = OwnerComp.GetAIOwner();
 	if (!AIController)
@@ -44,11 +46,13 @@ EBTNodeResult::Type UBTTask_ZikelActivateAbility::ExecuteTask(UBehaviorTreeCompo
 	}
 
 	TSubclassOf<UGameplayAbility> AbilityToActivate = AbilityClass;
+
+	// AbilityClass가 지정되지 않았다면 BossCharacterBase에서 무작위 공격 능력을 가져옴
 	if (!AbilityToActivate)
 	{
-		if (const ABoss_Zikel* Zikel = Cast<ABoss_Zikel>(Character))
+		if (const ABossCharacterBase* Boss = Cast<ABossCharacterBase>(Character))
 		{
-			AbilityToActivate = Zikel->GetRandomAttackAbilityClass();
+			AbilityToActivate = Boss->GetRandomAttackAbilityClass();
 		}
 	}
 
@@ -59,7 +63,7 @@ EBTNodeResult::Type UBTTask_ZikelActivateAbility::ExecuteTask(UBehaviorTreeCompo
 
 	if (ASC->TryActivateAbilityByClass(AbilityToActivate))
 	{
-		FBTZikelActivateAbilityMemory* MyMemory = reinterpret_cast<FBTZikelActivateAbilityMemory*>(NodeMemory);
+		FBTBossActivateAbilityMemory* MyMemory = reinterpret_cast<FBTBossActivateAbilityMemory*>(NodeMemory);
 		MyMemory->ASC = ASC;
 		MyMemory->ActivatedAbilityClass = AbilityToActivate;
 
@@ -69,9 +73,9 @@ EBTNodeResult::Type UBTTask_ZikelActivateAbility::ExecuteTask(UBehaviorTreeCompo
 	return EBTNodeResult::Failed;
 }
 
-void UBTTask_ZikelActivateAbility::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
+void UBTTask_BossActivateAbility::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
-	FBTZikelActivateAbilityMemory* MyMemory = reinterpret_cast<FBTZikelActivateAbilityMemory*>(NodeMemory);
+	FBTBossActivateAbilityMemory* MyMemory = reinterpret_cast<FBTBossActivateAbilityMemory*>(NodeMemory);
 
 	if (MyMemory->ASC.IsValid() && MyMemory->ActivatedAbilityClass)
 	{
@@ -88,6 +92,7 @@ void UBTTask_ZikelActivateAbility::TickTask(UBehaviorTreeComponent& OwnerComp, u
 			}
 		}
 
+		// 어빌리티가 더 이상 활성화되어 있지 않다면 태스크 종료
 		if (!bIsActive)
 		{
 			FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);

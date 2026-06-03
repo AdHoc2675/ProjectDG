@@ -13,6 +13,7 @@ struct FOnAttributeChangeData;
 class UBossCharacterClassData;
 class UDG_BossAttributeSet;
 class UDG_EnemyAttributeSet;
+class UGameplayAbility;
 
 /**
  * 
@@ -51,6 +52,9 @@ protected:
 	// 보스는 DataAsset이 있으면 그 값을 우선 적용
 	virtual void ApplyDefaultEffects() override;
 
+	// DataAsset의 AttackAbilities를 ASC에 부여
+	virtual void GrantDefaultAbilities() override;
+
 	// 소환 직후 보스 전용 스탯 적용
 	virtual void PossessedBy(AController* NewController) override;
 
@@ -78,6 +82,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Team")
 	FGameplayTag GetBossTag() const { return BossTag; }
+
+	/** DataAsset에 등록된 공격 어빌리티 중 무작위로 하나를 선택하여 반환 */
+	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Ability")
+	TSubclassOf<UGameplayAbility> GetRandomAttackAbilityClass() const;
 
 private:
 	bool bBossSpecialEffectsApplied = false;
