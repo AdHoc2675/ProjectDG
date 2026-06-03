@@ -5,6 +5,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Core/DG_Debug.h"
 #include "GameplayEffectExtension.h"
+#include "Character/Enemy/EnemyCharacterBase.h"
 
 UDG_AttributeSet::UDG_AttributeSet()
 {
@@ -207,6 +208,17 @@ void UDG_AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbac
 				Debug::Print(TEXT("[DG_AttributeSet] Health reached zero."));
 				// 통상적으로 Target의 ASC를 통해 캐릭터의 Die() 함수 등을 호출하는 이벤트를 보냅니다.
 			}
+		}
+
+		if (AEnemyCharacterBase* TargetEnemy = Cast<AEnemyCharacterBase>(GetOwningActor()))
+		{
+			bool bIsCritical = false;
+
+			// [추가] GAS EffectContext에서 데미지를 가한 오리지널 주체(보통 PlayerCharacter)를 가져옵니다.
+			AActor* InstigatorActor = Data.EffectSpec.GetContext().GetInstigator();
+
+			// 데미지를 띄우라고 전송하면서 공격자 정보도 넘겨줍니다.
+			TargetEnemy->Multicast_ShowDamageNumber(LocalDamageDone, bIsCritical, InstigatorActor);
 		}
 	}
 	else if (Data.EvaluatedData.Attribute == GetHealthAttribute())

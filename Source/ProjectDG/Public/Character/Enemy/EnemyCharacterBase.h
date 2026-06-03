@@ -18,6 +18,7 @@ class UNiagaraComponent;
 struct FOnAttributeChangeData;
 class UDGLootDropComponent;
 class UDGMinimapMarkerComponent;
+class ADGDamageNumberActor;
 
 /**
  * AEnemyCharacterBase
@@ -110,8 +111,15 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_DestroyAOETelegraph();
 
+	/** 데미지가 들어왔을 때 모든 클라이언트에게 신호를 보내되, 자신이 때린 것만 띄우도록 */
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_ShowDamageNumber(float DamageAmount, bool bIsCritical, AActor* DamageInstigator);
+
 protected:
 	UPROPERTY()
 	TObjectPtr<UNiagaraComponent> AOETelegraphComponent;
 
+	/** 스폰할 데미지 넘버 풀링 액터 클래스 */
+	UPROPERTY(EditDefaultsOnly, Category = "EnemyCharacterBase|UI")
+	TSubclassOf<ADGDamageNumberActor> DamageNumberClass;
 };

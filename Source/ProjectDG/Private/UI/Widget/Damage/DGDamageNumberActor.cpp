@@ -30,11 +30,25 @@ void ADGDamageNumberActor::ShowDamage(float DamageAmount, bool bIsCritical)
 {
 	SetActorHiddenInGame(false);
 
+	UE_LOG(LogTemp, Warning, TEXT("[DamageActor] ShowDamage called."));
+
 	if (DamageWidgetComponent)
 	{
-		if (UDGDamageNumberWidget* DamageWidget = Cast<UDGDamageNumberWidget>(DamageWidgetComponent->GetWidget()))
+		UUserWidget* RawWidget = DamageWidgetComponent->GetWidget();
+		if (!RawWidget)
 		{
-			DamageWidget->PlayDamageAnimation(DamageAmount, bIsCritical);
+			UE_LOG(LogTemp, Error, TEXT("[DamageActor] RawWidget is NULL! (액터 BP의 WidgetComponent에서 Widget Class를 할당했는지 확인하세요)"));
+			return;
+		}
+
+		if (UDGDamageNumberWidget* DamageWidget = Cast<UDGDamageNumberWidget>(RawWidget))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[DamageActor] Casting Success! Calling PlayDamageAnimation."));
+			DamageWidget->PlayDamageAnimation(DamageAmount, bIsCritical, this);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("[DamageActor] Cast Failed! (위젯이 UDGDamageNumberWidget을 상속받았는지 확인하세요)"));
 		}
 	}
 }

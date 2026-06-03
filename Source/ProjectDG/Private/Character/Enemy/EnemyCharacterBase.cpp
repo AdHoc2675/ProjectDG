@@ -15,6 +15,9 @@
 #include "NiagaraFunctionLibrary.h"
 #include "Components/UI/DGMinimapMarkerComponent.h"
 
+#include "System/DGDamageNumberPoolSubsystem.h"
+#include "UI/Widget/Damage/DGDamageNumberActor.h"
+
 AEnemyCharacterBase::AEnemyCharacterBase() {
   AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(
       TEXT("AbilitySystemComponent"));
@@ -58,6 +61,45 @@ void AEnemyCharacterBase::PossessedBy(AController *NewController) {
           .AddUObject(this, &AEnemyCharacterBase::OnHealthChanged_DeathCheck);
     }
   }
+}
+
+void AEnemyCharacterBase::Multicast_ShowDamageNumber_Implementation(float DamageAmount, bool bIsCritical, AActor* DamageInstigator)
+{
+    UE_LOG(LogTemp, Warning, TEXT("[DamageNumber] Multicast called! Damage: %.1f"), DamageAmount);
+
+    // 클래스가 비어있거나 데미지가 없으면 무시
+    if (!DamageNumberClass)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[DamageNumber] DamageNumberClass is NULL! (적 블루프린트에서 DamageNumberClass를 설정했는지 확인하세요)"));
+        return;
+    }
+    if (DamageAmount <= 0.f) return;
+
+    if (UWorld* World = GetWorld())
+    {
+        //// 클라이언트에서 '내가 때린 게 맞는지' 검사
+        //APlayerController* LocalPC = World->GetFirstPlayerController();
+        //if (LocalPC && LocalPC->GetPawn() != DamageInstigator)
+        //{
+        //    // 공격자가 내가 조종하는 캐릭터가 아니면 그리지 않고 바로 종료
+        //    UE_LOG(LogTemp, Warning, TEXT("[DamageNumber] Ignored. Instigator is not local player."));
+
+        //    return;
+        //}
+
+        if (UDGDamageNumberPoolSubsystem* PoolSubsystem = World->GetSubsystem<UDGDamageNumberPoolSubsystem>())
+        {
+            float ZOffset = GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 50.f : 100.f;
+            FVector SpawnLoc = GetActorLocation() + FVector(FMath::RandRange(-40.f, 40.f), FMath::RandRange(-40.f, 40.f), ZOffset);
+
+            if (ADGDamageNumberActor* DmgActor = PoolSubsystem->AcquireDamageNumber(DamageNumberClass, SpawnLoc))
+            {
+                UE_LOG(LogTemp, Warning, TEXT("[DamageNumber] Actor Acquired! Calling ShowDamage."));
+
+                DmgActor->ShowDamage(DamageAmount, bIsCritical);
+            }
+        }
+    }
 }
 
 void AEnemyCharacterBase::InitializeEnemyAbilitySystem() {
