@@ -8,6 +8,7 @@
 #include "Core/DG_GameplayTags.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/Controller.h"
 
 UGA_Assassin_ShadowAssault::UGA_Assassin_ShadowAssault()
 {
@@ -255,21 +256,34 @@ void UGA_Assassin_ShadowAssault::ClearIgnoredDashTargetCollision()
 
 void UGA_Assassin_ShadowAssault::FaceTargetFromCurrentLocation()
 {
-      AActor* AvatarActor = GetAvatarActorFromAbility();
-      AActor* TargetActor = CurrentTargetResult.TargetActor;
+	AActor* AvatarActor = GetAvatarActorFromAbility();
+	AActor* TargetActor = CurrentTargetResult.TargetActor;
 
-      if (!AvatarActor || !TargetActor)
-      {
-              return;
-      }
+	if (!AvatarActor || !TargetActor)
+	{
+		return;
+	}
 
-      FVector DirectionToTarget = TargetActor->GetActorLocation() - AvatarActor->GetActorLocation();
-      DirectionToTarget.Z = 0.f;
+	FVector DirectionToTarget = TargetActor->GetActorLocation() - AvatarActor->GetActorLocation();
+	DirectionToTarget.Z = 0.f;
 
-      if (DirectionToTarget.Normalize())
-      {
-              AvatarActor->SetActorRotation(DirectionToTarget.Rotation());
-      }
+	if (!DirectionToTarget.Normalize())
+	{
+		return;
+	}
+
+	const FRotator TargetRotation = DirectionToTarget.Rotation();
+	const FRotator YawOnlyRotation(0.f, TargetRotation.Yaw, 0.f);
+
+	AvatarActor->SetActorRotation(YawOnlyRotation);
+
+	if (ACharacter* AvatarCharacter = Cast<ACharacter>(AvatarActor))
+	{
+		if (AController* Controller = AvatarCharacter->GetController())
+		{
+			Controller->SetControlRotation(YawOnlyRotation);
+		}
+	}
 }
 
 void UGA_Assassin_ShadowAssault::OnMoveFinished()
