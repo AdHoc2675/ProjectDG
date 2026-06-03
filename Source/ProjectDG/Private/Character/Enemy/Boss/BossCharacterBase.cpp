@@ -278,6 +278,42 @@ void ABossCharacterBase::UpdateHealthPhaseTags(float HealthRatio)
 	}
 }
 
+void ABossCharacterBase::GrantDefaultAbilities()
+{
+	Super::GrantDefaultAbilities();
+
+	if (!HasAuthority() || !AbilitySystemComponent || !BossClassData)
+	{
+		return;
+	}
+
+	for (const auto& AbilityClass : BossClassData->AttackAbilities)
+	{
+		if (AbilityClass)
+		{
+			AbilitySystemComponent->GiveAbility(
+				FGameplayAbilitySpec(AbilityClass, 1));
+		}
+	}
+}
+
+TSubclassOf<UGameplayAbility> ABossCharacterBase::GetRandomAttackAbilityClass() const
+{
+	if (!BossClassData)
+	{
+		return nullptr;
+	}
+
+	const TArray<TSubclassOf<UGameplayAbility>>& Abilities = BossClassData->AttackAbilities;
+	if (Abilities.Num() == 0)
+	{
+		return nullptr;
+	}
+
+	const int32 RandomIndex = FMath::RandRange(0, Abilities.Num() - 1);
+	return Abilities[RandomIndex];
+}
+
 void ABossCharacterBase::HandleDeath()
 {
 	Super::HandleDeath();

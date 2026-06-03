@@ -102,6 +102,9 @@ public:
 	void Multicast_SpawnAOETelegraph(UNiagaraSystem* VFX, FVector Location, FName ScaleParamName, float Scale);
 
 	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_SpawnAttachedDirectionalTelegraph(UNiagaraSystem* VFX, FRotator RelativeRotation, float Length, float Width, FName LengthParamName, FName WidthParamName);
+
+	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_DestroyAOETelegraph();
 
 protected:

@@ -173,6 +173,45 @@ void AEnemyCharacterBase::Multicast_SpawnAOETelegraph_Implementation(UNiagaraSys
 	}
 }
 
+void AEnemyCharacterBase::Multicast_SpawnAttachedDirectionalTelegraph_Implementation(UNiagaraSystem* VFX, FRotator RelativeRotation, float Length, float Width, FName LengthParamName, FName WidthParamName)
+{
+	if (!VFX) return;
+
+	if (AOETelegraphComponent)
+	{
+		AOETelegraphComponent->DeactivateImmediate();
+		AOETelegraphComponent = nullptr;
+	}
+
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		// 캡슐의 바닥(발 밑)에 맞추기 위해 Z 오프셋 계산
+		FVector Offset = FVector(0.f, 0.f, -Capsule->GetScaledCapsuleHalfHeight());
+		
+		AOETelegraphComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
+			VFX,
+			Capsule,
+			NAME_None,
+			Offset,
+			RelativeRotation,
+			EAttachLocation::KeepRelativeOffset,
+			true // bAutoDestroy
+		);
+
+		if (AOETelegraphComponent)
+		{
+			if (LengthParamName != NAME_None)
+			{
+				AOETelegraphComponent->SetVariableFloat(LengthParamName, Length);
+			}
+			if (WidthParamName != NAME_None)
+			{
+				AOETelegraphComponent->SetVariableFloat(WidthParamName, Width);
+			}
+		}
+	}
+}
+
 void AEnemyCharacterBase::Multicast_DestroyAOETelegraph_Implementation()
 {
 	if (AOETelegraphComponent)

@@ -6,9 +6,6 @@
 #include "Character/Enemy/Boss/BossCharacterBase.h"
 #include "Boss_Ramu.generated.h"
 
-class UAnimMontage;
-class UGameplayAbility;
-
 /**
  * 
  */
@@ -19,17 +16,4 @@ class PROJECTDG_API ABoss_Ramu : public ABossCharacterBase
 	
 public:
 	ABoss_Ramu();
-
-protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ramu|Combat")
-	TArray<TObjectPtr<UAnimMontage>> AttackMontages;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ramu|Combat")
-	TArray<TSubclassOf<UGameplayAbility>> AttackAbilities;
-
-public:
-	UFUNCTION(BlueprintCallable, Category = "Ramu|Combat")
-	TSubclassOf<UGameplayAbility> GetRandomAttackAbilityClass() const;
-
-	const TArray<TObjectPtr<UAnimMontage>>& GetAttackMontages() const;
 };
