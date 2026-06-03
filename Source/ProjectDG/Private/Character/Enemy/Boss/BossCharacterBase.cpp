@@ -9,11 +9,17 @@
 #include "GAS/Attributes/DG_AttributeSet.h"
 #include "GAS/Attributes/DG_BossAttributeSet.h"
 #include "GAS/Attributes/DG_EnemyAttributeSet.h"
+#include "Components/UI/DGMinimapMarkerComponent.h"
 
 ABossCharacterBase::ABossCharacterBase()
 {
 	BossAttributeSet = CreateDefaultSubobject<UDG_BossAttributeSet>(TEXT("BossAttributeSet"));
 	EnemyAttributeSet = CreateDefaultSubobject<UDG_EnemyAttributeSet>(TEXT("EnemyAttributeSet"));
+
+	if (MinimapMarkerComponent)
+	{
+		MinimapMarkerComponent->MarkerType = EMinimapMarkerType::Boss;
+	}
 }
 
 //Boss Class Data 초기 태그 설정

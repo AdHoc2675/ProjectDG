@@ -65,4 +65,11 @@ public:
 	// UI Widget에서 클릭되었을 때 호출할 함수
 	UFUNCTION(BlueprintCallable, Category = "Map|Interaction")
 	void NotifyClicked();
+
+	// 미니맵 시스템에 수동으로 등록/해제하는 함수
+	UFUNCTION(BlueprintCallable, Category = "Minimap")
+	void RegisterToSubsystem();
+
+	UFUNCTION(BlueprintCallable, Category = "Minimap")
+	void UnregisterFromSubsystem();
 };

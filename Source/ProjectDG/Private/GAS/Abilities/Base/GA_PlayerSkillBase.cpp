@@ -5,6 +5,7 @@
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Character/Player/PlayerCharacterBase.h"
 #include "Character/Player/Data/PlayerSkillData.h"
+#include "Core/DG_Debug.h"
 #include "Core/DG_GameplayTags.h"
 #include "GameFramework/DG_PlayerState.h"
 #include "GameFramework/Pawn.h"
@@ -17,12 +18,13 @@
 UGA_PlayerSkillBase::UGA_PlayerSkillBase()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-	
+
 	CooldownGameplayEffectClass = UGE_SkillCoolDown::StaticClass();
 	CostGameplayEffectClass = UGE_SkillCost::StaticClass();
 }
 
-bool UGA_PlayerSkillBase::CheckCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, OUT FGameplayTagContainer* OptionalRelevantTags) const
+bool UGA_PlayerSkillBase::CheckCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+                                    OUT FGameplayTagContainer* OptionalRelevantTags) const
 {
 	//// 기본 비용 검사 통과 여부
 	//if (!Super::CheckCost(Handle, ActorInfo, OptionalRelevantTags))
@@ -51,23 +53,28 @@ bool UGA_PlayerSkillBase::CheckCost(const FGameplayAbilitySpecHandle Handle, con
 	return true;
 }
 
-void UGA_PlayerSkillBase::ApplyCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
+void UGA_PlayerSkillBase::ApplyCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+                                    const FGameplayAbilityActivationInfo ActivationInfo) const
 {
 	const float Cost = GetSkillSpiritCost(); // 데이터 에셋에서 소모량 가져오기
 	const float Gain = GetSkillSpiritGain(); // 데이터 에셋에서 회복량 가져오기
 
-	UE_LOG(LogTemp, Log, TEXT("[GA_PlayerSkillBase] Applying cost for skill: %s, Cost: %f, Gain: %f"), *GetName(), Cost, Gain);
+	UE_LOG(LogTemp, Log, TEXT("[GA_PlayerSkillBase] Applying cost for skill: %s, Cost: %f, Gain: %f"), *GetName(), Cost,
+	       Gain);
 
 	// 소모값(Cost)이나 회복값(Gain) 중 하나라도 있고, GE가 할당되어 있다면
-	if ((Cost > 0.f || Gain > 0.f) && CostGameplayEffectClass && ActorInfo && ActorInfo->AbilitySystemComponent.IsValid())
+	if ((Cost > 0.f || Gain > 0.f) && CostGameplayEffectClass && ActorInfo && ActorInfo->AbilitySystemComponent.
+		IsValid())
 	{
 		FGameplayEffectContextHandle ContextHandle = ActorInfo->AbilitySystemComponent->MakeEffectContext();
 		ContextHandle.AddSourceObject(this);
 
-		FGameplayEffectSpecHandle SpecHandle = ActorInfo->AbilitySystemComponent->MakeOutgoingSpec(CostGameplayEffectClass, GetAbilityLevel(), ContextHandle);
+		FGameplayEffectSpecHandle SpecHandle = ActorInfo->AbilitySystemComponent->MakeOutgoingSpec(
+			CostGameplayEffectClass, GetAbilityLevel(), ContextHandle);
 		if (SpecHandle.IsValid())
 		{
-			UE_LOG(LogTemp, Log, TEXT("[GA_PlayerSkillBase] Created Cost GameplayEffectSpec for skill: %s"), *GetName());
+			UE_LOG(LogTemp, Log, TEXT("[GA_PlayerSkillBase] Created Cost GameplayEffectSpec for skill: %s"),
+			       *GetName());
 			// 소모는 빼고(-) 회복은 더하는(+) 최종 변화량 계산
 			const float FinalMentalChange = Gain - Cost;
 
@@ -76,7 +83,8 @@ void UGA_PlayerSkillBase::ApplyCost(const FGameplayAbilitySpecHandle Handle, con
 
 			/*ActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());*/
 
-			FActiveGameplayEffectHandle AppliedGE = ActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+			FActiveGameplayEffectHandle AppliedGE = ActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(
+				*SpecHandle.Data.Get());
 
 			if (AppliedGE.WasSuccessfullyApplied())
 			{
@@ -128,8 +136,8 @@ void UGA_PlayerSkillBase::ApplyCooldown(
 	}
 
 	FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(
-			CooldownGameplayEffectClass,
-			GetAbilityLevel()
+		CooldownGameplayEffectClass,
+		GetAbilityLevel()
 	);
 
 	if (!SpecHandle.IsValid() || !SpecHandle.Data.IsValid())
@@ -152,6 +160,7 @@ void UGA_PlayerSkillBase::EndAbility(
 )
 {
 	UnregisterSkillChainStepEvent();
+	UnregisterSkillHitCheckEvent();
 
 	Super::EndAbility(
 		Handle,
@@ -317,6 +326,55 @@ void UGA_PlayerSkillBase::HandleSkillChainStepEvent(const FGameplayEventData& Pa
 	// 자식 Base에서 override해서 실제 스킬 실행 처리
 }
 
+void UGA_PlayerSkillBase::RegisterSkillHitCheckEvent()
+{
+	if (SkillHitCheckEventTask)
+	{
+		return;
+	}
+
+	SkillHitCheckEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this,
+		DGGameplayTags::Event_Attack_HitCheck,
+		nullptr,
+		false,
+		true
+	);
+
+	if (!SkillHitCheckEventTask)
+	{
+		return;
+	}
+
+	SkillHitCheckEventTask->EventReceived.AddDynamic(
+		this,
+		&UGA_PlayerSkillBase::OnSkillHitCheckEvent
+	);
+
+	SkillHitCheckEventTask->ReadyForActivation();
+}
+
+void UGA_PlayerSkillBase::UnregisterSkillHitCheckEvent()
+{
+	if (!SkillHitCheckEventTask)
+	{
+		return;
+	}
+
+	SkillHitCheckEventTask->EndTask();
+	SkillHitCheckEventTask = nullptr;
+}
+
+void UGA_PlayerSkillBase::OnSkillHitCheckEvent(FGameplayEventData Payload)
+{
+	HandleSkillHitCheckEvent(Payload);
+}
+
+void UGA_PlayerSkillBase::HandleSkillHitCheckEvent(const FGameplayEventData& Payload)
+{
+	// 자식 Base에서 override해서 실제 판정 처리
+}
+
 ADG_PlayerState* UGA_PlayerSkillBase::GetDGPlayerState() const
 {
 	const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo();
@@ -378,14 +436,42 @@ float UGA_PlayerSkillBase::GetSkillCooldown() const
 
 float UGA_PlayerSkillBase::GetSkillSpiritCost() const
 {
-	const UPlayerSkillData* Data = GetPlayerSkillData();
-	return Data ? Data->SpiritCost : 0.f;
+	const UPlayerSkillData* PlayerSkillData = GetPlayerSkillData();
+	if (!PlayerSkillData)
+	{
+		return 0.f;
+	}
+
+	if (PlayerSkillData->ComboCount > 1)
+	{
+		const UPlayerSkillData* CurrentComboSkillData = GetCurrentComboSkillData();
+		if (CurrentComboSkillData && CurrentComboSkillData != PlayerSkillData)
+		{
+			return CurrentComboSkillData->SpiritCost;
+		}
+	}
+
+	return PlayerSkillData->SpiritCost;
 }
 
 float UGA_PlayerSkillBase::GetSkillSpiritGain() const
 {
-	const UPlayerSkillData* Data = GetPlayerSkillData();
-	return Data ? Data->SpiritGain : 0.f;
+	const UPlayerSkillData* PlayerSkillData = GetPlayerSkillData();
+	if (!PlayerSkillData)
+	{
+		return 0.f;
+	}
+
+	if (PlayerSkillData->ComboCount > 1)
+	{
+		const UPlayerSkillData* CurrentComboSkillData = GetCurrentComboSkillData();
+		if (CurrentComboSkillData && CurrentComboSkillData != PlayerSkillData)
+		{
+			return CurrentComboSkillData->SpiritGain;
+		}
+	}
+
+	return PlayerSkillData->SpiritGain;
 }
 
 float UGA_PlayerSkillBase::GetSkillDamageMultiplier() const
@@ -486,4 +572,59 @@ bool UGA_PlayerSkillBase::IsSkillInputHeld(FGameplayTag InSkillTag) const
 	}
 
 	return PlayerCharacter->IsSkillTagHeld(InSkillTag);
+}
+
+void UGA_PlayerSkillBase::ApplySkillMovementPolicy()
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (!ASC)
+	{
+		return;
+	}
+
+	if (!bSkillActivePolicyApplied)
+	{
+		ASC->AddLooseGameplayTag(DGGameplayTags::State_Skill_Active);
+		bSkillActivePolicyApplied = true;
+	}
+
+	const UPlayerSkillData* CurrentSkillData = GetCurrentComboSkillData();
+	if (!CurrentSkillData)
+	{
+		CurrentSkillData = GetPlayerSkillData();
+	}
+
+	if (!CurrentSkillData)
+	{
+		return;
+	}
+
+	if (!CurrentSkillData->bCanMoveWhileCasting && !bSkillMovementLockedApplied)
+	{
+		ASC->AddLooseGameplayTag(DGGameplayTags::State_Movement_Locked);
+		bSkillMovementLockedApplied = true;
+	}
+}
+
+void UGA_PlayerSkillBase::ClearSkillMovementPolicy()
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (!ASC)
+	{
+		bSkillActivePolicyApplied = false;
+		bSkillMovementLockedApplied = false;
+		return;
+	}
+
+	if (bSkillMovementLockedApplied)
+	{
+		ASC->RemoveLooseGameplayTag(DGGameplayTags::State_Movement_Locked);
+		bSkillMovementLockedApplied = false;
+	}
+
+	if (bSkillActivePolicyApplied)
+	{
+		ASC->RemoveLooseGameplayTag(DGGameplayTags::State_Skill_Active);
+		bSkillActivePolicyApplied = false;
+	}
 }

@@ -60,6 +60,27 @@ enum class EPlayerSkillAOEOrigin : uint8
 	ProjectileImpact UMETA(DisplayName = "Projectile Impact")
 };
 
+UENUM(BlueprintType)
+enum class EPlayerSkillHitShape : uint8
+{
+	None UMETA(DisplayName = "None"),
+
+	AcquiredTarget UMETA(DisplayName = "Acquired Target"),
+	ForwardBox UMETA(DisplayName = "Forward Box"),
+	Radius UMETA(DisplayName = "Radius")
+};
+
+UENUM(BlueprintType)
+enum class EPlayerSkillHitOrigin : uint8
+{
+	None UMETA(DisplayName = "None"),
+
+	Self UMETA(DisplayName = "Self"),
+	AcquiredTarget UMETA(DisplayName = "Acquired Target"),
+	GroundLocation UMETA(DisplayName = "Ground Location"),
+	ProjectileImpact UMETA(DisplayName = "Projectile Impact")
+};
+
 /**
  * 플레이어 스킬 공통 데이터.
  * 스킬 수치 / 판정 / 연출 / 연결 GA 정보를 관리한다.
@@ -81,11 +102,11 @@ public:
 	/** 스킬 태그. 예: Skill.Warrior.SharpStrike */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Identity")
 	FGameplayTag SkillTag;
-	
+
 	/** 쿨다운 식별 태그. 예: Cooldown.Skill.Warrior.DoomStrike */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Identity")
 	FGameplayTag CooldownTag;
-	
+
 	/** 입력 이벤트 태그. 예: Event.Input.Warrior.SharpStrike : 콤보입력을 받는 Skill의 경우 콤보입력 ANS에서 tapping Event가 들어왔는지 확인하기 위한 태그*/
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Input")
 	FGameplayTag InputEventTag;
@@ -143,7 +164,7 @@ public:
 	/** 공격력 계수 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Value")
 	float BaseDamageMultiplier = 1.f;
-	
+
 	/** 타수. Step DA에서 사용하며, 실제 1hit 배율은 BaseDamageMultiplier / HitCount로 계산한다. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Value", meta = (ClampMin = "1"))
 	int32 HitCount = 1;
@@ -155,7 +176,7 @@ public:
 	/** 콤보 단계 수 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Combo", meta = (ClampMin = "1"))
 	int32 ComboCount = 1;
-	
+
 	/** 콤보 단계별 SkillData. ComboCount와 연동된다. Index 0 = 1타 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Combo")
 	TArray<TObjectPtr<UPlayerSkillData>> ComboSkillDataList;
@@ -180,12 +201,20 @@ public:
 	/** 차지 단계 시간. 예: 0.5 / 1.0 / 1.5 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Charge")
 	TArray<float> ChargeLevelTimes;
-	
+
 	/** 차지 단계별 버프 GameplayEffect. Index 0 = 1단, Index 1 = 2단, Index 2 = 3단 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Charge")
 	TArray<TSubclassOf<UGameplayEffect>> ChargeLevelBuffEffects;
 
-public:
+public:	
+	/** 데미지 판정 형태 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Hit")
+	EPlayerSkillHitShape HitShape = EPlayerSkillHitShape::None;
+
+	/** 데미지 판정 기준 위치 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Hit")
+	EPlayerSkillHitOrigin HitOrigin = EPlayerSkillHitOrigin::None;
+	
 	/** 전방 Box 판정 크기 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Melee")
 	FVector BoxExtent = FVector(200.f, 100.f, 100.f);
@@ -193,6 +222,14 @@ public:
 	/** 전방 Box 판정 위치 보정 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Melee")
 	float BoxForwardOffset = 200.f;
+
+	/**맥스 히트 타겟수 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill|Hit")
+	int32 MaxHitTargets = 1;
+	
+	/**디버그 라인 On/OFF True 면 디버그라인이 보이고 False 면 안보임. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Debug")
+	bool bDrawHitDebug = false;
 
 	/** 투사체 클래스 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Projectile")
