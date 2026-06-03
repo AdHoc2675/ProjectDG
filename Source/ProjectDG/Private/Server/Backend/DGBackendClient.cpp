@@ -8,6 +8,55 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 
+namespace
+{
+	FDGCharacterSummary ParseCharacterSummaryFromJsonObject(
+		const TSharedPtr<FJsonObject>& CharacterObject
+	)
+	{
+		FDGCharacterSummary CharacterSummary;
+
+		if (!CharacterObject.IsValid())
+		{
+			return CharacterSummary;
+		}
+
+		double SlotIndexDouble = -1.0;
+		if (CharacterObject->TryGetNumberField(TEXT("slotIndex"), SlotIndexDouble))
+		{
+			CharacterSummary.SlotIndex = static_cast<int32>(SlotIndexDouble);
+		}
+
+		bool bIsEmpty = true;
+		if (CharacterObject->TryGetBoolField(TEXT("isEmpty"), bIsEmpty))
+		{
+			CharacterSummary.bIsEmpty = bIsEmpty;
+		}
+
+		double CharacterIdDouble = 0.0;
+		if (CharacterObject->TryGetNumberField(TEXT("characterId"), CharacterIdDouble))
+		{
+			CharacterSummary.CharacterId = static_cast<int64>(CharacterIdDouble);
+		}
+
+		double LevelDouble = 0.0;
+		if (CharacterObject->TryGetNumberField(TEXT("level"), LevelDouble))
+		{
+			CharacterSummary.Level = static_cast<int32>(LevelDouble);
+		}
+
+		CharacterObject->TryGetStringField(TEXT("characterName"), CharacterSummary.CharacterName);
+		CharacterObject->TryGetStringField(TEXT("classTag"), CharacterSummary.ClassTag);
+
+		if (CharacterSummary.CharacterId > 0)
+		{
+			CharacterSummary.bIsEmpty = false;
+		}
+
+		return CharacterSummary;
+	}
+}
+
 void UDGBackendClient::Initialize(const FString& InBaseUrl)
 {
 	BaseUrl = InBaseUrl;
@@ -49,6 +98,22 @@ void UDGBackendClient::GetCharacters(
 	);
 
 	SendCharacterListGetRequest(EndPoint, Callback);
+}
+
+void UDGBackendClient::CreateCharacter(
+	int64 AccountId,
+	const FDGCreateCharacterRequest& RequestData,
+	FDGCreateCharacterApiResultCallback Callback
+)
+{
+	const FString EndPoint = FString::Printf(
+		TEXT("/api/accounts/%lld/characters"),
+		AccountId
+	);
+
+	const FString BodyJson = BuildCreateCharacterJson(RequestData);
+
+	SendCreateCharacterPostRequest(EndPoint, BodyJson, Callback);
 }
 
 void UDGBackendClient::CreateSession(
@@ -218,6 +283,56 @@ void UDGBackendClient::SendCharacterListGetRequest(
 	}
 }
 
+void UDGBackendClient::SendCreateCharacterPostRequest(
+	const FString& EndPoint,
+	const FString& BodyJson,
+	FDGCreateCharacterApiResultCallback Callback
+)
+{
+	const FString Url = BaseUrl + EndPoint;
+
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
+
+	HttpRequest->SetURL(Url);
+	HttpRequest->SetVerb(TEXT("POST"));
+	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	HttpRequest->SetHeader(TEXT("Accept"), TEXT("application/json"));
+	HttpRequest->SetContentAsString(BodyJson);
+
+	HttpRequest->OnProcessRequestComplete().BindLambda(
+		[Callback](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful) mutable
+		{
+			int32 ResponseCode = 0;
+			FString ResponseBody;
+
+			if (Response.IsValid())
+			{
+				ResponseCode = Response->GetResponseCode();
+				ResponseBody = Response->GetContentAsString();
+			}
+
+			const FDGCreateCharacterResult Result = ParseCreateCharacterResult(
+				bWasSuccessful,
+				ResponseCode,
+				ResponseBody
+			);
+
+			Callback.ExecuteIfBound(Result.bSuccess, Result);
+		}
+	);
+
+	const bool bStarted = HttpRequest->ProcessRequest();
+
+	if (!bStarted)
+	{
+		FDGCreateCharacterResult Result;
+		Result.bSuccess = false;
+		Result.ErrorMessage = TEXT("Failed to start HTTP request.");
+
+		Callback.ExecuteIfBound(false, Result);
+	}
+}
+
 FString UDGBackendClient::BuildRegisterJson(
 	const FDGRegisterRequest& RequestData
 )
@@ -243,6 +358,23 @@ FString UDGBackendClient::BuildLoginJson(
 
 	JsonObject->SetStringField(TEXT("loginId"), RequestData.LoginId);
 	JsonObject->SetStringField(TEXT("password"), RequestData.Password);
+
+	FString OutputString;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
+	FJsonSerializer::Serialize(JsonObject, Writer);
+
+	return OutputString;
+}
+
+FString UDGBackendClient::BuildCreateCharacterJson(
+	const FDGCreateCharacterRequest& RequestData
+)
+{
+	TSharedRef<FJsonObject> JsonObject = MakeShared<FJsonObject>();
+
+	JsonObject->SetNumberField(TEXT("slotIndex"), static_cast<double>(RequestData.SlotIndex));
+	JsonObject->SetStringField(TEXT("characterName"), RequestData.CharacterName);
+	JsonObject->SetStringField(TEXT("classTag"), RequestData.ClassTag);
 
 	FString OutputString;
 	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
@@ -426,24 +558,7 @@ FDGCharacterListResult UDGBackendClient::ParseCharacterListResult(
 				continue;
 			}
 
-			FDGCharacterSummary CharacterSummary;
-
-			double CharacterIdDouble = 0.0;
-			if (CharacterObject->TryGetNumberField(TEXT("characterId"), CharacterIdDouble))
-			{
-				CharacterSummary.CharacterId = static_cast<int64>(CharacterIdDouble);
-			}
-
-			double LevelDouble = 1.0;
-			if (CharacterObject->TryGetNumberField(TEXT("level"), LevelDouble))
-			{
-				CharacterSummary.Level = static_cast<int32>(LevelDouble);
-			}
-
-			CharacterObject->TryGetStringField(TEXT("characterName"), CharacterSummary.CharacterName);
-			CharacterObject->TryGetStringField(TEXT("classTag"), CharacterSummary.ClassTag);
-
-			Result.Characters.Add(CharacterSummary);
+			Result.Characters.Add(ParseCharacterSummaryFromJsonObject(CharacterObject));
 		}
 	}
 
@@ -463,6 +578,88 @@ FDGCharacterListResult UDGBackendClient::ParseCharacterListResult(
 	{
 		Result.bSuccess = false;
 		Result.ErrorMessage = TEXT("Backend response is missing AccountId.");
+	}
+
+	return Result;
+}
+
+FDGCreateCharacterResult UDGBackendClient::ParseCreateCharacterResult(
+	bool bRequestSucceeded,
+	int32 ResponseCode,
+	const FString& ResponseBody
+)
+{
+	FDGCreateCharacterResult Result;
+
+	if (!bRequestSucceeded)
+	{
+		Result.bSuccess = false;
+		Result.ErrorMessage = TEXT("HTTP request failed.");
+		return Result;
+	}
+
+	if (ResponseCode < 200 || ResponseCode >= 300)
+	{
+		Result.bSuccess = false;
+		Result.ErrorMessage = FString::Printf(
+			TEXT("Backend returned HTTP error. Code: %d Body: %s"),
+			ResponseCode,
+			*ResponseBody
+		);
+		return Result;
+	}
+
+	TSharedPtr<FJsonObject> JsonObject;
+	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseBody);
+
+	if (!FJsonSerializer::Deserialize(Reader, JsonObject) || !JsonObject.IsValid())
+	{
+		Result.bSuccess = false;
+		Result.ErrorMessage = TEXT("Failed to parse backend JSON response.");
+		return Result;
+	}
+
+	bool bApiSuccess = false;
+	JsonObject->TryGetBoolField(TEXT("success"), bApiSuccess);
+
+	Result.bSuccess = bApiSuccess;
+
+	double AccountIdDouble = 0.0;
+	if (JsonObject->TryGetNumberField(TEXT("accountId"), AccountIdDouble))
+	{
+		Result.AccountId = static_cast<int64>(AccountIdDouble);
+	}
+
+	JsonObject->TryGetStringField(TEXT("message"), Result.Message);
+
+	const TSharedPtr<FJsonObject>* CharacterObject = nullptr;
+	if (JsonObject->TryGetObjectField(TEXT("character"), CharacterObject))
+	{
+		Result.Character = ParseCharacterSummaryFromJsonObject(*CharacterObject);
+	}
+
+	if (!Result.bSuccess)
+	{
+		if (Result.Message.IsEmpty())
+		{
+			Result.ErrorMessage = TEXT("Backend API returned success=false.");
+		}
+		else
+		{
+			Result.ErrorMessage = Result.Message;
+		}
+	}
+
+	if (Result.bSuccess && Result.AccountId <= 0)
+	{
+		Result.bSuccess = false;
+		Result.ErrorMessage = TEXT("Backend response is missing AccountId.");
+	}
+
+	if (Result.bSuccess && Result.Character.CharacterId <= 0)
+	{
+		Result.bSuccess = false;
+		Result.ErrorMessage = TEXT("Backend response is missing CharacterId.");
 	}
 
 	return Result;

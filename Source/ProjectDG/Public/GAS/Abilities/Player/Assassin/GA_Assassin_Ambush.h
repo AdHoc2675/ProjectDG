@@ -3,25 +3,20 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GAS/Abilities/Base/GA_TargetMontageSkillBase.h"
+#include "GAS/Abilities/Base/GA_MeleeAttackBase.h"
 #include "GA_Assassin_Ambush.generated.h"
 
 /**
  * 암살자 2번 스킬: 기습
  *
- * 타겟 획득 / Commit / 몽타주 재생 / Hit 이벤트 수신은
- * UGA_TargetMontageSkillBase 흐름을 사용한다.
+ * 논타겟 전방 범위 히트박스 스킬.
+ * 실제 콤보 / 몽타주 / HitEvent / 데미지 처리는 UGA_MeleeAttackBase에서 처리한다.
  */
 UCLASS()
-class PROJECTDG_API UGA_Assassin_Ambush : public UGA_TargetMontageSkillBase
+class PROJECTDG_API UGA_Assassin_Ambush : public UGA_MeleeAttackBase
 {
 	GENERATED_BODY()
 	
 public:
 	UGA_Assassin_Ambush();
-
-protected:
-	virtual void ExecuteTargetSkill(AActor* TargetActor, const FGameplayEventData& Payload) override;
-	
-	
 };

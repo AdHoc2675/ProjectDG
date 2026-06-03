@@ -24,16 +24,16 @@ public:
 	UGA_Assassin_Infiltration();
 
 	virtual void EndAbility(
-					const FGameplayAbilitySpecHandle Handle,
-					const FGameplayAbilityActorInfo* ActorInfo,
-					const FGameplayAbilityActivationInfo ActivationInfo,
-					bool bReplicateEndAbility,
-					bool bWasCancelled
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		bool bReplicateEndAbility,
+		bool bWasCancelled
 	) override;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Infiltration|Movement")
-	float BehindTargetDistance = 120.f;
+	float BehindTargetDistance = 240.f;
 
 	UPROPERTY()
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> MoveBeginTask = nullptr;

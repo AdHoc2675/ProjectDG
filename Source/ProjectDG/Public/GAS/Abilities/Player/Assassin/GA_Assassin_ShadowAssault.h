@@ -33,7 +33,7 @@ public:
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "ShadowAssault|Movement")
-	float BehindTargetDistance = 160.f;
+	float BehindTargetDistance = 200.f;
 
 	UPROPERTY()
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> MoveBeginTask = nullptr;
