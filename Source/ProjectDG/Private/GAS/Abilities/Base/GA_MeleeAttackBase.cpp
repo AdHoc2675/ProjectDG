@@ -8,10 +8,11 @@
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Character/Player/Data/PlayerSkillData.h"
 #include "Character/Player/PlayerCharacterBase.h"
-#include "Engine/OverlapResult.h"
-#include "TimerManager.h"
-#include "Core/DG_Debug.h"
 #include "Core/DG_GameplayTags.h"
+#include "DrawDebugHelpers.h"
+#include "Engine/OverlapResult.h"
+#include "Engine/World.h"
+#include "TimerManager.h"
 
 UGA_MeleeAttackBase::UGA_MeleeAttackBase()
 {
@@ -35,17 +36,32 @@ void UGA_MeleeAttackBase::ActivateAbility(
 		return;
 	}
 
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	if (!CheckCooldown(Handle, ActorInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
+	if (!CheckCost(Handle, ActorInfo))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	if (!CommitAbilityCost(Handle, ActorInfo, ActivationInfo))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	bMeleeCostCommitted = true;
+
 	ActiveChainStepIndex = GetCurrentComboStepIndex();
 	ActiveHitGroupIndex = ActiveChainStepIndex + 1;
 	ActiveHitCount = GetSkillHitCount();
 	ActiveDamageMultiplierPerHit = GetSkillDamageMultiplierPerHit();
-
+	
+	ApplySkillMovementPolicy();
 
 	RegisterSkillChainStepEvent();
 	RegisterSkillHitCheckEvent();
@@ -65,6 +81,30 @@ void UGA_MeleeAttackBase::EndAbility(
 	const bool bShouldActivateNextChain = bPendingChainActivation;
 	const FGameplayTag NextChainSkillTag = GetSkillTag();
 
+	const UPlayerSkillData* PlayerSkillData = GetPlayerSkillData();
+	const int32 ComboCount = PlayerSkillData ? FMath::Max(1, PlayerSkillData->ComboCount) : 1;
+
+	const bool bIsChainSkill = ComboCount > 1;
+	const bool bIsFinalChainStep = ActiveChainStepIndex >= ComboCount - 1;
+
+	const bool bShouldCommitCooldown =
+		bMeleeCostCommitted &&
+		!bShouldActivateNextChain &&
+		!bWasCancelled &&
+		(!bIsChainSkill || bIsFinalChainStep);
+
+	if (bShouldCommitCooldown)
+	{
+		CommitAbilityCooldown(
+			Handle,
+			ActorInfo,
+			ActivationInfo,
+			false
+		);
+	}
+
+	ClearSkillMovementPolicy();
+	
 	ResetMeleeState();
 
 	MontageTask = nullptr;
@@ -98,6 +138,7 @@ void UGA_MeleeAttackBase::ResetMeleeState()
 	bChainInputWindowOpen = false;
 	bBufferedNextChainInput = false;
 	bPendingChainActivation = false;
+	bMeleeCostCommitted = false;
 
 	HitActorsByCombo.Reset();
 }
@@ -239,7 +280,6 @@ void UGA_MeleeAttackBase::TryRequestNextChainFromHeldInput()
 
 	const bool bHeld = IsSkillInputHeld(SkillTag);
 
-
 	if (!bHeld)
 	{
 		return;
@@ -268,7 +308,6 @@ void UGA_MeleeAttackBase::RequestNextChainActivation()
 
 	bPendingChainActivation = true;
 	bBufferedNextChainInput = false;
-
 
 	EndMeleeAbility();
 }
@@ -300,7 +339,7 @@ void UGA_MeleeAttackBase::ActivateNextChainOnNextTick(FGameplayTag SkillTag)
 				return;
 			}
 
-			const bool bActivated = WeakASC->TryActivateAbilitiesByTag(SkillTagContainer);
+			WeakASC->TryActivateAbilitiesByTag(SkillTagContainer);
 		})
 	);
 }
@@ -319,8 +358,6 @@ void UGA_MeleeAttackBase::HandleSkillChainStepEvent(const FGameplayEventData& Pa
 		return;
 	}
 
-	const int32 PreviousStepIndex = GetCurrentComboStepIndex();
-
 	AdvanceCurrentComboStep();
 }
 
@@ -331,7 +368,25 @@ void UGA_MeleeAttackBase::HandleSkillHitCheckEvent(const FGameplayEventData& Pay
 		return;
 	}
 
-	ExecuteForwardBoxHitCheckFromSkillData();
+	const UPlayerSkillData* CurrentSkillData = GetCurrentComboSkillData();
+	if (!CurrentSkillData)
+	{
+		return;
+	}
+
+	if (CurrentSkillData->HitShape == EPlayerSkillHitShape::ForwardBox &&
+		CurrentSkillData->HitOrigin == EPlayerSkillHitOrigin::Self)
+	{
+		ExecuteForwardBoxHitCheckFromSkillData();
+		return;
+	}
+
+	if (CurrentSkillData->HitShape == EPlayerSkillHitShape::Radius &&
+		CurrentSkillData->HitOrigin == EPlayerSkillHitOrigin::Self)
+	{
+		ExecuteRadiusHitCheckFromSkillData();
+		return;
+	}
 }
 
 void UGA_MeleeAttackBase::ExecuteForwardBoxHitCheckFromSkillData()
@@ -342,17 +397,17 @@ void UGA_MeleeAttackBase::ExecuteForwardBoxHitCheckFromSkillData()
 		return;
 	}
 
-	TArray<AActor*> HitActors;
-	CollectForwardBoxHitActorsFromSkillData(HitActors);
+	TArray<AActor*> BoxHitActors;
+	CollectForwardBoxHitActorsFromSkillData(BoxHitActors);
 
-	if (HitActors.Num() <= 0)
+	if (BoxHitActors.Num() <= 0)
 	{
 		return;
 	}
 
 	const FVector AvatarLocation = AvatarActor->GetActorLocation();
 
-	HitActors.Sort([AvatarLocation](const AActor& A, const AActor& B)
+	BoxHitActors.Sort([AvatarLocation](const AActor& A, const AActor& B)
 	{
 		return FVector::DistSquared(AvatarLocation, A.GetActorLocation()) <
 			FVector::DistSquared(AvatarLocation, B.GetActorLocation());
@@ -361,17 +416,17 @@ void UGA_MeleeAttackBase::ExecuteForwardBoxHitCheckFromSkillData()
 	const UPlayerSkillData* CurrentSkillData = GetCurrentComboSkillData();
 	const int32 MaxHitTargets = CurrentSkillData ? FMath::Max(1, CurrentSkillData->MaxHitTargets) : 1;
 
-	if (HitActors.Num() > MaxHitTargets)
+	if (BoxHitActors.Num() > MaxHitTargets)
 	{
-		HitActors.SetNum(MaxHitTargets);
+		BoxHitActors.SetNum(MaxHitTargets);
 	}
 
 	const int32 HitCount = FMath::Max(1, ActiveHitCount);
 	const float DamageMultiplierPerHit = GetCurrentComboDamage();
 
-	for (AActor* HitActor : HitActors)
+	for (AActor* BoxHitActor : BoxHitActors)
 	{
-		if (!IsValidMeleeHitActor(AvatarActor, HitActor))
+		if (!IsValidMeleeHitActor(AvatarActor, BoxHitActor))
 		{
 			continue;
 		}
@@ -379,20 +434,20 @@ void UGA_MeleeAttackBase::ExecuteForwardBoxHitCheckFromSkillData()
 		for (int32 HitIndex = 0; HitIndex < HitCount; ++HitIndex)
 		{
 			ApplyDamageToTarget(
-				HitActor,
+				BoxHitActor,
 				0.f,
 				DamageMultiplierPerHit,
 				GetSkillTag(),
-				HitActor->GetActorLocation(),
+				BoxHitActor->GetActorLocation(),
 				true
 			);
 		}
 	}
 }
 
-void UGA_MeleeAttackBase::CollectForwardBoxHitActorsFromSkillData(TArray<AActor*>& OutHitActors) const
+void UGA_MeleeAttackBase::CollectForwardBoxHitActorsFromSkillData(TArray<AActor*>& OutBoxHitActors) const
 {
-	OutHitActors.Reset();
+	OutBoxHitActors.Reset();
 
 	AActor* AvatarActor = GetAvatarActorFromAbility();
 	const UPlayerSkillData* CurrentSkillData = GetCurrentComboSkillData();
@@ -431,24 +486,24 @@ void UGA_MeleeAttackBase::CollectForwardBoxHitActorsFromSkillData(TArray<AActor*
 		QueryParams
 	);
 
-	TSet<TWeakObjectPtr<AActor>> UniqueActors;
+	TSet<TWeakObjectPtr<AActor>> UniqueBoxActors;
 
 	for (const FOverlapResult& OverlapResult : OverlapResults)
 	{
-		AActor* HitActor = OverlapResult.GetActor();
+		AActor* OverlappedActor = OverlapResult.GetActor();
 
-		if (!IsValidMeleeHitActor(AvatarActor, HitActor))
+		if (!IsValidMeleeHitActor(AvatarActor, OverlappedActor))
 		{
 			continue;
 		}
 
-		if (UniqueActors.Contains(HitActor))
+		if (UniqueBoxActors.Contains(OverlappedActor))
 		{
 			continue;
 		}
 
-		UniqueActors.Add(HitActor);
-		OutHitActors.Add(HitActor);
+		UniqueBoxActors.Add(OverlappedActor);
+		OutBoxHitActors.Add(OverlappedActor);
 	}
 
 	if (CurrentSkillData->bDrawHitDebug)
@@ -459,10 +514,140 @@ void UGA_MeleeAttackBase::CollectForwardBoxHitActorsFromSkillData(TArray<AActor*
 				Center,
 				BoxHalfExtent,
 				BoxRotation.Rotator(),
-				OutHitActors.Num() > 0 ? FColor::Green : FColor::Red,
+				OutBoxHitActors.Num() > 0 ? FColor::Green : FColor::Red,
 				1.5f
 			);
 		}
+	}
+}
+
+void UGA_MeleeAttackBase::ExecuteRadiusHitCheckFromSkillData()
+{
+	AActor* AvatarActor = GetAvatarActorFromAbility();
+	if (!AvatarActor || !AvatarActor->HasAuthority())
+	{
+		return;
+	}
+
+	TArray<AActor*> RadiusHitActors;
+	CollectRadiusHitActorsFromSkillData(RadiusHitActors);
+
+	if (RadiusHitActors.Num() <= 0)
+	{
+		return;
+	}
+
+	const FVector AvatarLocation = AvatarActor->GetActorLocation();
+
+	RadiusHitActors.Sort([AvatarLocation](const AActor& A, const AActor& B)
+	{
+		return FVector::DistSquared(AvatarLocation, A.GetActorLocation()) <
+			FVector::DistSquared(AvatarLocation, B.GetActorLocation());
+	});
+
+	const UPlayerSkillData* CurrentSkillData = GetCurrentComboSkillData();
+	const int32 MaxHitTargets = CurrentSkillData ? FMath::Max(1, CurrentSkillData->MaxHitTargets) : 1;
+
+	if (RadiusHitActors.Num() > MaxHitTargets)
+	{
+		RadiusHitActors.SetNum(MaxHitTargets);
+	}
+
+	const int32 HitCount = FMath::Max(1, ActiveHitCount);
+	const float DamageMultiplierPerHit = GetCurrentComboDamage();
+
+	for (AActor* RadiusHitActor : RadiusHitActors)
+	{
+		if (!IsValidMeleeHitActor(AvatarActor, RadiusHitActor))
+		{
+			continue;
+		}
+
+		for (int32 HitIndex = 0; HitIndex < HitCount; ++HitIndex)
+		{
+			ApplyDamageToTarget(
+				RadiusHitActor,
+				0.f,
+				DamageMultiplierPerHit,
+				GetSkillTag(),
+				RadiusHitActor->GetActorLocation(),
+				true
+			);
+		}
+	}
+}
+
+void UGA_MeleeAttackBase::CollectRadiusHitActorsFromSkillData(TArray<AActor*>& OutRadiusHitActors) const
+{
+	OutRadiusHitActors.Reset();
+
+	AActor* AvatarActor = GetAvatarActorFromAbility();
+	const UPlayerSkillData* CurrentSkillData = GetCurrentComboSkillData();
+
+	if (!AvatarActor || !CurrentSkillData)
+	{
+		return;
+	}
+
+	const float Radius = CurrentSkillData->Radius;
+	if (Radius <= 0.f)
+	{
+		return;
+	}
+
+	UWorld* World = AvatarActor->GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	const FVector Center = AvatarActor->GetActorLocation();
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(MeleeSkillRadiusHitCheck), false, AvatarActor);
+	QueryParams.AddIgnoredActor(AvatarActor);
+
+	TArray<FOverlapResult> OverlapResults;
+
+	World->OverlapMultiByChannel(
+		OverlapResults,
+		Center,
+		FQuat::Identity,
+		ECC_Pawn,
+		FCollisionShape::MakeSphere(Radius),
+		QueryParams
+	);
+
+	TSet<TWeakObjectPtr<AActor>> UniqueRadiusActors;
+
+	for (const FOverlapResult& OverlapResult : OverlapResults)
+	{
+		AActor* OverlappedActor = OverlapResult.GetActor();
+
+		if (!IsValidMeleeHitActor(AvatarActor, OverlappedActor))
+		{
+			continue;
+		}
+
+		if (UniqueRadiusActors.Contains(OverlappedActor))
+		{
+			continue;
+		}
+
+		UniqueRadiusActors.Add(OverlappedActor);
+		OutRadiusHitActors.Add(OverlappedActor);
+	}
+
+	if (CurrentSkillData->bDrawHitDebug)
+	{
+		DrawDebugSphere(
+			World,
+			Center,
+			Radius,
+			32,
+			OutRadiusHitActors.Num() > 0 ? FColor::Green : FColor::Red,
+			false,
+			1.5f
+		);
 	}
 }
 

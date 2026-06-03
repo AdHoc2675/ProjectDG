@@ -186,4 +186,15 @@ protected:
 protected:
 	/** 현재 SkillTag가 할당된 입력 슬롯이 눌려 있는지 확인 */
 	bool IsSkillInputHeld(FGameplayTag InSkillTag) const;
+	
+protected:
+	/** SkillData의 이동 정책에 따라 스킬 실행 중 공통 상태 태그를 부여한다. */
+	void ApplySkillMovementPolicy();
+
+	/** ApplySkillMovementPolicy에서 부여한 이동 정책 태그를 제거한다. */
+	void ClearSkillMovementPolicy();
+
+protected:
+	bool bSkillActivePolicyApplied = false;
+	bool bSkillMovementLockedApplied = false;
 };

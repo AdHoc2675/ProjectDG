@@ -89,6 +89,18 @@ protected:
 
       /** 서버 권한에서 타겟에게 데미지와 상태이상 등 실제 스킬 효과를 적용한다. */
       virtual void ExecuteTargetSkill(AActor* TargetActor, const FGameplayEventData& Payload);
+      
+      /** AN_SkillHit 이벤트를 받았을 때 TargetMontage 계열 판정을 실행한다. */
+      virtual void HandleSkillHitCheckEvent(const FGameplayEventData& Payload) override;
+
+      /** DA Radius 기준으로 시전자 중심 원형 판정을 실행한다. */
+      virtual void ExecuteRadiusHitCheckFromSkillData(const FGameplayEventData& Payload);
+
+      /** DA Radius 기준으로 원형 범위 내 대상들을 수집한다. */
+      virtual void CollectRadiusHitActorsFromSkillData(TArray<AActor*>& OutHitActors) const;
+
+      /** RadiusOverlap 결과로 들어온 Actor가 실제 데미지 대상인지 검사한다. */
+      virtual bool IsValidRadiusHitActor(AActor* AvatarActor, AActor* TargetActor) const;
 
       /** 최초 획득한 타겟이 아직 존재하고 유효하며 사거리 안에 있는지 검사한다. */
       virtual bool IsCurrentTargetStillValid() const;

@@ -436,14 +436,42 @@ float UGA_PlayerSkillBase::GetSkillCooldown() const
 
 float UGA_PlayerSkillBase::GetSkillSpiritCost() const
 {
-	const UPlayerSkillData* Data = GetPlayerSkillData();
-	return Data ? Data->SpiritCost : 0.f;
+	const UPlayerSkillData* PlayerSkillData = GetPlayerSkillData();
+	if (!PlayerSkillData)
+	{
+		return 0.f;
+	}
+
+	if (PlayerSkillData->ComboCount > 1)
+	{
+		const UPlayerSkillData* CurrentComboSkillData = GetCurrentComboSkillData();
+		if (CurrentComboSkillData && CurrentComboSkillData != PlayerSkillData)
+		{
+			return CurrentComboSkillData->SpiritCost;
+		}
+	}
+
+	return PlayerSkillData->SpiritCost;
 }
 
 float UGA_PlayerSkillBase::GetSkillSpiritGain() const
 {
-	const UPlayerSkillData* Data = GetPlayerSkillData();
-	return Data ? Data->SpiritGain : 0.f;
+	const UPlayerSkillData* PlayerSkillData = GetPlayerSkillData();
+	if (!PlayerSkillData)
+	{
+		return 0.f;
+	}
+
+	if (PlayerSkillData->ComboCount > 1)
+	{
+		const UPlayerSkillData* CurrentComboSkillData = GetCurrentComboSkillData();
+		if (CurrentComboSkillData && CurrentComboSkillData != PlayerSkillData)
+		{
+			return CurrentComboSkillData->SpiritGain;
+		}
+	}
+
+	return PlayerSkillData->SpiritGain;
 }
 
 float UGA_PlayerSkillBase::GetSkillDamageMultiplier() const
@@ -544,4 +572,59 @@ bool UGA_PlayerSkillBase::IsSkillInputHeld(FGameplayTag InSkillTag) const
 	}
 
 	return PlayerCharacter->IsSkillTagHeld(InSkillTag);
+}
+
+void UGA_PlayerSkillBase::ApplySkillMovementPolicy()
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (!ASC)
+	{
+		return;
+	}
+
+	if (!bSkillActivePolicyApplied)
+	{
+		ASC->AddLooseGameplayTag(DGGameplayTags::State_Skill_Active);
+		bSkillActivePolicyApplied = true;
+	}
+
+	const UPlayerSkillData* CurrentSkillData = GetCurrentComboSkillData();
+	if (!CurrentSkillData)
+	{
+		CurrentSkillData = GetPlayerSkillData();
+	}
+
+	if (!CurrentSkillData)
+	{
+		return;
+	}
+
+	if (!CurrentSkillData->bCanMoveWhileCasting && !bSkillMovementLockedApplied)
+	{
+		ASC->AddLooseGameplayTag(DGGameplayTags::State_Movement_Locked);
+		bSkillMovementLockedApplied = true;
+	}
+}
+
+void UGA_PlayerSkillBase::ClearSkillMovementPolicy()
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (!ASC)
+	{
+		bSkillActivePolicyApplied = false;
+		bSkillMovementLockedApplied = false;
+		return;
+	}
+
+	if (bSkillMovementLockedApplied)
+	{
+		ASC->RemoveLooseGameplayTag(DGGameplayTags::State_Movement_Locked);
+		bSkillMovementLockedApplied = false;
+	}
+
+	if (bSkillActivePolicyApplied)
+	{
+		ASC->RemoveLooseGameplayTag(DGGameplayTags::State_Skill_Active);
+		bSkillActivePolicyApplied = false;
+	}
 }

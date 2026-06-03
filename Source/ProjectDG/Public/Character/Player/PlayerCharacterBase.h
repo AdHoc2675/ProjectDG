@@ -194,6 +194,8 @@ protected:
 	void LookAction(const FInputActionValue& InputActionValue);
 	void MoveAction(const FInputActionValue& InputActionValue);
 	
+	bool IsMovementInputLocked() const;
+	
 	void ShiftActionStarted();
 	void SendDodgeEvent(FVector Direction, bool bHasInput);
 
