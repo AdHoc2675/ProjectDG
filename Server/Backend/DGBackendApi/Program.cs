@@ -50,7 +50,9 @@ app.MapGet("/health", () =>
  * - LoginId 중복 검사
  * - PasswordHasher로 비밀번호 저장
  * - Account 생성
- * - Warrior Lv.1 기본 캐릭터 자동 생성
+ *
+ * 캐릭터는 자동 생성하지 않는다.
+ * 캐릭터 생성은 /api/accounts/{accountId}/characters API에서 처리한다.
  */
 app.MapPost("/api/auth/register", async (
     RegisterRequest request,
@@ -111,19 +113,6 @@ app.MapPost("/api/auth/register", async (
     };
 
     account.PasswordHash = passwordHasher.HashPassword(account, request.Password);
-
-    var character = new GameCharacter
-    {
-        Account = account,
-        SlotIndex = 0,
-        CharacterName = $"{displayName}_Warrior",
-        ClassTag = "Character.Class.Warrior",
-        Level = 1,
-        Status = "Active",
-        CreatedAtUtc = now
-    };
-
-    account.Characters.Add(character);
 
     db.Accounts.Add(account);
 
