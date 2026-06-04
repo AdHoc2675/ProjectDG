@@ -43,6 +43,10 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Skill_ChainInput_Open)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Skill_ChainInput_Close)
 	
+	// Weapon GameplayCue Event
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Weapon_Blade_BasicTrail_Begin)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Weapon_Blade_BasicTrail_End)
+	
 	// MeleeAttack Combo Miss 완화
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combo_InputRequest)
 
@@ -72,6 +76,9 @@ namespace DGGameplayTags
 	
 	// 암살자 콤보공격 '빠른 베기(QuickSlash)'에서 다음 콤보로 넘어가기 위한 InputEvent Tag
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Assassin_QuickSlash)
+	
+	// GameplayCue Tag
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Weapon_Blade_BasicTrail)
 
 	// Skill_Common
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Common_Dodge)
