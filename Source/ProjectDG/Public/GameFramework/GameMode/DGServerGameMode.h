@@ -8,12 +8,14 @@
 
 class AController;
 class APlayerController;
+class APawn;
 
 struct FDGConnectedMemberInfo
 {
 	FString SessionId;
 	int64 AccountId = 0;
 	int64 CharacterId = 0;
+	FString ClassTag;
 	FString Role;
 };
 
@@ -43,6 +45,8 @@ public:
 
 	virtual void RestartPlayer(AController* NewPlayer) override;
 
+	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
+
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
@@ -51,6 +55,18 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "DG|Server")
 	float HeartbeatIntervalSeconds = 10.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "DG|Server|Pawn")
+	TSubclassOf<APawn> WarriorPawnClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "DG|Server|Pawn")
+	TSubclassOf<APawn> ArcherPawnClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "DG|Server|Pawn")
+	TSubclassOf<APawn> MagePawnClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "DG|Server|Pawn")
+	TSubclassOf<APawn> AssassinPawnClass;
 
 	FTimerHandle SessionHeartbeatTimerHandle;
 
@@ -131,6 +147,7 @@ private:
 		FString& OutSessionId,
 		int64& OutAccountId,
 		int64& OutCharacterId,
+		FString& OutClassTag,
 		FString& OutRole
 	);
 
