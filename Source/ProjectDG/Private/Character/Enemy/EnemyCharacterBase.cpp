@@ -18,6 +18,8 @@
 #include "System/DGDamageNumberPoolSubsystem.h"
 #include "UI/Widget/Damage/DGDamageNumberActor.h"
 
+#include "UObject/ConstructorHelpers.h"
+
 AEnemyCharacterBase::AEnemyCharacterBase() {
   AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(
       TEXT("AbilitySystemComponent"));
@@ -35,6 +37,12 @@ AEnemyCharacterBase::AEnemyCharacterBase() {
   if (USkeletalMeshComponent* MeshComp = GetMesh())
   {
       MeshComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+  }
+
+  static ConstructorHelpers::FClassFinder<ADGDamageNumberActor> DamageActorClassFinder(TEXT("/Game/__ProjectDG/__BP/UI/Damage/BP_DGDamageNumberActor.BP_DGDamageNumberActor_C"));
+  if (DamageActorClassFinder.Succeeded())
+  {
+      DamageNumberClass = DamageActorClassFinder.Class;
   }
 }
 
@@ -89,7 +97,7 @@ void AEnemyCharacterBase::Multicast_ShowDamageNumber_Implementation(float Damage
 
         if (UDGDamageNumberPoolSubsystem* PoolSubsystem = World->GetSubsystem<UDGDamageNumberPoolSubsystem>())
         {
-            float ZOffset = GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 50.f : 100.f;
+            float ZOffset = GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 10.f : 20.f;
             FVector SpawnLoc = GetActorLocation() + FVector(FMath::RandRange(-40.f, 40.f), FMath::RandRange(-40.f, 40.f), ZOffset);
 
             if (ADGDamageNumberActor* DmgActor = PoolSubsystem->AcquireDamageNumber(DamageNumberClass, SpawnLoc))
