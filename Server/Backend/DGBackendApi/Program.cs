@@ -844,6 +844,7 @@ app.MapPost("/api/sessions/validate-join", async (
             SessionId: "",
             AccountId: 0,
             CharacterId: 0,
+            ClassTag: "",
             Role: "",
             Message: "SessionId is required."
         ));
@@ -856,6 +857,7 @@ app.MapPost("/api/sessions/validate-join", async (
             SessionId: request.SessionId,
             AccountId: 0,
             CharacterId: 0,
+            ClassTag: "",
             Role: "",
             Message: "JoinToken is required."
         ));
@@ -872,6 +874,7 @@ app.MapPost("/api/sessions/validate-join", async (
             SessionId: request.SessionId,
             AccountId: 0,
             CharacterId: 0,
+             ClassTag: "",
             Role: "",
             Message: "Session not found."
         ));
@@ -884,6 +887,7 @@ app.MapPost("/api/sessions/validate-join", async (
             SessionId: request.SessionId,
             AccountId: 0,
             CharacterId: 0,
+            ClassTag: "",
             Role: "",
             Message: $"Session is not joinable. Current status: {session.Status}"
         ));
@@ -901,19 +905,41 @@ app.MapPost("/api/sessions/validate-join", async (
             SessionId: request.SessionId,
             AccountId: 0,
             CharacterId: 0,
+            ClassTag: "",
             Role: "",
             Message: "Invalid join token."
         ));
     }
+    
+    var character = await db.GameCharacters
+        .FirstOrDefaultAsync(x =>
+            x.CharacterId == member.CharacterId &&
+            x.AccountId == member.AccountId &&
+            x.Status == "Active"
+        );
+    
+    if (character == null)
+    {
+        return Results.BadRequest(new ValidateJoinResponse(
+            Success: false,
+            SessionId: request.SessionId,
+            AccountId: member.AccountId,
+            CharacterId: member.CharacterId,
+            ClassTag: "",
+            Role: member.Role,
+            Message: "Character not found."
+        ));
+    }
 
-    return Results.Ok(new ValidateJoinResponse(
-        Success: true,
-        SessionId: session.SessionId,
-        AccountId: member.AccountId,
-        CharacterId: member.CharacterId,
-        Role: member.Role,
-        Message: "Join token is valid."
-    ));
+   return Results.Ok(new ValidateJoinResponse(
+       Success: true,
+       SessionId: session.SessionId,
+       AccountId: member.AccountId,
+       CharacterId: member.CharacterId,
+       ClassTag: character.ClassTag,
+       Role: member.Role,
+       Message: "Join token is valid."
+   ));
 });
 
 /**
@@ -1426,11 +1452,12 @@ public record ValidateJoinRequest(
 
 public record ValidateJoinResponse(
     bool Success,
-    string SessionId,
-    long AccountId,
-    long CharacterId,
-    string Role,
-    string Message
+       string SessionId,
+       long AccountId,
+       long CharacterId,
+       string ClassTag,
+       string Role,
+       string Message
 );
 
 public record SessionStartedRequest(
