@@ -27,7 +27,9 @@ AFieldEnemyBase::AFieldEnemyBase() {
   bIsReturning = false;
 
   // 풀링되는 액터는 월드 파티션 그리드에 의해 언로드되지 않도록 공간 로딩을 끕니다.
-  bIsSpatiallyLoaded = false;
+#if WITH_EDITORONLY_DATA
+  SetIsSpatiallyLoaded(false);
+#endif
 
   EnemyAttributeSet =
       CreateDefaultSubobject<UDG_EnemyAttributeSet>(TEXT("EnemyAttributeSet"));
