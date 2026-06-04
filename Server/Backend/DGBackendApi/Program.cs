@@ -115,6 +115,7 @@ app.MapPost("/api/auth/register", async (
     var character = new GameCharacter
     {
         Account = account,
+        SlotIndex = 0,
         CharacterName = $"{displayName}_Warrior",
         ClassTag = "Character.Class.Warrior",
         Level = 1,
@@ -218,7 +219,7 @@ app.MapPost("/api/auth/login", async (
 });
 
 /**
- * 계정 캐릭터 목록 조회 API
+ * 계정 캐릭터 3슬롯 목록 조회 API
  */
 app.MapGet("/api/accounts/{accountId:long}/characters", async (
     long accountId,
@@ -230,7 +231,7 @@ app.MapGet("/api/accounts/{accountId:long}/characters", async (
         return Results.BadRequest(new CharacterListResponse(
             Success: false,
             AccountId: accountId,
-            Characters: new List<CharacterSummaryResponse>(),
+            Characters: new List<CharacterSlotResponse>(),
             Message: "AccountId must be greater than 0."
         ));
     }
@@ -246,7 +247,7 @@ app.MapGet("/api/accounts/{accountId:long}/characters", async (
         return Results.NotFound(new CharacterListResponse(
             Success: false,
             AccountId: accountId,
-            Characters: new List<CharacterSummaryResponse>(),
+            Characters: new List<CharacterSlotResponse>(),
             Message: "Account not found."
         ));
     }
@@ -256,20 +257,187 @@ app.MapGet("/api/accounts/{accountId:long}/characters", async (
             x.AccountId == accountId &&
             x.Status == "Active"
         )
-        .OrderBy(x => x.CharacterId)
-        .Select(x => new CharacterSummaryResponse(
-            x.CharacterId,
-            x.CharacterName,
-            x.ClassTag,
-            x.Level
-        ))
+        .OrderBy(x => x.SlotIndex)
         .ToListAsync();
+
+    var slots = Enumerable.Range(0, 3)
+        .Select(slotIndex =>
+        {
+            var character = characters.FirstOrDefault(x => x.SlotIndex == slotIndex);
+
+            if (character == null)
+            {
+                return EmptyCharacterSlot(slotIndex);
+            }
+
+            return new CharacterSlotResponse(
+                SlotIndex: character.SlotIndex,
+                IsEmpty: false,
+                CharacterId: character.CharacterId,
+                CharacterName: character.CharacterName,
+                ClassTag: character.ClassTag,
+                Level: character.Level
+            );
+        })
+        .ToList();
 
     return Results.Ok(new CharacterListResponse(
         Success: true,
         AccountId: accountId,
-        Characters: characters,
-        Message: "Characters loaded."
+        Characters: slots,
+        Message: "Character slots loaded."
+    ));
+});
+
+/**
+ * 캐릭터 생성 API
+ *
+ * 처리:
+ * - Account 검증
+ * - SlotIndex 0~2 검증
+ * - 해당 슬롯 중복 검사
+ * - 계정당 Active 캐릭터 최대 3개 제한
+ * - 캐릭터 생성
+ */
+app.MapPost("/api/accounts/{accountId:long}/characters", async (
+    long accountId,
+    CreateCharacterRequest request,
+    DGDbContext db
+) =>
+{
+    if (accountId <= 0)
+    {
+        return Results.BadRequest(new CreateCharacterResponse(
+            Success: false,
+            AccountId: accountId,
+            Character: EmptyCharacterSlot(request.SlotIndex),
+            Message: "AccountId must be greater than 0."
+        ));
+    }
+
+    if (request.SlotIndex < 0 || request.SlotIndex > 2)
+    {
+        return Results.BadRequest(new CreateCharacterResponse(
+            Success: false,
+            AccountId: accountId,
+            Character: EmptyCharacterSlot(request.SlotIndex),
+            Message: "SlotIndex must be between 0 and 2."
+        ));
+    }
+
+    var characterName = string.IsNullOrWhiteSpace(request.CharacterName)
+        ? ""
+        : request.CharacterName.Trim();
+
+    if (string.IsNullOrWhiteSpace(characterName))
+    {
+        return Results.BadRequest(new CreateCharacterResponse(
+            Success: false,
+            AccountId: accountId,
+            Character: EmptyCharacterSlot(request.SlotIndex),
+            Message: "CharacterName is required."
+        ));
+    }
+
+    var classTag = string.IsNullOrWhiteSpace(request.ClassTag)
+        ? "Character.Class.Warrior"
+        : request.ClassTag.Trim();
+
+    var accountExists = await db.Accounts
+        .AnyAsync(x =>
+            x.AccountId == accountId &&
+            x.Status == "Active"
+        );
+
+    if (!accountExists)
+    {
+        return Results.NotFound(new CreateCharacterResponse(
+            Success: false,
+            AccountId: accountId,
+            Character: EmptyCharacterSlot(request.SlotIndex),
+            Message: "Account not found."
+        ));
+    }
+
+    var activeCharacterCount = await db.GameCharacters
+        .CountAsync(x =>
+            x.AccountId == accountId &&
+            x.Status == "Active"
+        );
+
+    if (activeCharacterCount >= 3)
+    {
+        return Results.BadRequest(new CreateCharacterResponse(
+            Success: false,
+            AccountId: accountId,
+            Character: EmptyCharacterSlot(request.SlotIndex),
+            Message: "Character slots are full."
+        ));
+    }
+
+    var slotOccupied = await db.GameCharacters
+        .AnyAsync(x =>
+            x.AccountId == accountId &&
+            x.SlotIndex == request.SlotIndex &&
+            x.Status == "Active"
+        );
+
+    if (slotOccupied)
+    {
+        return Results.BadRequest(new CreateCharacterResponse(
+            Success: false,
+            AccountId: accountId,
+            Character: EmptyCharacterSlot(request.SlotIndex),
+            Message: "Character slot is already occupied."
+        ));
+    }
+
+    var duplicatedName = await db.GameCharacters
+        .AnyAsync(x =>
+            x.AccountId == accountId &&
+            x.CharacterName == characterName &&
+            x.Status == "Active"
+        );
+
+    if (duplicatedName)
+    {
+        return Results.BadRequest(new CreateCharacterResponse(
+            Success: false,
+            AccountId: accountId,
+            Character: EmptyCharacterSlot(request.SlotIndex),
+            Message: "CharacterName already exists."
+        ));
+    }
+
+    var now = DateTime.UtcNow;
+
+    var character = new GameCharacter
+    {
+        AccountId = accountId,
+        SlotIndex = request.SlotIndex,
+        CharacterName = characterName,
+        ClassTag = classTag,
+        Level = 1,
+        Status = "Active",
+        CreatedAtUtc = now
+    };
+
+    db.GameCharacters.Add(character);
+
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new CreateCharacterResponse(
+        Success: true,
+        AccountId: accountId,
+        Character: new CharacterSlotResponse(
+            SlotIndex: character.SlotIndex,
+            IsEmpty: false,
+            CharacterId: character.CharacterId,
+            CharacterName: character.CharacterName,
+            ClassTag: character.ClassTag,
+            Level: character.Level
+        ),
+        Message: "Character created."
     ));
 });
 
@@ -1105,6 +1273,18 @@ static string HashRoomPassword(string roomPassword)
     return Convert.ToHexString(hashBytes);
 }
 
+static CharacterSlotResponse EmptyCharacterSlot(int slotIndex)
+{
+    return new CharacterSlotResponse(
+        SlotIndex: slotIndex,
+        IsEmpty: true,
+        CharacterId: 0,
+        CharacterName: "",
+        ClassTag: "",
+        Level: 0
+    );
+}
+
 static void EndSession(GameSession session, DateTime now)
 {
     session.Status = "Ended";
@@ -1162,7 +1342,9 @@ public record LoginResponse(
     string Message
 );
 
-public record CharacterSummaryResponse(
+public record CharacterSlotResponse(
+    int SlotIndex,
+    bool IsEmpty,
     long CharacterId,
     string CharacterName,
     string ClassTag,
@@ -1172,7 +1354,20 @@ public record CharacterSummaryResponse(
 public record CharacterListResponse(
     bool Success,
     long AccountId,
-    List<CharacterSummaryResponse> Characters,
+    List<CharacterSlotResponse> Characters,
+    string Message
+);
+
+public record CreateCharacterRequest(
+    int SlotIndex,
+    string CharacterName,
+    string ClassTag
+);
+
+public record CreateCharacterResponse(
+    bool Success,
+    long AccountId,
+    CharacterSlotResponse Character,
     string Message
 );
 
