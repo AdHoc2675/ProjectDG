@@ -123,6 +123,63 @@ void UDGAuthSubsystem::RequestCharacterList()
 	);
 }
 
+void UDGAuthSubsystem::CreateCharacter(
+	int32 SlotIndex,
+	const FString& CharacterName,
+	const FString& ClassTag
+)
+{
+	if (!BackendClient)
+	{
+		const FString ErrorMessage = TEXT("[DGAuthSubsystem] BackendClient is null.");
+
+		OnCharacterCreateFailed.Broadcast(ErrorMessage);
+		return;
+	}
+
+	if (CurrentAccountId <= 0)
+	{
+		const FString ErrorMessage = TEXT("[DGAuthSubsystem] CurrentAccountId is invalid.");
+
+		OnCharacterCreateFailed.Broadcast(ErrorMessage);
+		return;
+	}
+
+	if (SlotIndex < 0 || SlotIndex > 2)
+	{
+		const FString ErrorMessage = TEXT("Character slot index is invalid.");
+
+		OnCharacterCreateFailed.Broadcast(ErrorMessage);
+		return;
+	}
+
+	const FString TrimmedCharacterName = CharacterName.TrimStartAndEnd();
+
+	if (TrimmedCharacterName.IsEmpty())
+	{
+		const FString ErrorMessage = TEXT("CharacterName is empty.");
+
+		OnCharacterCreateFailed.Broadcast(ErrorMessage);
+		return;
+	}
+
+	FDGCreateCharacterRequest RequestData;
+	RequestData.SlotIndex = SlotIndex;
+	RequestData.CharacterName = TrimmedCharacterName;
+	RequestData.ClassTag = ClassTag.IsEmpty()
+							   ? TEXT("Character.Class.Warrior")
+							   : ClassTag;
+
+	BackendClient->CreateCharacter(
+		CurrentAccountId,
+		RequestData,
+		FDGCreateCharacterApiResultCallback::CreateUObject(
+			this,
+			&UDGAuthSubsystem::HandleCreateCharacterCompleted
+		)
+	);
+}
+
 bool UDGAuthSubsystem::SelectCharacterById(int64 CharacterId)
 {
 	if (CharacterId <= 0)
@@ -132,16 +189,44 @@ bool UDGAuthSubsystem::SelectCharacterById(int64 CharacterId)
 
 	for (const FDGCharacterSummary& Character : CachedCharacters)
 	{
+		if (Character.bIsEmpty)
+		{
+			continue;
+		}
+
 		if (Character.CharacterId == CharacterId)
 		{
 			SelectedCharacterId = Character.CharacterId;
-
 
 			OnCharacterSelected.Broadcast(Character);
 			return true;
 		}
 	}
 
+	return false;
+}
+
+bool UDGAuthSubsystem::SelectCharacterBySlotIndex(int32 SlotIndex)
+{
+	if (SlotIndex < 0 || SlotIndex > 2)
+	{
+		return false;
+	}
+
+	for (const FDGCharacterSummary& Character : CachedCharacters)
+	{
+		if (Character.SlotIndex != SlotIndex)
+		{
+			continue;
+		}
+
+		if (Character.bIsEmpty || Character.CharacterId <= 0)
+		{
+			return false;
+		}
+
+		return SelectCharacterById(Character.CharacterId);
+	}
 
 	return false;
 }
@@ -257,11 +342,32 @@ void UDGAuthSubsystem::HandleCharacterListCompleted(
 
 	OnCharacterListLoaded.Broadcast(Result);
 
-	if (CachedCharacters.Num() == 1)
-	{
-		SelectCharacterById(CachedCharacters[0].CharacterId);
-	}
+	// if (CachedCharacters.Num() == 1)
+	// {
+	// 	SelectCharacterById(CachedCharacters[0].CharacterId);
+	// }
 }
+
+void UDGAuthSubsystem::HandleCreateCharacterCompleted(
+	bool bSuccess,
+	const FDGCreateCharacterResult& Result
+)
+{
+	if (!bSuccess)
+	{
+		const FString ErrorMessage = Result.ErrorMessage.IsEmpty()
+										 ? TEXT("Character create request failed.")
+										 : Result.ErrorMessage;
+
+		OnCharacterCreateFailed.Broadcast(ErrorMessage);
+		return;
+	}
+
+	OnCharacterCreated.Broadcast(Result);
+
+	RequestCharacterList();
+}
+
 
 bool UDGAuthSubsystem::ValidateLoginInput(
 	const FString& LoginId,
