@@ -97,8 +97,19 @@ void AEnemyCharacterBase::Multicast_ShowDamageNumber_Implementation(float Damage
 
         if (UDGDamageNumberPoolSubsystem* PoolSubsystem = World->GetSubsystem<UDGDamageNumberPoolSubsystem>())
         {
-            float ZOffset = GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 10.f : 20.f;
-            FVector SpawnLoc = GetActorLocation() + FVector(FMath::RandRange(-40.f, 40.f), FMath::RandRange(-40.f, 40.f), ZOffset);
+            // 캡슐의 절반 높이
+            float CapsuleHalfHeight = GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 50.f;
+
+            // 몬스터 중앙 위치에서 랜덤하게 앞뒤좌우로
+            FVector SpawnLoc = GetActorLocation() + FVector(FMath::RandRange(-40.f, 40.f), FMath::RandRange(-40.f, 40.f), 0.f);
+
+            // 몬스터 바닥(발밑)의 Z 축 좌표 계산
+            float BottomZ = GetActorLocation().Z - CapsuleHalfHeight;
+
+            // 발밑을 기준으로 항상 플레이어 눈높이(대략 높이 100~180)에서 뜨도록 Z값 덮어쓰기
+            // 몬스터가 너무 작아서 키가 100도 안될 수 있으니, 몬스터 높이의 절반과 눈높이 중 더 높은 곳에 띄우도록 보정
+            float TargetHeight = FMath::Max(CapsuleHalfHeight, FMath::RandRange(50.f, 100.f));
+            SpawnLoc.Z = BottomZ + TargetHeight;
 
             if (ADGDamageNumberActor* DmgActor = PoolSubsystem->AcquireDamageNumber(DamageNumberClass, SpawnLoc))
             {
