@@ -8,6 +8,7 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerState.h"
+#include "GameFramework/DG_PlayerState.h"
 #include "HAL/PlatformMisc.h"
 #include "HttpModule.h"
 #include "Interfaces/IHttpRequest.h"
@@ -382,6 +383,21 @@ void ADGServerGameMode::ValidateJoinTokenAsync(
 			MemberInfo.Role = ResponseRole;
 
 			ConnectedMemberInfos.Add(TObjectKey<AController>(PlayerController), MemberInfo);
+			
+			if (ADG_PlayerState* DGPlayerState = PlayerController->GetPlayerState<ADG_PlayerState>())
+			{
+				DGPlayerState->SetSessionMemberInfo(
+					MemberInfo.SessionId,
+					MemberInfo.AccountId,
+					MemberInfo.CharacterId,
+					MemberInfo.ClassTag,
+					MemberInfo.Role
+				);
+			}
+			else
+			{
+				Debug::Print(TEXT("[DGServerGameMode] DG_PlayerState is null when setting session member info."));
+			}
 
 			if (APawn* ExistingPawn = PlayerController->GetPawn())
 			{

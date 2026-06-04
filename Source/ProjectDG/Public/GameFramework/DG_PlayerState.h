@@ -19,13 +19,13 @@ ADG_PlayerState
 Player 의 상태, GAS관리 호스트
 
 구조 
--Player 는 GAS 를 PlayerState에 붙임.
--GAS 기반인 Attribute 도 일단 State에 붙여둠.
+- Player 는 GAS 를 PlayerState에 붙임.
+- GAS 기반인 Attribute 도 일단 State에 붙여둠.
 
 현재 구현내용
--ASC 생성 
--Attribute 생성
--나중에 Character 에서 가져다 쓸 getter 생성 및 제공
+- ASC 생성 
+- Attribute 생성
+- Character 에서 가져다 쓸 getter 생성 및 제공
 */
 
 USTRUCT(BlueprintType)
@@ -51,21 +51,21 @@ class PROJECTDG_API ADG_PlayerState : public APlayerState, public IAbilitySystem
 
 public:
 	ADG_PlayerState();
-	
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	
+
 public:
-	//IAbilitySystemInterface 구현
-	//외부에서 Character 에게 ASC 를 달라 할때 사용할 진입포인트
+	// IAbilitySystemInterface 구현
+	// 외부에서 Character 에게 ASC 를 달라 할때 사용할 진입포인트
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 	// AttributeSet Getter
-	//나중에 Combat/Character/UI/데미지 등에서 사용	
-	UFUNCTION(BlueprintCallable, Category="GAS")
+	// 나중에 Combat/Character/UI/데미지 등에서 사용
+	UFUNCTION(BlueprintCallable, Category = "GAS")
 	UDG_AttributeSet* GetDGAttributeSet() const;
-	
+
 public:
 	// Getter 함수 추가
 	UFUNCTION(BlueprintCallable, Category = "Player|Growth")
@@ -77,6 +77,27 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Player|Growth")
 	int32 GetCurrentExp() const { return CurrentExp; }
 
+	UFUNCTION(BlueprintCallable, Category = "Player|Session")
+	FString GetSessionId() const { return SessionId; }
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Session")
+	int64 GetAccountId() const { return AccountId; }
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Session")
+	int64 GetCharacterId() const { return CharacterId; }
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Session")
+	FString GetSessionRole() const { return SessionRole; }
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Session")
+	void SetSessionMemberInfo(
+		const FString& InSessionId,
+		int64 InAccountId,
+		int64 InCharacterId,
+		const FString& InClassTag,
+		const FString& InRole
+	);
+
 	UFUNCTION(BlueprintCallable, Category = "Player|Skill")
 	int32 GetCurrentSkillComboStepIndex(FGameplayTag SkillTag, int32 ComboCount) const;
 
@@ -87,11 +108,11 @@ public:
 	void ResetSkillComboStep(FGameplayTag SkillTag);
 
 protected:
-	//Playerstate 가 직접 소유하는 ASC 
+	// PlayerState 가 직접 소유하는 ASC 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 
-	//ROW 이름
+	// ROW 이름
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Init")
 	FName AttributeInitRowName = TEXT("Player");
 
@@ -108,13 +129,25 @@ protected:
 
 	UFUNCTION()
 	void OnRep_SkillComboStates();
-	
+
 public:
 	UFUNCTION(BlueprintCallable, Category = "Player|Init")
 	void InitializePlayerDataFromClassData(const UPlayerCharacterClassData* InClassData);
-	
+
 #pragma region Character
 protected:
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Player|Session")
+	FString SessionId;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Player|Session")
+	int64 AccountId = 0;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Player|Session")
+	int64 CharacterId = 0;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Player|Session")
+	FString SessionRole;
+
 	UPROPERTY(ReplicatedUsing = OnRep_CharacterClassTag, BlueprintReadOnly, Category = "Player|Character")
 	FGameplayTag CharacterClassTag;
 
@@ -135,12 +168,12 @@ protected:
 
 	UFUNCTION()
 	void OnRep_CurrentExp();
-	
-	//Attributeset 생성
+
+	// AttributeSet 생성
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS")
 	TObjectPtr<UDG_AttributeSet> AttributeSet = nullptr;
-	
-	//Attribute table 지정
+
+	// Attribute table 지정
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Init")
 	TObjectPtr<UDataTable> AttributeInitDataTable = nullptr;
 };

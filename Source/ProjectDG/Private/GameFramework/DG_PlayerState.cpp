@@ -22,10 +22,11 @@ ADG_PlayerState::ADG_PlayerState()
 	// ASC 생성 및 설정
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 
-	// ASC복제 활성화. 나중에 네트워크에서 GAS 조회시 복제가 필요
+	// ASC 복제 활성화. 나중에 네트워크에서 GAS 조회시 복제가 필요
 	AbilitySystemComponent->SetIsReplicated(true);
 
-	// 플레이어의 경우 Mixed 모드 권장 (자신의 GameplayEffect는 직접 시뮬레이션하고, 타인에게는 중요한 정보만 동기화)
+	// 플레이어의 경우 Mixed 모드 권장
+	// 자신의 GameplayEffect는 직접 시뮬레이션하고, 타인에게는 중요한 정보만 동기화
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
 	// AttributeSet 생성
@@ -77,8 +78,6 @@ void ADG_PlayerState::InitializeAttributesFromDataTable() const
 	 *
 	 * 중요:
 	 * - 여기의 템플릿 타입은 DataTable의 Row Struct 타입명이어야 한다.
-	 * - 네가 말한 구조체 이름이 실제로 FDT_Attributedla 라면
-	 *   아래처럼 그대로 넣으면 된다.
 	 */
 	const FDT_Attribute* InitRow =
 		AttributeInitDataTable->FindRow<FDT_Attribute>(
@@ -256,6 +255,47 @@ void ADG_PlayerState::ResetSkillComboStep(FGameplayTag SkillTag)
 	ForceNetUpdate();
 }
 
+void ADG_PlayerState::SetSessionMemberInfo(
+	const FString& InSessionId,
+	int64 InAccountId,
+	int64 InCharacterId,
+	const FString& InClassTag,
+	const FString& InRole
+)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	SessionId = InSessionId;
+	AccountId = InAccountId;
+	CharacterId = InCharacterId;
+	SessionRole = InRole;
+
+	if (!InClassTag.IsEmpty())
+	{
+		const FGameplayTag ParsedClassTag = FGameplayTag::RequestGameplayTag(
+			FName(*InClassTag),
+			false
+		);
+
+		if (ParsedClassTag.IsValid())
+		{
+			CharacterClassTag = ParsedClassTag;
+		}
+		else
+		{
+			Debug::Print(FString::Printf(
+				TEXT("[DG_PlayerState] Invalid ClassTag from backend: %s"),
+				*InClassTag
+			));
+		}
+	}
+
+	ForceNetUpdate();
+}
+
 void ADG_PlayerState::InitializePlayerDataFromClassData(const UPlayerCharacterClassData* InClassData)
 {
 	if (!HasAuthority())
@@ -282,6 +322,11 @@ void ADG_PlayerState::InitializePlayerDataFromClassData(const UPlayerCharacterCl
 void ADG_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ADG_PlayerState, SessionId);
+	DOREPLIFETIME(ADG_PlayerState, AccountId);
+	DOREPLIFETIME(ADG_PlayerState, CharacterId);
+	DOREPLIFETIME(ADG_PlayerState, SessionRole);
 
 	DOREPLIFETIME(ADG_PlayerState, CharacterClassTag);
 	DOREPLIFETIME(ADG_PlayerState, Level);
