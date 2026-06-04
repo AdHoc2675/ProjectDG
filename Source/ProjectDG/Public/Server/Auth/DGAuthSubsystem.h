@@ -11,6 +11,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDGOnAuthSucceeded, const FDGAuthRes
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDGOnAuthFailed, const FString&, ErrorMessage);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDGOnCharacterListLoaded, const FDGCharacterListResult&, Result);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDGOnCharacterSelected, const FDGCharacterSummary&, Character);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDGOnAuthCharacterCreated, const FDGCreateCharacterResult&, Result);
 
 /**
  * 계정 / 로그인 / 캐릭터 선택 담당 Subsystem
@@ -48,6 +49,16 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "DG|Auth")
 	void RequestCharacterList();
+	
+	UFUNCTION(BlueprintCallable, Category = "DG|Auth")
+	void CreateCharacter(
+		int32 SlotIndex,
+		const FString& CharacterName,
+		const FString& ClassTag
+	);
+
+	UFUNCTION(BlueprintCallable, Category = "DG|Auth")
+	bool SelectCharacterBySlotIndex(int32 SlotIndex);
 
 	UFUNCTION(BlueprintCallable, Category = "DG|Auth")
 	bool SelectCharacterById(int64 CharacterId);
@@ -88,6 +99,12 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "DG|Auth")
 	FDGOnAuthFailed OnCharacterListFailed;
 
+	UPROPERTY(BlueprintAssignable, Category = "DG|Auth")
+	FDGOnAuthCharacterCreated OnCharacterCreated;
+
+	UPROPERTY(BlueprintAssignable, Category = "DG|Auth")
+	FDGOnAuthFailed OnCharacterCreateFailed;
+	
 	UPROPERTY(BlueprintAssignable, Category = "DG|Auth")
 	FDGOnCharacterSelected OnCharacterSelected;
 
@@ -131,6 +148,11 @@ private:
 		bool bSuccess,
 		const FDGCharacterListResult& Result
 	);
+	
+	void HandleCreateCharacterCompleted(
+	bool bSuccess,
+	const FDGCreateCharacterResult& Result
+);
 
 	bool ValidateLoginInput(
 		const FString& LoginId,

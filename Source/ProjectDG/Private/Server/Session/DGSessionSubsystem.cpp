@@ -19,208 +19,9 @@ void UDGSessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void UDGSessionSubsystem::Deinitialize()
 {
 	BackendClient = nullptr;
+	LastSessionConnectionInfo = FDGSessionConnectionInfo();
 
 	Super::Deinitialize();
-}
-
-void UDGSessionSubsystem::Login(
-	const FString& LoginId,
-	const FString& Password
-)
-{
-	if (!BackendClient)
-	{
-		const FString ErrorMessage = TEXT("[DGSessionSubsystem] BackendClient is null.");
-		OnSessionRequestFailed.Broadcast(ErrorMessage);
-		return;
-	}
-
-	const FString TrimmedLoginId = LoginId.TrimStartAndEnd();
-
-	if (TrimmedLoginId.IsEmpty())
-	{
-		const FString ErrorMessage = TEXT("LoginId is empty.");
-		OnSessionRequestFailed.Broadcast(ErrorMessage);
-		return;
-	}
-
-	if (Password.IsEmpty())
-	{
-		const FString ErrorMessage = TEXT("Password is empty.");
-		OnSessionRequestFailed.Broadcast(ErrorMessage);
-		return;
-	}
-
-	FDGLoginRequest RequestData;
-	RequestData.LoginId = TrimmedLoginId;
-	RequestData.Password = Password;
-
-	BackendClient->Login(
-		RequestData,
-		FDGAuthApiResultCallback::CreateUObject(
-			this,
-			&UDGSessionSubsystem::HandleLoginCompleted
-		)
-	);
-}
-
-void UDGSessionSubsystem::LoadMyCharacters()
-{
-	if (!BackendClient)
-	{
-		const FString ErrorMessage = TEXT("[DGSessionSubsystem] BackendClient is null.");
-		OnSessionRequestFailed.Broadcast(ErrorMessage);
-		return;
-	}
-
-	if (!ValidateLoggedIn())
-	{
-		return;
-	}
-
-	BackendClient->GetCharacters(
-		CurrentAccountId,
-		FDGCharacterListApiResultCallback::CreateUObject(
-			this,
-			&UDGSessionSubsystem::HandleLoadCharactersCompleted
-		)
-	);
-}
-
-void UDGSessionSubsystem::CreateCharacter(
-	int32 SlotIndex,
-	const FString& CharacterName,
-	const FString& ClassTag
-)
-{
-	if (!BackendClient)
-	{
-		const FString ErrorMessage = TEXT("[DGSessionSubsystem] BackendClient is null.");
-		OnSessionRequestFailed.Broadcast(ErrorMessage);
-		return;
-	}
-
-	if (!ValidateLoggedIn())
-	{
-		return;
-	}
-
-	if (SlotIndex < 0 || SlotIndex > 2)
-	{
-		const FString ErrorMessage = TEXT("SlotIndex must be between 0 and 2.");
-		OnSessionRequestFailed.Broadcast(ErrorMessage);
-		return;
-	}
-
-	const FString TrimmedCharacterName = CharacterName.TrimStartAndEnd();
-
-	if (TrimmedCharacterName.IsEmpty())
-	{
-		const FString ErrorMessage = TEXT("CharacterName is empty.");
-		OnSessionRequestFailed.Broadcast(ErrorMessage);
-		return;
-	}
-
-	FDGCreateCharacterRequest RequestData;
-	RequestData.SlotIndex = SlotIndex;
-	RequestData.CharacterName = TrimmedCharacterName;
-	RequestData.ClassTag = ClassTag.IsEmpty()
-		? TEXT("Character.Class.Warrior")
-		: ClassTag;
-
-	BackendClient->CreateCharacter(
-		CurrentAccountId,
-		RequestData,
-		FDGCreateCharacterApiResultCallback::CreateUObject(
-			this,
-			&UDGSessionSubsystem::HandleCreateCharacterCompleted
-		)
-	);
-}
-
-void UDGSessionSubsystem::SelectCharacterById(int64 CharacterId)
-{
-	if (CharacterId <= 0)
-	{
-		const FString ErrorMessage = TEXT("CharacterId must be greater than 0.");
-		OnSessionRequestFailed.Broadcast(ErrorMessage);
-		return;
-	}
-
-	const FDGCharacterSummary* FoundCharacter = CachedCharacterSlots.FindByPredicate(
-		[CharacterId](const FDGCharacterSummary& Character)
-		{
-			return !Character.bIsEmpty && Character.CharacterId == CharacterId;
-		}
-	);
-
-	if (!FoundCharacter)
-	{
-		const FString ErrorMessage = TEXT("Character not found in cached character slots.");
-		OnSessionRequestFailed.Broadcast(ErrorMessage);
-		return;
-	}
-
-	SelectedCharacterId = FoundCharacter->CharacterId;
-
-	OnCharacterSelected.Broadcast(
-		SelectedCharacterId,
-		FoundCharacter->SlotIndex
-	);
-}
-
-void UDGSessionSubsystem::SelectCharacterBySlotIndex(int32 SlotIndex)
-{
-	const FDGCharacterSummary* FoundCharacter = CachedCharacterSlots.FindByPredicate(
-		[SlotIndex](const FDGCharacterSummary& Character)
-		{
-			return !Character.bIsEmpty && Character.SlotIndex == SlotIndex;
-		}
-	);
-
-	if (!FoundCharacter)
-	{
-		const FString ErrorMessage = TEXT("Character slot is empty or not found.");
-		OnSessionRequestFailed.Broadcast(ErrorMessage);
-		return;
-	}
-
-	SelectedCharacterId = FoundCharacter->CharacterId;
-
-	OnCharacterSelected.Broadcast(
-		SelectedCharacterId,
-		FoundCharacter->SlotIndex
-	);
-}
-
-bool UDGSessionSubsystem::IsLoggedIn() const
-{
-	return CurrentAccountId > 0;
-}
-
-bool UDGSessionSubsystem::HasSelectedCharacter() const
-{
-	return SelectedCharacterId > 0;
-}
-
-int64 UDGSessionSubsystem::GetCurrentAccountId() const
-{
-	return CurrentAccountId;
-}
-
-int64 UDGSessionSubsystem::GetSelectedCharacterId() const
-{
-	return SelectedCharacterId;
-}
-
-FString UDGSessionSubsystem::GetCurrentDisplayName() const
-{
-	return CurrentDisplayName;
-}
-
-TArray<FDGCharacterSummary> UDGSessionSubsystem::GetCachedCharacterSlots() const
-{
-	return CachedCharacterSlots;
 }
 
 void UDGSessionSubsystem::CreateRoomAndTravel(
@@ -239,6 +40,11 @@ void UDGSessionSubsystem::CreateRoomAndTravel(
 	}
 
 	if (!ValidateRoomInput(RoomName, RoomPassword))
+	{
+		return;
+	}
+
+	if (!ValidateAccountCharacterInput(AccountId, CharacterId))
 	{
 		return;
 	}
@@ -278,6 +84,11 @@ void UDGSessionSubsystem::JoinRoomAndTravel(
 		return;
 	}
 
+	if (!ValidateAccountCharacterInput(AccountId, CharacterId))
+	{
+		return;
+	}
+
 	FDGJoinSessionRequest RequestData;
 	RequestData.RoomName = RoomName;
 	RequestData.RoomPassword = RoomPassword;
@@ -293,63 +104,12 @@ void UDGSessionSubsystem::JoinRoomAndTravel(
 	);
 }
 
-void UDGSessionSubsystem::CreateRoomAndTravelWithSelectedCharacter(
-	const FString& RoomName,
-	const FString& RoomPassword,
-	const FString& RegionId
-)
-{
-	if (!ValidateLoggedIn())
-	{
-		return;
-	}
-
-	if (!ValidateSelectedCharacter())
-	{
-		return;
-	}
-
-	CreateRoomAndTravel(
-		RoomName,
-		RoomPassword,
-		CurrentAccountId,
-		SelectedCharacterId,
-		RegionId
-	);
-}
-
-void UDGSessionSubsystem::JoinRoomAndTravelWithSelectedCharacter(
-	const FString& RoomName,
-	const FString& RoomPassword
-)
-{
-	if (!ValidateLoggedIn())
-	{
-		return;
-	}
-
-	if (!ValidateSelectedCharacter())
-	{
-		return;
-	}
-
-	JoinRoomAndTravel(
-		RoomName,
-		RoomPassword,
-		CurrentAccountId,
-		SelectedCharacterId
-	);
-}
-
 void UDGSessionSubsystem::TravelToLastSession()
 {
 	if (!LastSessionConnectionInfo.bSuccess)
 	{
-		return;
-	}
-
-	if (LastSessionConnectionInfo.ServerIP.IsEmpty() || LastSessionConnectionInfo.ServerPort <= 0)
-	{
+		const FString ErrorMessage = TEXT("Last session connection info is not valid.");
+		OnSessionRequestFailed.Broadcast(ErrorMessage);
 		return;
 	}
 
@@ -376,76 +136,6 @@ void UDGSessionSubsystem::InitializeBackendBaseUrlFromCommandLine()
 	}
 }
 
-void UDGSessionSubsystem::HandleLoginCompleted(
-	bool bSuccess,
-	const FDGAuthResult& Result
-)
-{
-	if (!bSuccess)
-	{
-		OnSessionRequestFailed.Broadcast(Result.ErrorMessage);
-		return;
-	}
-
-	CurrentAccountId = Result.AccountId;
-	CurrentLoginId = Result.LoginId;
-	CurrentDisplayName = Result.DisplayName;
-	SelectedCharacterId = 0;
-	CachedCharacterSlots.Reset();
-
-	OnLoginSucceeded.Broadcast(Result);
-
-	LoadMyCharacters();
-}
-
-void UDGSessionSubsystem::HandleLoadCharactersCompleted(
-	bool bSuccess,
-	const FDGCharacterListResult& Result
-)
-{
-	if (!bSuccess)
-	{
-		OnSessionRequestFailed.Broadcast(Result.ErrorMessage);
-		return;
-	}
-
-	CachedCharacterSlots = Result.Characters;
-
-	OnCharacterListLoaded.Broadcast(Result);
-}
-
-void UDGSessionSubsystem::HandleCreateCharacterCompleted(
-	bool bSuccess,
-	const FDGCreateCharacterResult& Result
-)
-{
-	if (!bSuccess)
-	{
-		OnSessionRequestFailed.Broadcast(Result.ErrorMessage);
-		return;
-	}
-
-	CachedCharacterSlots.RemoveAll(
-		[&Result](const FDGCharacterSummary& Character)
-		{
-			return Character.SlotIndex == Result.Character.SlotIndex;
-		}
-	);
-
-	CachedCharacterSlots.Add(Result.Character);
-
-	CachedCharacterSlots.Sort(
-		[](const FDGCharacterSummary& A, const FDGCharacterSummary& B)
-		{
-			return A.SlotIndex < B.SlotIndex;
-		}
-	);
-
-	OnCharacterCreated.Broadcast(Result);
-
-	LoadMyCharacters();
-}
-
 void UDGSessionSubsystem::HandleCreateSessionCompleted(
 	bool bSuccess,
 	const FDGSessionConnectionInfo& Result
@@ -453,7 +143,11 @@ void UDGSessionSubsystem::HandleCreateSessionCompleted(
 {
 	if (!bSuccess)
 	{
-		OnSessionRequestFailed.Broadcast(Result.ErrorMessage);
+		const FString ErrorMessage = Result.ErrorMessage.IsEmpty()
+			                             ? TEXT("Create session failed.")
+			                             : Result.ErrorMessage;
+
+		OnSessionRequestFailed.Broadcast(ErrorMessage);
 		return;
 	}
 
@@ -471,7 +165,11 @@ void UDGSessionSubsystem::HandleJoinSessionCompleted(
 {
 	if (!bSuccess)
 	{
-		OnSessionRequestFailed.Broadcast(Result.ErrorMessage);
+		const FString ErrorMessage = Result.ErrorMessage.IsEmpty()
+			                             ? TEXT("Join session failed.")
+			                             : Result.ErrorMessage;
+
+		OnSessionRequestFailed.Broadcast(ErrorMessage);
 		return;
 	}
 
@@ -488,6 +186,8 @@ void UDGSessionSubsystem::TravelToDedicatedServer(
 
 	if (!World)
 	{
+		const FString ErrorMessage = TEXT("[DGSessionSubsystem] World is null.");
+		OnSessionRequestFailed.Broadcast(ErrorMessage);
 		return;
 	}
 
@@ -495,21 +195,36 @@ void UDGSessionSubsystem::TravelToDedicatedServer(
 
 	if (!PlayerController)
 	{
+		const FString ErrorMessage = TEXT("[DGSessionSubsystem] PlayerController is null.");
+		OnSessionRequestFailed.Broadcast(ErrorMessage);
 		return;
 	}
 
-	if (ConnectionInfo.ServerIP.IsEmpty() || ConnectionInfo.ServerPort <= 0)
+	if (ConnectionInfo.ServerIP.IsEmpty())
 	{
+		const FString ErrorMessage = TEXT("ServerIP is empty.");
+		OnSessionRequestFailed.Broadcast(ErrorMessage);
+		return;
+	}
+
+	if (ConnectionInfo.ServerPort <= 0)
+	{
+		const FString ErrorMessage = TEXT("ServerPort is invalid.");
+		OnSessionRequestFailed.Broadcast(ErrorMessage);
 		return;
 	}
 
 	if (ConnectionInfo.SessionId.IsEmpty())
 	{
+		const FString ErrorMessage = TEXT("SessionId is empty.");
+		OnSessionRequestFailed.Broadcast(ErrorMessage);
 		return;
 	}
 
 	if (ConnectionInfo.JoinToken.IsEmpty())
 	{
+		const FString ErrorMessage = TEXT("JoinToken is empty.");
+		OnSessionRequestFailed.Broadcast(ErrorMessage);
 		return;
 	}
 
@@ -546,23 +261,21 @@ bool UDGSessionSubsystem::ValidateRoomInput(
 	return true;
 }
 
-bool UDGSessionSubsystem::ValidateLoggedIn()
+bool UDGSessionSubsystem::ValidateAccountCharacterInput(
+	int64 AccountId,
+	int64 CharacterId
+)
 {
-	if (CurrentAccountId <= 0)
+	if (AccountId <= 0)
 	{
-		const FString ErrorMessage = TEXT("Not logged in.");
+		const FString ErrorMessage = TEXT("AccountId is invalid.");
 		OnSessionRequestFailed.Broadcast(ErrorMessage);
 		return false;
 	}
 
-	return true;
-}
-
-bool UDGSessionSubsystem::ValidateSelectedCharacter()
-{
-	if (SelectedCharacterId <= 0)
+	if (CharacterId <= 0)
 	{
-		const FString ErrorMessage = TEXT("Character is not selected.");
+		const FString ErrorMessage = TEXT("CharacterId is invalid.");
 		OnSessionRequestFailed.Broadcast(ErrorMessage);
 		return false;
 	}
