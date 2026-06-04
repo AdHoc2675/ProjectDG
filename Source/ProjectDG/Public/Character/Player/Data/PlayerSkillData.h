@@ -60,6 +60,27 @@ enum class EPlayerSkillAOEOrigin : uint8
 	ProjectileImpact UMETA(DisplayName = "Projectile Impact")
 };
 
+UENUM(BlueprintType)
+enum class EPlayerSkillHitShape : uint8
+{
+	None UMETA(DisplayName = "None"),
+
+	AcquiredTarget UMETA(DisplayName = "Acquired Target"),
+	ForwardBox UMETA(DisplayName = "Forward Box"),
+	Radius UMETA(DisplayName = "Radius")
+};
+
+UENUM(BlueprintType)
+enum class EPlayerSkillHitOrigin : uint8
+{
+	None UMETA(DisplayName = "None"),
+
+	Self UMETA(DisplayName = "Self"),
+	AcquiredTarget UMETA(DisplayName = "Acquired Target"),
+	GroundLocation UMETA(DisplayName = "Ground Location"),
+	ProjectileImpact UMETA(DisplayName = "Projectile Impact")
+};
+
 /**
  * 플레이어 스킬 공통 데이터.
  * 스킬 수치 / 판정 / 연출 / 연결 GA 정보를 관리한다.
@@ -185,7 +206,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Charge")
 	TArray<TSubclassOf<UGameplayEffect>> ChargeLevelBuffEffects;
 
-public:
+public:	
+	/** 데미지 판정 형태 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Hit")
+	EPlayerSkillHitShape HitShape = EPlayerSkillHitShape::None;
+
+	/** 데미지 판정 기준 위치 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Hit")
+	EPlayerSkillHitOrigin HitOrigin = EPlayerSkillHitOrigin::None;
+	
 	/** 전방 Box 판정 크기 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Melee")
 	FVector BoxExtent = FVector(200.f, 100.f, 100.f);
@@ -197,7 +226,8 @@ public:
 	/**맥스 히트 타겟수 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill|Hit")
 	int32 MaxHitTargets = 1;
-
+	
+	/**디버그 라인 On/OFF True 면 디버그라인이 보이고 False 면 안보임. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|Debug")
 	bool bDrawHitDebug = false;
 

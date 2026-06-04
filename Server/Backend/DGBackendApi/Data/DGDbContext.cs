@@ -61,7 +61,13 @@ public class DGDbContext : DbContext
 
         modelBuilder.Entity<GameCharacter>(entity =>
         {
-            entity.ToTable("game_characters");
+            entity.ToTable("game_characters", table =>
+            {
+                table.HasCheckConstraint(
+                    "ck_game_characters_slot_index",
+                    "slot_index >= 0 AND slot_index <= 2"
+                );
+            });
 
             entity.HasKey(x => x.CharacterId);
 
@@ -70,6 +76,9 @@ public class DGDbContext : DbContext
 
             entity.Property(x => x.AccountId)
                 .HasColumnName("account_id");
+
+            entity.Property(x => x.SlotIndex)
+                .HasColumnName("slot_index");
 
             entity.Property(x => x.CharacterName)
                 .HasColumnName("character_name")
@@ -93,6 +102,10 @@ public class DGDbContext : DbContext
                 .HasColumnName("last_played_at_utc");
 
             entity.HasIndex(x => x.AccountId);
+
+            entity.HasIndex(x => new { x.AccountId, x.SlotIndex })
+                .IsUnique()
+                .HasFilter("status = 'Active'");
         });
 
         modelBuilder.Entity<GameSession>(entity =>

@@ -127,7 +127,9 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Movement_Dodge, "State.Movement.Dodge")
 	UE_DEFINE_GAMEPLAY_TAG(State_Movement_Sprint, "State.Movement.Sprint")
 	UE_DEFINE_GAMEPLAY_TAG(State_Movement_Jump, "State.Movement.Jump")
-	
+	UE_DEFINE_GAMEPLAY_TAG(State_Movement_Locked, "State.Movement.Locked")
+	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Active, "State.Skill.Active")
+		
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_SharpStrike_Active, "State.Skill.Warrior.SharpStrike.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_CuttingSmash_Active, "State.Skill.Warrior.CuttingSmash.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_GroundSlam_Active, "State.Skill.Warrior.GroundSlam.Active")

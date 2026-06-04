@@ -1,4 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -23,16 +24,16 @@ public:
 	UGA_Assassin_FlashSlash();
 
 	virtual void EndAbility(
-			const FGameplayAbilitySpecHandle Handle,
-			const FGameplayAbilityActorInfo* ActorInfo,
-			const FGameplayAbilityActivationInfo ActivationInfo,
-			bool bReplicateEndAbility,
-			bool bWasCancelled
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		bool bReplicateEndAbility,
+		bool bWasCancelled
 	) override;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "FlashSlash|Movement")
-	float BehindTargetDistance = 160.f;
+	float PassThroughDistance = 240.f;
 
 	UPROPERTY()
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> MoveBeginTask = nullptr;
@@ -48,9 +49,7 @@ protected:
 
 	virtual void StartTargetMontageEventTasks() override;
 
-	virtual void ExecuteTargetSkill(AActor* TargetActor, const FGameplayEventData& Payload) override;
-
-	bool BuildBehindTargetLocation(AActor* TargetActor, FVector& OutLocation) const;
+	bool BuildPassThroughLocation(AActor* TargetActor, FVector& OutLocation) const;
 
 	void StartMoveBehindTarget(float Duration);
 

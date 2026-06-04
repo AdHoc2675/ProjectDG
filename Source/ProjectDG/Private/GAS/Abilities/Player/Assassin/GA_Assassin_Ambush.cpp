@@ -12,32 +12,3 @@ UGA_Assassin_Ambush::UGA_Assassin_Ambush()
 	AbilityTags.AddTag(DGGameplayTags::Skill_Assassin_Ambush);
 	ActivationOwnedTags.AddTag(DGGameplayTags::State_Skill_Assassin_Ambush_Active);
 }
-
-void UGA_Assassin_Ambush::ExecuteTargetSkill(AActor* TargetActor, const FGameplayEventData& Payload)
-{
-	if (!HasAuthorityAvatar())
-	{
-		return;
-	}
-
-	if (!TargetActor)
-	{
-		return;
-	}
-
-	ApplyDamageToTarget(
-			TargetActor,
-			0.f,
-			GetSkillDamageMultiplier(),
-			GetSkillTag(),
-			TargetActor->GetActorLocation(),
-			true,
-			GetSkillGroggyDamage()
-	);
-
-	ApplyStatusEffectToTarget(TargetActor);
-}
-
-
-
-

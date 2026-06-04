@@ -109,6 +109,9 @@ public:
 	void Multicast_SpawnAOETelegraph(UNiagaraSystem* VFX, FVector Location, FName ScaleParamName, float Scale);
 
 	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_SpawnAttachedDirectionalTelegraph(UNiagaraSystem* VFX, FRotator RelativeRotation, float Length, float Width, FName LengthParamName, FName WidthParamName);
+
+	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_DestroyAOETelegraph();
 
 	/** 데미지가 들어왔을 때 모든 클라이언트에게 신호를 보내되, 자신이 때린 것만 띄우도록 */

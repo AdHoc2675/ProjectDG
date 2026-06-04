@@ -31,6 +31,9 @@ AFieldEnemyBase::AFieldEnemyBase() {
 
   EnemyAttributeSet =
       CreateDefaultSubobject<UDG_EnemyAttributeSet>(TEXT("EnemyAttributeSet"));
+
+  // 스포너 등을 통해 동적으로 생성되었을 때도 AI가 빙의할 수 있도록 설정
+  AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
 // Field Class Data에서 태그 초기화
@@ -262,7 +265,20 @@ void AFieldEnemyBase::InitFromDataAsset(UFieldCharacterClassData* Data) {
   // Initialize tags and effects if already possessed
   if (HasAuthority()) {
     InitializeFieldTagFromClassData();
+
+    // 데이터 에셋이 세팅/변경되었으므로 어빌리티와 이펙트를 명시적으로 다시 부여
+    GrantDefaultAbilities();
+    ApplyDefaultEffects();
+
+    // 만약 AIController가 빙의된 상태라면 즉시 BT 실행 (이때 Blackboard도 생성됨)
+    if (AAIController* AIController = Cast<AAIController>(GetController())) {
+      if (FieldClassData->BehaviorTree) {
+        AIController->RunBehaviorTree(FieldClassData->BehaviorTree);
+      }
+    }
+
     // Blackboard needs to be updated with new patrol/leash stats
+    // 반드시 BT가 실행되어 Blackboard가 만들어진 이후에 값을 세팅해야 합니다.
     UpdateBlackboardValues();
   }
 }

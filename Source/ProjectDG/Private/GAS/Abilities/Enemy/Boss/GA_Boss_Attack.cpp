@@ -13,8 +13,6 @@ UGA_Boss_Attack::UGA_Boss_Attack()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerOnly;
-
-	AbilityTags.AddTag(DGGameplayTags::Skill_Boss_Kashapa_Attack);
 }
 
 void UGA_Boss_Attack::ActivateAbility(
