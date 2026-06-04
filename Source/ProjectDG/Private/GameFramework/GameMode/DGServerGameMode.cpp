@@ -30,7 +30,6 @@ void ADGServerGameMode::PreLogin(
 	const FString SessionId = UGameplayStatics::ParseOption(Options, TEXT("SessionId"));
 	const FString JoinToken = UGameplayStatics::ParseOption(Options, TEXT("JoinToken"));
 
-
 	if (!ErrorMessage.IsEmpty())
 	{
 		return;
@@ -44,14 +43,12 @@ void ADGServerGameMode::PreLogin(
 	if (SessionId.IsEmpty())
 	{
 		ErrorMessage = TEXT("Missing SessionId.");
-
 		return;
 	}
 
 	if (JoinToken.IsEmpty())
 	{
 		ErrorMessage = TEXT("Missing JoinToken.");
-
 		return;
 	}
 }
@@ -82,7 +79,6 @@ FString ADGServerGameMode::InitNewPlayer(
 
 	const FString SessionId = UGameplayStatics::ParseOption(Options, TEXT("SessionId"));
 	const FString JoinToken = UGameplayStatics::ParseOption(Options, TEXT("JoinToken"));
-
 
 	if (GetNetMode() != NM_DedicatedServer)
 	{
@@ -115,7 +111,6 @@ void ADGServerGameMode::PostLogin(APlayerController* NewPlayer)
 		return;
 	}
 
-
 	APawn* ControlledPawn = NewPlayer->GetPawn();
 	APlayerState* PS = NewPlayer->PlayerState.Get();
 
@@ -130,7 +125,6 @@ void ADGServerGameMode::PostLogin(APlayerController* NewPlayer)
 	const FString PlayerStateName = IsValid(PS)
 		                                ? PS->GetName()
 		                                : TEXT("None");
-
 
 	if (GetNetMode() == NM_DedicatedServer)
 	{
@@ -168,7 +162,6 @@ void ADGServerGameMode::Logout(AController* Exiting)
 	{
 		const FString ExitingPawnName = ExitingPawn->GetName();
 
-
 		ExitingPawn->Destroy();
 	}
 
@@ -181,14 +174,12 @@ void ADGServerGameMode::Logout(AController* Exiting)
 
 	ConnectedPlayerCount = FMath::Max(0, ConnectedPlayerCount - 1);
 
-
 	if (bHasMemberInfo)
 	{
 		const bool bWasLastKnownPlayer = ConnectedPlayerCount <= 0;
 		ReportMemberLeftAsync(LeavingMemberInfo, bWasLastKnownPlayer);
 		return;
 	}
-
 
 	TryReportSessionEndedIfNoPlayers();
 }
@@ -207,7 +198,6 @@ void ADGServerGameMode::RestartPlayer(AController* NewPlayer)
 		                               ? PawnBefore->GetName()
 		                               : TEXT("None");
 
-
 	Super::RestartPlayer(NewPlayer);
 
 	APawn* PawnAfter = IsValid(NewPlayer)
@@ -217,6 +207,41 @@ void ADGServerGameMode::RestartPlayer(AController* NewPlayer)
 	const FString PawnAfterName = IsValid(PawnAfter)
 		                              ? PawnAfter->GetName()
 		                              : TEXT("None");
+}
+
+UClass* ADGServerGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)
+{
+	if (IsValid(InController))
+	{
+		const TObjectKey<AController> ControllerKey(InController);
+
+		if (const FDGConnectedMemberInfo* MemberInfo = ConnectedMemberInfos.Find(ControllerKey))
+		{
+			const FString& ClassTag = MemberInfo->ClassTag;
+
+			if ((ClassTag == TEXT("Character.Class.Warrior") || ClassTag == TEXT("Class.Warrior")) && WarriorPawnClass)
+			{
+				return WarriorPawnClass;
+			}
+
+			if ((ClassTag == TEXT("Character.Class.Archer") || ClassTag == TEXT("Class.Archer")) && ArcherPawnClass)
+			{
+				return ArcherPawnClass;
+			}
+
+			if ((ClassTag == TEXT("Character.Class.Mage") || ClassTag == TEXT("Class.Mage")) && MagePawnClass)
+			{
+				return MagePawnClass;
+			}
+
+			if ((ClassTag == TEXT("Character.Class.Assassin") || ClassTag == TEXT("Class.Assassin")) && AssassinPawnClass)
+			{
+				return AssassinPawnClass;
+			}
+		}
+	}
+
+	return Super::GetDefaultPawnClassForController_Implementation(InController);
 }
 
 void ADGServerGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -287,13 +312,12 @@ void ADGServerGameMode::ValidateJoinTokenAsync(
 	Request->SetHeader(TEXT("Accept"), TEXT("application/json"));
 	Request->SetContentAsString(BodyJson);
 
-
 	Request->OnProcessRequestComplete().BindLambda(
 		[this, WeakPlayerController, SessionId](
-		FHttpRequestPtr HttpRequest,
-		FHttpResponsePtr HttpResponse,
-		bool bWasSuccessful
-	)
+			FHttpRequestPtr HttpRequest,
+			FHttpResponsePtr HttpResponse,
+			bool bWasSuccessful
+		)
 		{
 			if (!WeakPlayerController.IsValid())
 			{
@@ -311,11 +335,11 @@ void ADGServerGameMode::ValidateJoinTokenAsync(
 			const int32 ResponseCode = HttpResponse->GetResponseCode();
 			const FString ResponseBody = HttpResponse->GetContentAsString();
 
-
 			FString ResponseMessage;
 			FString ResponseSessionId;
 			int64 ResponseAccountId = 0;
 			int64 ResponseCharacterId = 0;
+			FString ResponseClassTag;
 			FString ResponseRole;
 
 			const bool bValidJoin = ParseValidateJoinResponse(
@@ -324,6 +348,7 @@ void ADGServerGameMode::ValidateJoinTokenAsync(
 				ResponseSessionId,
 				ResponseAccountId,
 				ResponseCharacterId,
+				ResponseClassTag,
 				ResponseRole
 			);
 
@@ -353,10 +378,18 @@ void ADGServerGameMode::ValidateJoinTokenAsync(
 			MemberInfo.SessionId = ResponseSessionId.IsEmpty() ? SessionId : ResponseSessionId;
 			MemberInfo.AccountId = ResponseAccountId;
 			MemberInfo.CharacterId = ResponseCharacterId;
+			MemberInfo.ClassTag = ResponseClassTag;
 			MemberInfo.Role = ResponseRole;
 
 			ConnectedMemberInfos.Add(TObjectKey<AController>(PlayerController), MemberInfo);
 
+			if (APawn* ExistingPawn = PlayerController->GetPawn())
+			{
+				PlayerController->UnPossess();
+				ExistingPawn->Destroy();
+			}
+
+			RestartPlayer(PlayerController);
 
 			ReportSessionStartedAsync(MemberInfo.SessionId);
 		}
@@ -397,13 +430,12 @@ void ADGServerGameMode::ReportSessionStartedAsync(
 	Request->SetHeader(TEXT("Accept"), TEXT("application/json"));
 	Request->SetContentAsString(BodyJson);
 
-
 	Request->OnProcessRequestComplete().BindLambda(
 		[this, SessionId](
-		FHttpRequestPtr HttpRequest,
-		FHttpResponsePtr HttpResponse,
-		bool bWasSuccessful
-	)
+			FHttpRequestPtr HttpRequest,
+			FHttpResponsePtr HttpResponse,
+			bool bWasSuccessful
+		)
 		{
 			if (!bWasSuccessful || !HttpResponse.IsValid())
 			{
@@ -417,7 +449,6 @@ void ADGServerGameMode::ReportSessionStartedAsync(
 			{
 				return;
 			}
-
 
 			StartSessionHeartbeat(SessionId);
 		}
@@ -452,7 +483,6 @@ void ADGServerGameMode::ReportSessionEndedAsync(
 	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
 	Request->SetHeader(TEXT("Accept"), TEXT("application/json"));
 	Request->SetContentAsString(BodyJson);
-
 
 	Request->OnProcessRequestComplete().BindLambda(
 		[](FHttpRequestPtr HttpRequest, FHttpResponsePtr HttpResponse, bool bWasSuccessful)
@@ -512,13 +542,12 @@ void ADGServerGameMode::ReportMemberLeftAsync(
 	Request->SetHeader(TEXT("Accept"), TEXT("application/json"));
 	Request->SetContentAsString(BodyJson);
 
-
 	Request->OnProcessRequestComplete().BindLambda(
 		[this, MemberInfo, bWasLastKnownPlayer](
-		FHttpRequestPtr HttpRequest,
-		FHttpResponsePtr HttpResponse,
-		bool bWasSuccessful
-	)
+			FHttpRequestPtr HttpRequest,
+			FHttpResponsePtr HttpResponse,
+			bool bWasSuccessful
+		)
 		{
 			if (!bWasSuccessful || !HttpResponse.IsValid())
 			{
@@ -552,12 +581,10 @@ void ADGServerGameMode::ReportMemberLeftAsync(
 				return;
 			}
 
-
 			if (!bShouldShutdownServer)
 			{
 				return;
 			}
-
 
 			bSessionEndReported = true;
 
@@ -667,13 +694,12 @@ void ADGServerGameMode::SendSessionHeartbeatAsync(
 	Request->SetHeader(TEXT("Accept"), TEXT("application/json"));
 	Request->SetContentAsString(BodyJson);
 
-
 	Request->OnProcessRequestComplete().BindLambda(
 		[](
-		FHttpRequestPtr HttpRequest,
-		FHttpResponsePtr HttpResponse,
-		bool bWasSuccessful
-	)
+			FHttpRequestPtr HttpRequest,
+			FHttpResponsePtr HttpResponse,
+			bool bWasSuccessful
+		)
 		{
 			if (!bWasSuccessful || !HttpResponse.IsValid())
 			{
@@ -730,7 +756,6 @@ void ADGServerGameMode::KickPlayerWithReason(
 	{
 		return;
 	}
-
 
 	APawn* PawnToDestroy = PlayerController->GetPawn();
 
@@ -835,6 +860,7 @@ bool ADGServerGameMode::ParseValidateJoinResponse(
 	FString& OutSessionId,
 	int64& OutAccountId,
 	int64& OutCharacterId,
+	FString& OutClassTag,
 	FString& OutRole
 )
 {
@@ -851,6 +877,7 @@ bool ADGServerGameMode::ParseValidateJoinResponse(
 	JsonObject->TryGetBoolField(TEXT("success"), bSuccess);
 	JsonObject->TryGetStringField(TEXT("message"), OutMessage);
 	JsonObject->TryGetStringField(TEXT("sessionId"), OutSessionId);
+	JsonObject->TryGetStringField(TEXT("classTag"), OutClassTag);
 	JsonObject->TryGetStringField(TEXT("role"), OutRole);
 
 	double AccountIdValue = 0.0;
@@ -869,6 +896,12 @@ bool ADGServerGameMode::ParseValidateJoinResponse(
 	if (bSuccess && (OutAccountId <= 0 || OutCharacterId <= 0))
 	{
 		OutMessage = TEXT("Validate-join response has invalid AccountId or CharacterId.");
+		return false;
+	}
+
+	if (bSuccess && OutClassTag.IsEmpty())
+	{
+		OutMessage = TEXT("Validate-join response is missing ClassTag.");
 		return false;
 	}
 
