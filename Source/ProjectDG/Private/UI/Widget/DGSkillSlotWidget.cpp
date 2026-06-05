@@ -123,3 +123,8 @@ bool UDGSkillSlotWidget::MatchCooldownTag(FGameplayTag TagToCheck) const
 {
 	return CooldownTag.IsValid() && (CooldownTag == TagToCheck);
 }
+
+void UDGSkillSlotWidget::SetComboStepIcons(const TArray<UTexture2D*>& InIcons)
+{
+	// 여러 아이콘을 위젯에 표시하는 로직 (예: HorizontalBox에 동적 추가)
+}

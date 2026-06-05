@@ -6,6 +6,7 @@
 #include "DGOverlayWidgetController.generated.h"
 
 class UDG_AttributeSet;
+class PlayerSkillData;
 
 
 // UI 로 값 변화를 방송할 다이내믹 멀티캐스트 델리게이트 선언
@@ -44,6 +45,8 @@ struct FUIPlayerSkillInfo
 	UPROPERTY(BlueprintReadOnly) FGameplayTag SlotTag;
 	UPROPERTY(BlueprintReadOnly) FGameplayTag CooldownTag;
 	UPROPERTY(BlueprintReadOnly) UTexture2D* Icon = nullptr;
+
+	UPROPERTY(BlueprintReadOnly) TArray<UTexture2D*> ComboStepIcons;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSkillInfoSetSignature, const FUIPlayerSkillInfo&, SkillInfo);
@@ -195,5 +198,6 @@ protected:
 	// 쿨타임 태그 이벤트 처리용
 	void OnCooldownTagChanged(const FGameplayTag InCooldownTag, int32 NewCount);
 
+	TArray<UTexture2D*> GetComboStepIcons(const UPlayerSkillData* SkillData);
 #pragma region Skill Info
 };

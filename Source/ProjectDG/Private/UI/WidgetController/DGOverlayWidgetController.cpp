@@ -76,6 +76,7 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 					Info.SlotTag = SlotDef.SlotTag.IsValid() ? SlotDef.SlotTag : SlotDef.SkillData->DefaultSlotTag;
 					Info.CooldownTag = SlotDef.SkillData->CooldownTag;
 					Info.Icon = SlotDef.SkillData->Icon; // null이어도 넘길 수 있음
+					Info.ComboStepIcons = GetComboStepIcons(SlotDef.SkillData);  // 콤보 스킬 아이콘 배열 가져오기
 
 					// 위젯으로 기본 스킬 정보 브로드캐스트
 					OnSkillInfoSet.Broadcast(Info);
@@ -465,4 +466,23 @@ void UDGOverlayWidgetController::OnCooldownTagChanged(const FGameplayTag InCoold
 		// 쿨타임이 종료됨
 		OnSkillCooldownChanged.Broadcast(InCooldownTag, 0.f, 0.f);
 	}
+}
+
+TArray<UTexture2D*> GetComboStepIcons(const UPlayerSkillData* SkillData)
+{
+	TArray<UTexture2D*> OutIcons;
+	if (!SkillData) return OutIcons;
+
+	if (SkillData->ComboCount > 1 && SkillData->ComboSkillDataList.Num() > 0)
+	{
+		for (const UPlayerSkillData* StepData : SkillData->ComboSkillDataList)
+		{
+			OutIcons.Add(StepData ? StepData->Icon : nullptr);
+		}
+	}
+	else
+	{
+		OutIcons.Add(SkillData->Icon);
+	}
+	return OutIcons;
 }

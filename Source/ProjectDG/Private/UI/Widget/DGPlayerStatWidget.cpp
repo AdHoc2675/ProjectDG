@@ -144,6 +144,7 @@ void UDGPlayerStatWidget::OnSkillInfoSet(const FUIPlayerSkillInfo& SkillInfo)
 	if (TargetSlot)
 	{
 		TargetSlot->InitSkillSlot(SkillInfo.SlotTag, SkillInfo.CooldownTag, SkillInfo.Icon);
+		TargetSlot->SetComboStepIcons(SkillInfo.ComboStepIcons);
 		UE_LOG(LogTemp, Log, TEXT("[DGPlayerStatWidget] %s 슬롯 데이터 매핑 완료"), *SkillInfo.SlotTag.ToString());
 	}
 	else

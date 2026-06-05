@@ -29,6 +29,7 @@ public:
 	// 내가 담당하는 쿨타임 태그가 맞는지 확인
 	bool MatchCooldownTag(FGameplayTag TagToCheck) const;
 
+	void SetComboStepIcons(const TArray<UTexture2D*>& InIcons);
 protected:
 	virtual void NativeConstruct() override;
 
