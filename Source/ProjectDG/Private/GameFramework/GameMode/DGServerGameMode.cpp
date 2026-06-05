@@ -218,7 +218,11 @@ UClass* ADGServerGameMode::GetDefaultPawnClassForController_Implementation(ACont
 
 		if (const FDGConnectedMemberInfo* MemberInfo = ConnectedMemberInfos.Find(ControllerKey))
 		{
-			const FString& ClassTag = MemberInfo->ClassTag;
+			FString ClassTag = MemberInfo->ClassTag;
+			ClassTag.TrimStartAndEndInline();
+			ClassTag.RemoveFromStart(TEXT("\""));
+			ClassTag.RemoveFromEnd(TEXT("\""));
+			ClassTag.TrimStartAndEndInline();
 
 			if ((ClassTag == TEXT("Character.Class.Warrior") || ClassTag == TEXT("Class.Warrior")) && WarriorPawnClass)
 			{
@@ -239,6 +243,19 @@ UClass* ADGServerGameMode::GetDefaultPawnClassForController_Implementation(ACont
 			{
 				return AssassinPawnClass;
 			}
+
+			Debug::Print(FString::Printf(
+				TEXT("[DGServerGameMode] No PawnClass matched. RawClassTag=%s NormalizedClassTag=%s"),
+				*MemberInfo->ClassTag,
+				*ClassTag
+			));
+		}
+		else
+		{
+			Debug::Print(FString::Printf(
+				TEXT("[DGServerGameMode] ConnectedMemberInfo not found. Controller=%s"),
+				*InController->GetName()
+			));
 		}
 	}
 
@@ -895,6 +912,11 @@ bool ADGServerGameMode::ParseValidateJoinResponse(
 	JsonObject->TryGetStringField(TEXT("sessionId"), OutSessionId);
 	JsonObject->TryGetStringField(TEXT("classTag"), OutClassTag);
 	JsonObject->TryGetStringField(TEXT("role"), OutRole);
+
+	OutClassTag.TrimStartAndEndInline();
+	OutClassTag.RemoveFromStart(TEXT("\""));
+	OutClassTag.RemoveFromEnd(TEXT("\""));
+	OutClassTag.TrimStartAndEndInline();
 
 	double AccountIdValue = 0.0;
 	double CharacterIdValue = 0.0;

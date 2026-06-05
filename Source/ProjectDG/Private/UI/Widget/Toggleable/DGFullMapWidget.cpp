@@ -43,6 +43,20 @@ void UDGFullMapWidget::NativeConstruct()
 	}
 }
 
+void UDGFullMapWidget::NativeDestruct()
+{
+	if (UWorld* World = GetWorld())
+	{
+		if (UDGMinimapSubsystem* MapSubsystem = World->GetSubsystem<UDGMinimapSubsystem>())
+		{
+			MapSubsystem->OnMarkerRegistered.RemoveDynamic(this, &UDGFullMapWidget::OnMarkerAdded);
+			MapSubsystem->OnMarkerUnregistered.RemoveDynamic(this, &UDGFullMapWidget::OnMarkerRemoved);
+		}
+	}
+
+	Super::NativeDestruct();
+}
+
 void UDGFullMapWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);

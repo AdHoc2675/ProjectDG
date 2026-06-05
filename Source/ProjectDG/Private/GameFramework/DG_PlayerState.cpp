@@ -275,8 +275,14 @@ void ADG_PlayerState::SetSessionMemberInfo(
 
 	if (!InClassTag.IsEmpty())
 	{
+		FString NormalizedClassTag = InClassTag;
+		NormalizedClassTag.TrimStartAndEndInline();
+		NormalizedClassTag.RemoveFromStart(TEXT("\""));
+		NormalizedClassTag.RemoveFromEnd(TEXT("\""));
+		NormalizedClassTag.TrimStartAndEndInline();
+
 		const FGameplayTag ParsedClassTag = FGameplayTag::RequestGameplayTag(
-			FName(*InClassTag),
+			FName(*NormalizedClassTag),
 			false
 		);
 
@@ -287,8 +293,9 @@ void ADG_PlayerState::SetSessionMemberInfo(
 		else
 		{
 			Debug::Print(FString::Printf(
-				TEXT("[DG_PlayerState] Invalid ClassTag from backend: %s"),
-				*InClassTag
+				TEXT("[DG_PlayerState] Invalid ClassTag from backend. Raw=%s Normalized=%s"),
+				*InClassTag,
+				*NormalizedClassTag
 			));
 		}
 	}
