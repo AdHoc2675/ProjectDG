@@ -24,10 +24,19 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Assassin|MovingAttack")
 	bool bUseAssassinMovingAttackUpperBody = false;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Assassin|MovingAttack")
+	bool bIsAssassinMeleeTwistCorrectionActive = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Assassin|MovingAttack")
+	bool bUseAssassinMeleeTwistCorrection = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Assassin|MovingAttack")
 	float AssassinMovingAttackThreshold = 10.f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Assassin|MovingAttack")
 	FGameplayTagContainer MovingAttackStateTags;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Assassin|MovingAttack")
+	FGameplayTagContainer MeleeTwistCorrectionStateTags;
 };

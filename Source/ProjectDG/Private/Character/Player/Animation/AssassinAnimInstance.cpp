@@ -4,6 +4,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "Character/Player/PlayerCharacterBase.h"
+#include "Core/DG_GameplayTags.h"
 
 void UAssassinAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
@@ -11,6 +12,8 @@ void UAssassinAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	bIsAssassinMovingAttackActive = false;
 	bUseAssassinMovingAttackUpperBody = false;
+	bIsAssassinMeleeTwistCorrectionActive = false;
+	bUseAssassinMeleeTwistCorrection = false;
 
 	if (!PlayerCharacter)
 	{
@@ -20,10 +23,20 @@ void UAssassinAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	if (UAbilitySystemComponent* ASC = PlayerCharacter->GetCharacterAbilitySystemComponent())
 	{
 		bIsAssassinMovingAttackActive = ASC->HasAnyMatchingGameplayTags(MovingAttackStateTags);
-	}
+		bIsAssassinMeleeTwistCorrectionActive = ASC->HasAnyMatchingGameplayTags(MeleeTwistCorrectionStateTags);
 
-	bUseAssassinMovingAttackUpperBody =
-			bIsAssassinMovingAttackActive && GroundSpeed > AssassinMovingAttackThreshold;
+		const bool bIsMovementLocked =
+				ASC->HasMatchingGameplayTag(DGGameplayTags::State_Movement_Locked);
+
+		bUseAssassinMovingAttackUpperBody =
+				bIsAssassinMovingAttackActive &&
+				!bIsMovementLocked &&
+				GroundSpeed > AssassinMovingAttackThreshold;
+
+		bUseAssassinMeleeTwistCorrection =
+				bUseAssassinMovingAttackUpperBody &&
+				bIsAssassinMeleeTwistCorrectionActive;
+	}
 }
 
 
