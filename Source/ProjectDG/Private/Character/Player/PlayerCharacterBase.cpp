@@ -177,6 +177,21 @@ void APlayerCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
+void APlayerCharacterBase::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+	
+	FGameplayEventData Payload;
+	Payload.EventTag = DGGameplayTags::Event_Movement_Jump_Landed;
+	Payload.Instigator = this;
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+			this,
+			DGGameplayTags::Event_Movement_Jump_Landed,
+			Payload
+	);
+}
+
 void APlayerCharacterBase::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
@@ -389,8 +404,8 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 
 	if (IA_Jump)
 	{
-		EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Started, this, &ACharacter::Jump);
-		EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+		EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Started, this, &APlayerCharacterBase::JumpActionStarted);
+		EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Completed, this, &APlayerCharacterBase::JumpActionCompleted);
 	}
 
 	if (IA_Shift)
@@ -790,6 +805,31 @@ void APlayerCharacterBase::MoveAction(const FInputActionValue& InputActionValue)
 		GetCameraRightOnPlane() * CurrentMoveInput.X;
 
 	AddMovementInput(MoveDirection.GetSafeNormal());
+}
+
+void APlayerCharacterBase::JumpActionStarted()
+{
+	SendJumpEvent();
+}
+
+void APlayerCharacterBase::JumpActionCompleted()
+{
+	StopJumping();
+}
+
+void APlayerCharacterBase::SendJumpEvent()
+{
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC)
+	{
+		return;
+	}
+
+	FGameplayEventData Payload;
+	Payload.EventTag = DGGameplayTags::Skill_Common_Jump;
+	Payload.Instigator = this;
+
+	ASC->HandleGameplayEvent(Payload.EventTag, &Payload);
 }
 
 bool APlayerCharacterBase::IsMovementInputLocked() const
