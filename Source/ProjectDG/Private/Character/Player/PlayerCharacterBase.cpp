@@ -805,6 +805,17 @@ void APlayerCharacterBase::MoveAction(const FInputActionValue& InputActionValue)
 		GetCameraRightOnPlane() * CurrentMoveInput.X;
 
 	AddMovementInput(MoveDirection.GetSafeNormal());
+	
+	FGameplayEventData Payload;
+	Payload.EventTag = DGGameplayTags::Event_Movement_Skill_CancelByMove;
+	Payload.Instigator = this;
+	Payload.Target = this;
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+		  this,
+		  DGGameplayTags::Event_Movement_Skill_CancelByMove,
+		  Payload
+	);
 }
 
 void APlayerCharacterBase::JumpActionStarted()

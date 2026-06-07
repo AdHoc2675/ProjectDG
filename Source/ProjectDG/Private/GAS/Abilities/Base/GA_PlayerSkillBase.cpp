@@ -161,6 +161,8 @@ void UGA_PlayerSkillBase::EndAbility(
 {
 	UnregisterSkillChainStepEvent();
 	UnregisterSkillHitCheckEvent();
+	UnregisterMovementUnlockEvent();
+	UnregisterMovementCancelEvent();
 
 	Super::EndAbility(
 		Handle,
@@ -319,6 +321,72 @@ void UGA_PlayerSkillBase::UnregisterSkillChainStepEvent()
 void UGA_PlayerSkillBase::OnSkillChainStepEvent(FGameplayEventData Payload)
 {
 	HandleSkillChainStepEvent(Payload);
+}
+
+void UGA_PlayerSkillBase::RegisterMovementCancelEvent()
+{
+	if (MovementCancelEventTask)
+	{
+		return;
+	}
+
+	MovementCancelEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+			this,
+			DGGameplayTags::Event_Movement_Skill_CancelByMove,
+			nullptr,
+			true,
+			true
+	);
+
+	if (!MovementCancelEventTask)
+	{
+		return;
+	}
+
+	MovementCancelEventTask->EventReceived.AddDynamic(
+			this,
+			&UGA_PlayerSkillBase::OnMovementCancelEvent
+	);
+
+	MovementCancelEventTask->ReadyForActivation();
+}
+
+void UGA_PlayerSkillBase::OnMovementCancelEvent(FGameplayEventData Payload)
+{
+	StopCurrentSkillMontage();
+	K2_EndAbility();
+}
+
+void UGA_PlayerSkillBase::StopCurrentSkillMontage(float BlendOutTime)
+{
+	AActor* AvatarActor = GetAvatarActorFromAbility();
+	ACharacter* Character = Cast<ACharacter>(AvatarActor);
+	if (!Character || !Character->GetMesh())
+	{
+		return;
+	}
+
+	UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance();
+	if (!AnimInstance)
+	{
+		return;
+	}
+
+	if (UAnimMontage* SkillMontage = GetSkillMontage())
+	{
+		AnimInstance->Montage_Stop(BlendOutTime, SkillMontage);
+	}
+}
+
+void UGA_PlayerSkillBase::UnregisterMovementCancelEvent()
+{
+	if (!MovementCancelEventTask)
+	{
+		return;
+	}
+
+	MovementCancelEventTask->EndTask();
+	MovementCancelEventTask = nullptr;
 }
 
 void UGA_PlayerSkillBase::HandleSkillChainStepEvent(const FGameplayEventData& Payload)
@@ -603,6 +671,8 @@ void UGA_PlayerSkillBase::ApplySkillMovementPolicy()
 	{
 		ASC->AddLooseGameplayTag(DGGameplayTags::State_Movement_Locked);
 		bSkillMovementLockedApplied = true;
+		
+		RegisterMovementUnlockEvent();
 	}
 }
 
@@ -626,5 +696,67 @@ void UGA_PlayerSkillBase::ClearSkillMovementPolicy()
 	{
 		ASC->RemoveLooseGameplayTag(DGGameplayTags::State_Skill_Active);
 		bSkillActivePolicyApplied = false;
+	}
+}
+
+void UGA_PlayerSkillBase::RegisterMovementUnlockEvent()
+{
+	if (MovementUnlockEventTask)
+	{
+		return;
+	}
+
+	MovementUnlockEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+			this,
+			DGGameplayTags::Event_Movement_Skill_Unlock,
+			nullptr,
+			true,
+			true
+	);
+
+	if (!MovementUnlockEventTask)
+	{
+		return;
+	}
+
+	MovementUnlockEventTask->EventReceived.AddDynamic(
+			this,
+			&UGA_PlayerSkillBase::OnMovementUnlockEvent
+	);
+
+	MovementUnlockEventTask->ReadyForActivation();
+}
+
+void UGA_PlayerSkillBase::UnregisterMovementUnlockEvent()
+{
+	if (!MovementUnlockEventTask)
+	{
+		return;
+	}
+
+	MovementUnlockEventTask->EndTask();
+	MovementUnlockEventTask = nullptr;
+}
+
+void UGA_PlayerSkillBase::OnMovementUnlockEvent(FGameplayEventData Payload)
+{
+	ClearSkillMovementLockOnly();
+	UnregisterMovementUnlockEvent();
+	RegisterMovementCancelEvent();
+}
+
+void UGA_PlayerSkillBase::ClearSkillMovementLockOnly()
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (!ASC)
+	{
+		bSkillMovementLockedApplied = false;
+		return;
+	}
+
+	if (bSkillMovementLockedApplied)
+	{
+		ASC->RemoveLooseGameplayTag(DGGameplayTags::State_Movement_Locked);
+		bSkillMovementLockedApplied = false;
 	}
 }
