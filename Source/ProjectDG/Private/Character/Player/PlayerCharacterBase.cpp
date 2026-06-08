@@ -531,18 +531,7 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[PlayerCharacterBase][ClassDataDebug] PossessedBy. Owner=%s PawnClass=%s Controller=%s HasAuthority=%d PS=%s CharacterClassData=%s"),
-			*GetName(),
-			*GetClass()->GetName(),
-			*GetNameSafe(NewController),
-			HasAuthority() ? 1 : 0,
-			*GetNameSafe(GetPlayerState()),
-			*GetNameSafe(CharacterClassData)
-		),
-		FColor::Yellow
-	);
+
 
 	/**
 	 * Controller가 Pawn을 점유한 시점은
@@ -563,31 +552,13 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 		const int32 AbilityCountBeforeClear = ASC ? ASC->GetActivatableAbilities().Num() : -1;
 		const bool bWasAbilityListEmpty = ASC && ASC->GetActivatableAbilities().Num() == 0;
 
-		Debug::Print(
-			FString::Printf(
-				TEXT("[PlayerCharacterBase][ClassDataDebug] Before Class Skill Regrant. Owner=%s CharacterClassData=%s ASC=%s AbilityCount=%d"),
-				*GetName(),
-				*GetNameSafe(CharacterClassData),
-				*GetNameSafe(ASC),
-				AbilityCountBeforeClear
-			),
-			FColor::Yellow
-		);
+		
 
 		if (ASC)
 		{
 			const int32 ClearedClassSkillCount = ClearGrantedClassSkillAbilities(ASC);
 
-			Debug::Print(
-				FString::Printf(
-					TEXT("[PlayerCharacterBase][ClassDataDebug] ClearGrantedClassSkillAbilities. Owner=%s ClassData=%s Cleared=%d AbilityCountAfterClear=%d"),
-					*GetName(),
-					*GetNameSafe(CharacterClassData),
-					ClearedClassSkillCount,
-					ASC->GetActivatableAbilities().Num()
-				),
-				FColor::Yellow
-			);
+			
 
 			GrantDefaultAbilities();
 			GrantClassSkillAbilities();
@@ -597,15 +568,7 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 				ApplyDefaultEffects();
 			}
 
-			Debug::Print(
-				FString::Printf(
-					TEXT("[PlayerCharacterBase][ClassDataDebug] After Class Skill Regrant. Owner=%s ClassData=%s AbilityCount=%d"),
-					*GetName(),
-					*GetNameSafe(CharacterClassData),
-					ASC->GetActivatableAbilities().Num()
-				),
-				FColor::Yellow
-			);
+			
 		}
 	}
 
@@ -617,17 +580,7 @@ void APlayerCharacterBase::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[PlayerCharacterBase][ClassDataDebug] OnRep_PlayerState. Owner=%s PawnClass=%s HasAuthority=%d PS=%s CharacterClassData=%s"),
-			*GetName(),
-			*GetClass()->GetName(),
-			HasAuthority() ? 1 : 0,
-			*GetNameSafe(GetPlayerState()),
-			*GetNameSafe(CharacterClassData)
-		),
-		FColor::Yellow
-	);
+
 
 	/**
 	 * PlayerState가 복제 완료된 뒤 ASC 초기화 재시도
@@ -644,16 +597,7 @@ void APlayerCharacterBase::OnRep_PlayerState()
 
 void APlayerCharacterBase::InitializePlayerStateFromClassData()
 {
-	Debug::Print(
-		FString::Printf(
-			TEXT("[PlayerCharacterBase][ClassDataDebug] InitializePlayerStateFromClassData. Owner=%s PawnClass=%s HasAuthority=%d CharacterClassData=%s"),
-			*GetName(),
-			*GetClass()->GetName(),
-			HasAuthority() ? 1 : 0,
-			*GetNameSafe(CharacterClassData)
-		),
-		FColor::Cyan
-	);
+	
 
 	if (!HasAuthority())
 	{
@@ -662,67 +606,31 @@ void APlayerCharacterBase::InitializePlayerStateFromClassData()
 
 	if (!CharacterClassData)
 	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[PlayerCharacterBase][ClassDataDebug] InitializePlayerStateFromClassData Failed. CharacterClassData is null. Owner=%s"),
-				*GetName()
-			),
-			FColor::Red
-		);
+		
 		return;
 	}
 
 	ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>();
 	if (!PS)
 	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[PlayerCharacterBase][ClassDataDebug] InitializePlayerStateFromClassData Failed. PlayerState is null. Owner=%s CharacterClassData=%s"),
-				*GetName(),
-				*GetNameSafe(CharacterClassData)
-			),
-			FColor::Red
-		);
+		
 		return;
 	}
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[PlayerCharacterBase][ClassDataDebug] Initialize PlayerState Data. Owner=%s PS=%s CharacterClassData=%s"),
-			*GetName(),
-			*GetNameSafe(PS),
-			*GetNameSafe(CharacterClassData)
-		),
-		FColor::Cyan
-	);
+	
 
 	PS->InitializePlayerDataFromClassData(CharacterClassData);
 }
 
 void APlayerCharacterBase::InitializeSkillSlotsFromClassData()
 {
-	Debug::Print(
-		FString::Printf(
-			TEXT("[PlayerCharacterBase][ClassDataDebug] InitializeSkillSlotsFromClassData Begin. Owner=%s PawnClass=%s HasAuthority=%d CharacterClassData=%s"),
-			*GetName(),
-			*GetClass()->GetName(),
-			HasAuthority() ? 1 : 0,
-			*GetNameSafe(CharacterClassData)
-		),
-		FColor::Cyan
-	);
+	
 
 	SkillSlotMapping.Empty();
 
 	if (!CharacterClassData)
 	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[PlayerCharacterBase][ClassDataDebug] InitializeSkillSlotsFromClassData Failed. CharacterClassData is null. Owner=%s"),
-				*GetName()
-			),
-			FColor::Red
-		);
+		
 		return;
 	}
 
@@ -730,85 +638,33 @@ void APlayerCharacterBase::InitializeSkillSlotsFromClassData()
 	{
 		if (!SkillSlot.SlotTag.IsValid())
 		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[PlayerCharacterBase][ClassDataDebug] Skip SkillSlot. Invalid SlotTag. Owner=%s ClassData=%s"),
-					*GetName(),
-					*GetNameSafe(CharacterClassData)
-				),
-				FColor::Orange
-			);
+			
 			continue;
 		}
 
 		if (!SkillSlot.SkillData)
 		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[PlayerCharacterBase][ClassDataDebug] Skip SkillSlot. SkillData is null. Owner=%s ClassData=%s Slot=%s"),
-					*GetName(),
-					*GetNameSafe(CharacterClassData),
-					*SkillSlot.SlotTag.ToString()
-				),
-				FColor::Orange
-			);
+			
 			continue;
 		}
 
 		if (!SkillSlot.SkillData->SkillTag.IsValid())
 		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[PlayerCharacterBase][ClassDataDebug] Skip SkillSlot. SkillTag is invalid. Owner=%s ClassData=%s Slot=%s SkillData=%s"),
-					*GetName(),
-					*GetNameSafe(CharacterClassData),
-					*SkillSlot.SlotTag.ToString(),
-					*GetNameSafe(SkillSlot.SkillData)
-				),
-				FColor::Orange
-			);
+			
 			continue;
 		}
 
 		SkillSlotMapping.Add(SkillSlot.SlotTag, SkillSlot.SkillData->SkillTag);
 
-		Debug::Print(
-			FString::Printf(
-				TEXT("[PlayerCharacterBase][ClassDataDebug] SkillSlot Mapped. Owner=%s ClassData=%s Slot=%s SkillData=%s SkillTag=%s AbilityClass=%s"),
-				*GetName(),
-				*GetNameSafe(CharacterClassData),
-				*SkillSlot.SlotTag.ToString(),
-				*GetNameSafe(SkillSlot.SkillData),
-				*SkillSlot.SkillData->SkillTag.ToString(),
-				*GetNameSafe(SkillSlot.SkillData->AbilityClass)
-			),
-			FColor::Cyan
-		);
+		
 	}
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[PlayerCharacterBase][ClassDataDebug] InitializeSkillSlotsFromClassData End. Owner=%s ClassData=%s MappingCount=%d"),
-			*GetName(),
-			*GetNameSafe(CharacterClassData),
-			SkillSlotMapping.Num()
-		),
-		FColor::Cyan
-	);
+	
 }
 
 void APlayerCharacterBase::GrantClassSkillAbilities()
 {
-	Debug::Print(
-		FString::Printf(
-			TEXT("[PlayerCharacterBase][ClassDataDebug] GrantClassSkillAbilities Begin. Owner=%s PawnClass=%s HasAuthority=%d CharacterClassData=%s"),
-			*GetName(),
-			*GetClass()->GetName(),
-			HasAuthority() ? 1 : 0,
-			*GetNameSafe(CharacterClassData)
-		),
-		FColor::Cyan
-	);
+	
 
 	if (!HasAuthority())
 	{
@@ -818,107 +674,42 @@ void APlayerCharacterBase::GrantClassSkillAbilities()
 	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
 	if (!ASC)
 	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[PlayerCharacterBase][ClassDataDebug] GrantClassSkillAbilities Failed. ASC is null. Owner=%s ClassData=%s"),
-				*GetName(),
-				*GetNameSafe(CharacterClassData)
-			),
-			FColor::Red
-		);
+		
 		return;
 	}
 
 	if (!CharacterClassData)
 	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[PlayerCharacterBase][ClassDataDebug] GrantClassSkillAbilities Failed. CharacterClassData is null. Owner=%s"),
-				*GetName()
-			),
-			FColor::Red
-		);
+	
 		return;
 	}
 
 	const ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>();
 	const int32 CurrentLevel = PS ? PS->GetCharacterLevel() : 1;
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[PlayerCharacterBase][ClassDataDebug] GrantClassSkillAbilities Context. Owner=%s PS=%s CurrentLevel=%d ClassData=%s SlotCount=%d ExistingAbilityCount=%d"),
-			*GetName(),
-			*GetNameSafe(PS),
-			CurrentLevel,
-			*GetNameSafe(CharacterClassData),
-			CharacterClassData->SkillSlots.Num(),
-			ASC->GetActivatableAbilities().Num()
-		),
-		FColor::Cyan
-	);
+	
 
 	for (const FSkillSlotDefinition& SkillSlot : CharacterClassData->SkillSlots)
 	{
 		if (!SkillSlot.SkillData)
 		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[PlayerCharacterBase][ClassDataDebug] Skip Grant. SkillData is null. Owner=%s ClassData=%s Slot=%s"),
-					*GetName(),
-					*GetNameSafe(CharacterClassData),
-					*SkillSlot.SlotTag.ToString()
-				),
-				FColor::Orange
-			);
+			
 			continue;
 		}
 
 		if (!SkillSlot.SkillData->AbilityClass)
 		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[PlayerCharacterBase][ClassDataDebug] Skip Grant. AbilityClass is null. Owner=%s ClassData=%s Slot=%s SkillData=%s SkillTag=%s"),
-					*GetName(),
-					*GetNameSafe(CharacterClassData),
-					*SkillSlot.SlotTag.ToString(),
-					*GetNameSafe(SkillSlot.SkillData),
-					*SkillSlot.SkillData->SkillTag.ToString()
-				),
-				FColor::Orange
-			);
+			
 			continue;
 		}
 
 		if (SkillSlot.UnlockLevel > CurrentLevel)
 		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[PlayerCharacterBase][ClassDataDebug] Skip Grant. Level Locked. Owner=%s ClassData=%s Slot=%s SkillData=%s UnlockLevel=%d CurrentLevel=%d"),
-					*GetName(),
-					*GetNameSafe(CharacterClassData),
-					*SkillSlot.SlotTag.ToString(),
-					*GetNameSafe(SkillSlot.SkillData),
-					SkillSlot.UnlockLevel,
-					CurrentLevel
-				),
-				FColor::Orange
-			);
+			
 			continue;
 		}
 
-		Debug::Print(
-			FString::Printf(
-				TEXT("[PlayerCharacterBase][ClassDataDebug] Grant Skill. Owner=%s ClassData=%s Slot=%s SkillData=%s AbilityClass=%s SkillTag=%s InputEventTag=%s"),
-				*GetName(),
-				*GetNameSafe(CharacterClassData),
-				*SkillSlot.SlotTag.ToString(),
-				*GetNameSafe(SkillSlot.SkillData),
-				*GetNameSafe(SkillSlot.SkillData->AbilityClass),
-				*SkillSlot.SkillData->SkillTag.ToString(),
-				*SkillSlot.SkillData->InputEventTag.ToString()
-			),
-			FColor::Cyan
-		);
+		
 
 		FGameplayAbilitySpec AbilitySpec(
 			SkillSlot.SkillData->AbilityClass,
@@ -930,15 +721,7 @@ void APlayerCharacterBase::GrantClassSkillAbilities()
 		ASC->GiveAbility(AbilitySpec);
 	}
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[PlayerCharacterBase][ClassDataDebug] GrantClassSkillAbilities End. Owner=%s ClassData=%s AbilityCount=%d"),
-			*GetName(),
-			*GetNameSafe(CharacterClassData),
-			ASC->GetActivatableAbilities().Num()
-		),
-		FColor::Cyan
-	);
+
 }
 
 void APlayerCharacterBase::GrantDefaultAbilities()
@@ -954,15 +737,6 @@ void APlayerCharacterBase::GrantDefaultAbilities()
 		return;
 	}
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[PlayerCharacterBase][ClassDataDebug] GrantDefaultAbilities. Owner=%s ClassData=%s StartupAbilityCount=%d"),
-			*GetName(),
-			*GetNameSafe(CharacterClassData),
-			CharacterClassData->StartupAbilities.Num()
-		),
-		FColor::Cyan
-	);
 
 	for (const auto& AbilityClass : CharacterClassData->StartupAbilities)
 	{
@@ -973,27 +747,11 @@ void APlayerCharacterBase::GrantDefaultAbilities()
 
 		if (HasGrantedAbilityClass(ASC, AbilityClass))
 		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[PlayerCharacterBase][ClassDataDebug] Skip Default Ability. Already Granted. Owner=%s ClassData=%s AbilityClass=%s"),
-					*GetName(),
-					*GetNameSafe(CharacterClassData),
-					*GetNameSafe(AbilityClass)
-				),
-				FColor::Orange
-			);
+			
 			continue;
 		}
 
-		Debug::Print(
-			FString::Printf(
-				TEXT("[PlayerCharacterBase][ClassDataDebug] Grant Default Ability. Owner=%s ClassData=%s AbilityClass=%s"),
-				*GetName(),
-				*GetNameSafe(CharacterClassData),
-				*GetNameSafe(AbilityClass)
-			),
-			FColor::Cyan
-		);
+		
 
 		ASC->GiveAbility(FGameplayAbilitySpec(AbilityClass, 1));
 	}
@@ -1202,61 +960,25 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
 	if (!ASC)
 	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[PlayerCharacterBase][ClassDataDebug] SkillInput Failed. ASC is null. Owner=%s Slot=%s CharacterClassData=%s"),
-				*GetName(),
-				*SlotTag.ToString(),
-				*GetNameSafe(CharacterClassData)
-			),
-			FColor::Red
-		);
+		
 		return;
 	}
 
 	const FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[PlayerCharacterBase][ClassDataDebug] SkillInput Started. Owner=%s ClassData=%s Slot=%s SkillTag=%s MappingCount=%d AbilityCount=%d"),
-			*GetName(),
-			*GetNameSafe(CharacterClassData),
-			*SlotTag.ToString(),
-			SkillTag.IsValid() ? *SkillTag.ToString() : TEXT("None"),
-			SkillSlotMapping.Num(),
-			ASC->GetActivatableAbilities().Num()
-		),
-		FColor::Yellow
-	);
+	
 
 	if (SkillTag.IsValid())
 	{
 		const bool bActivated = ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(SkillTag));
 
-		Debug::Print(
-			FString::Printf(
-				TEXT("[PlayerCharacterBase][ClassDataDebug] TryActivateAbilitiesByTag. Owner=%s Slot=%s SkillTag=%s Activated=%d"),
-				*GetName(),
-				*SlotTag.ToString(),
-				*SkillTag.ToString(),
-				bActivated ? 1 : 0
-			),
-			bActivated ? FColor::Green : FColor::Red
-		);
+		
 
 		const FGameplayTag SkillInputEventTag = GetSkillInputEventTag(SkillTag);
 
 		if (SkillInputEventTag.IsValid())
 		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[PlayerCharacterBase][ClassDataDebug] SendSkillInputStartedEvent. Owner=%s SkillTag=%s InputEventTag=%s"),
-					*GetName(),
-					*SkillTag.ToString(),
-					*SkillInputEventTag.ToString()
-				),
-				FColor::Yellow
-			);
+			
 
 			SendSkillInputStartedEvent(SkillInputEventTag);
 
@@ -1267,30 +989,12 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 		}
 		else
 		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[PlayerCharacterBase][ClassDataDebug] InputEventTag Not Found. Owner=%s ClassData=%s Slot=%s SkillTag=%s"),
-					*GetName(),
-					*GetNameSafe(CharacterClassData),
-					*SlotTag.ToString(),
-					*SkillTag.ToString()
-				),
-				FColor::Orange
-			);
+			
 		}
 	}
 	else
 	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[PlayerCharacterBase][ClassDataDebug] SkillTag Not Found For Slot. Owner=%s ClassData=%s Slot=%s MappingCount=%d"),
-				*GetName(),
-				*GetNameSafe(CharacterClassData),
-				*SlotTag.ToString(),
-				SkillSlotMapping.Num()
-			),
-			FColor::Red
-		);
+		
 	}
 }
 
@@ -1463,15 +1167,7 @@ void APlayerCharacterBase::ServerRequestMeleeComboInput_Implementation(FGameplay
 
 void APlayerCharacterBase::InitializeMovementStats()
 {
-	Debug::Print(
-		FString::Printf(
-			TEXT("[PlayerCharacterBase][ClassDataDebug] InitializeMovementStats. Owner=%s CharacterClassData=%s MovementData=%s"),
-			*GetName(),
-			*GetNameSafe(CharacterClassData),
-			CharacterClassData ? *GetNameSafe(CharacterClassData->MovementData) : TEXT("None")
-		),
-		FColor::Cyan
-	);
+	
 
 	if (!CharacterClassData || !CharacterClassData->MovementData)
 	{
@@ -1533,75 +1229,3 @@ void APlayerCharacterBase::ServerHandleShiftAction_Implementation(
 	ASC->HandleGameplayEvent(Payload.EventTag, &Payload);
 }
 
-// void APlayerCharacterBase::Server_TestApplyDamage_Implementation()
-// {
-// 	if (!HasAuthority())
-// 	{
-// 		return;
-// 	}
-//
-// 	UCombatComponent* SourceCombatComponent = GetCombatComponent();
-// 	if (!SourceCombatComponent)
-// 	{
-// 		return;
-// 	}
-//
-// 	ABaseCharacter* BestTarget = nullptr;
-// 	float BestDistanceSq = TNumericLimits<float>::Max();
-//
-// 	TArray<AActor*> FoundActors;
-// 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseCharacter::StaticClass(), FoundActors);
-//
-// 	for (AActor* Actor : FoundActors)
-// 	{
-// 		ABaseCharacter* Candidate = Cast<ABaseCharacter>(Actor);
-// 		if (!Candidate)
-// 		{
-// 			continue;
-// 		}
-//
-// 		if (Candidate == this)
-// 		{
-// 			continue;
-// 		}
-//
-// 		if (Candidate->IsDead())
-// 		{
-// 			continue;
-// 		}
-//
-// 		if (IsFriendlyTo(Candidate))
-// 		{
-// 			continue;
-// 		}
-//
-// 		const float DistanceSq = FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation());
-// 		constexpr float MaxTestDamageRange = 3000.f;
-//
-// 		if (DistanceSq > FMath::Square(MaxTestDamageRange))
-// 		{
-// 			continue;
-// 		}
-//
-// 		if (DistanceSq < BestDistanceSq)
-// 		{
-// 			BestDistanceSq = DistanceSq;
-/// 			BestTarget = Candidate;
-// 		}
-// 	}
-//
-// 	if (!BestTarget)
-// 	{
-// 		return;
-// 	}
-//
-// 	FDGDamageRequest DamageRequest;
-// 	DamageRequest.SourceActor = this;
-// 	DamageRequest.TargetActor = BestTarget;
-// 	DamageRequest.BaseDamage = 100.f;
-// 	DamageRequest.SourceTag = DGGameplayTags::Input_Slot_1;
-// 	DamageRequest.HitLocation = BestTarget->GetActorLocation();
-// 	DamageRequest.bHasHitLocation = true;
-//
-// 	const FDGDamageResult DamageResult = SourceCombatComponent->ApplyDamageRequest(DamageRequest);
-// }

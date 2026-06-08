@@ -1,20 +1,51 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Character/Enemy/Boss/BossCharacterBase.h"
 
 #include "AbilitySystemComponent.h"
 #include "Character/Enemy/Boss/Data/BossCharacterClassData.h"
+#include "Character/Enemy/Data/BossSkillData.h"
+#include "Components/UI/DGMinimapMarkerComponent.h"
 #include "Core/DG_GameplayTags.h"
 #include "GAS/Attributes/DG_AttributeSet.h"
 #include "GAS/Attributes/DG_BossAttributeSet.h"
 #include "GAS/Attributes/DG_EnemyAttributeSet.h"
-#include "Components/UI/DGMinimapMarkerComponent.h"
+#include "GameplayAbilitySpec.h"
+
+namespace
+{
+	bool HasGrantedBossSkillDataAbility(const UAbilitySystemComponent* ASC, const UBossSkillData* SkillData)
+	{
+		if (!ASC || !SkillData || !SkillData->AbilityClass)
+		{
+			return false;
+		}
+
+		for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+		{
+			if (!Spec.Ability)
+			{
+				continue;
+			}
+
+			if (Spec.Ability->GetClass() != SkillData->AbilityClass)
+			{
+				continue;
+			}
+
+			if (Spec.SourceObject.Get() == SkillData)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+}
 
 ABossCharacterBase::ABossCharacterBase()
 {
 	BossAttributeSet = CreateDefaultSubobject<UDG_BossAttributeSet>(TEXT("BossAttributeSet"));
-	EnemyAttributeSet = CreateDefaultSubobject<UDG_EnemyAttributeSet>(TEXT("EnemyAttributeSet"));
 
 	if (MinimapMarkerComponent)
 	{
@@ -22,7 +53,7 @@ ABossCharacterBase::ABossCharacterBase()
 	}
 }
 
-//Boss Class Data 초기 태그 설정
+// Boss Class Data 초기 태그 설정
 void ABossCharacterBase::InitializeBossTagFromClassData()
 {
 	if (!HasAuthority())
@@ -44,14 +75,24 @@ void ABossCharacterBase::InitializeBossTagFromClassData()
 
 	if (AbilitySystemComponent)
 	{
-		AbilitySystemComponent->AddLooseGameplayTag(BossTag, 1, EGameplayTagReplicationState::TagOnly);
-
-		if (BossClassData->InitialPhaseTag.IsValid())
+		if (!bBossHealthPhaseDelegateBound)
 		{
-			AbilitySystemComponent->AddLooseGameplayTag(BossClassData->InitialPhaseTag, 1, EGameplayTagReplicationState::TagOnly);
+			AbilitySystemComponent
+				->GetGameplayAttributeValueChangeDelegate(UDG_AttributeSet::GetHealthAttribute())
+				.AddUObject(this, &ABossCharacterBase::OnHealthChanged);
+
+			bBossHealthPhaseDelegateBound = true;
+		}
+
+		if (!bGroggyDelegateBound)
+		{
+			AbilitySystemComponent
+				->GetGameplayAttributeValueChangeDelegate(UDG_EnemyAttributeSet::GetGroggyGaugeAttribute())
+				.AddUObject(this, &ABossCharacterBase::OnGroggyGaugeChanged);
+
+			bGroggyDelegateBound = true;
 		}
 	}
-
 }
 
 void ABossCharacterBase::BeginPlay()
@@ -70,12 +111,23 @@ void ABossCharacterBase::PossessedBy(AController* NewController)
 
 		if (AbilitySystemComponent)
 		{
-			AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(
-				UDG_AttributeSet::GetHealthAttribute()
-			).AddUObject(this, &ABossCharacterBase::OnHealthChanged);
-			AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(
-				UDG_EnemyAttributeSet::GetGroggyGaugeAttribute()
-			).AddUObject(this, &ABossCharacterBase::OnGroggyGaugeChanged);
+			if (!bBossHealthPhaseDelegateBound)
+			{
+				AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(
+					UDG_AttributeSet::GetHealthAttribute()
+				).AddUObject(this, &ABossCharacterBase::OnHealthChanged);
+
+				bBossHealthPhaseDelegateBound = true;
+			}
+
+			if (!bGroggyDelegateBound)
+			{
+				AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(
+					UDG_EnemyAttributeSet::GetGroggyGaugeAttribute()
+				).AddUObject(this, &ABossCharacterBase::OnGroggyGaugeChanged);
+
+				bGroggyDelegateBound = true;
+			}
 		}
 	}
 }
@@ -94,6 +146,11 @@ void ABossCharacterBase::ApplyDefaultEffects()
 	if (!BossClassData || (!bHasStartupEffects && !bHasEnemyStartupEffects))
 	{
 		Super::ApplyDefaultEffects();
+		return;
+	}
+
+	if (bBossDataEffectsApplied)
+	{
 		return;
 	}
 
@@ -131,6 +188,8 @@ void ABossCharacterBase::ApplyDefaultEffects()
 			}
 		}
 	}
+
+	bBossDataEffectsApplied = true;
 }
 
 void ABossCharacterBase::ApplyBossSpecialEffects()
@@ -171,11 +230,10 @@ void ABossCharacterBase::ApplyBossSpecialEffects()
 		UE_LOG(
 			LogTemp,
 			Log,
-			TEXT("[BossCharacterBase] Boss special effects applied. Phase=%.2f Threshold=%.2f Rage=%.2f/%.2f DR=%.2f"),
+			TEXT("[BossCharacterBase] Boss special effects applied. Phase=%.2f Threshold=%.2f Rage=%.2f/100.00 DR=%.2f"),
 			BossAttributeSet->GetCurrentPhase(),
 			BossAttributeSet->GetPhaseThreshold(),
 			BossAttributeSet->GetRageGauge(),
-			BossAttributeSet->GetMaxRageGauge(),
 			BossAttributeSet->GetDamageReduction()
 		);
 	}
@@ -276,8 +334,13 @@ void ABossCharacterBase::UpdateHealthPhaseTags(float HealthRatio)
 			AbilitySystemComponent->AddLooseGameplayTag(Entry.PhaseTag, 1, EGameplayTagReplicationState::TagOnly);
 			BossAttributeSet->SetCurrentPhase(EntryPhaseIndex);
 
-			UE_LOG(LogTemp, Warning, TEXT("[BossCharacterBase] Phase transition → Phase %.0f (HealthRatio=%.2f)"),
-				EntryPhaseIndex, HealthRatio);
+			UE_LOG(
+				LogTemp,
+				Warning,
+				TEXT("[BossCharacterBase] Phase transition → Phase %.0f (HealthRatio=%.2f)"),
+				EntryPhaseIndex,
+				HealthRatio
+			);
 
 			break; // 한 사이클에 하나의 페이즈만 전환
 		}
@@ -293,31 +356,39 @@ void ABossCharacterBase::GrantDefaultAbilities()
 		return;
 	}
 
-	for (const auto& AbilityClass : BossClassData->AttackAbilities)
+	for (const TObjectPtr<UBossSkillData>& SkillDataPtr : BossClassData->AttackSkills)
 	{
-		if (AbilityClass)
+		UBossSkillData* SkillData = SkillDataPtr.Get();
+		if (!SkillData || !SkillData->AbilityClass)
 		{
-			AbilitySystemComponent->GiveAbility(
-				FGameplayAbilitySpec(AbilityClass, 1));
+			continue;
 		}
+
+		if (HasGrantedBossSkillDataAbility(AbilitySystemComponent, SkillData))
+		{
+			continue;
+		}
+
+		FGameplayAbilitySpec AbilitySpec(SkillData->AbilityClass, 1, INDEX_NONE, SkillData);
+		AbilitySystemComponent->GiveAbility(AbilitySpec);
 	}
 }
 
-TSubclassOf<UGameplayAbility> ABossCharacterBase::GetRandomAttackAbilityClass() const
+UBossSkillData* ABossCharacterBase::GetRandomAttackSkillData() const
 {
 	if (!BossClassData)
 	{
 		return nullptr;
 	}
 
-	const TArray<TSubclassOf<UGameplayAbility>>& Abilities = BossClassData->AttackAbilities;
-	if (Abilities.Num() == 0)
+	const TArray<TObjectPtr<UBossSkillData>>& Skills = BossClassData->AttackSkills;
+	if (Skills.Num() == 0)
 	{
 		return nullptr;
 	}
 
-	const int32 RandomIndex = FMath::RandRange(0, Abilities.Num() - 1);
-	return Abilities[RandomIndex];
+	const int32 RandomIndex = FMath::RandRange(0, Skills.Num() - 1);
+	return Skills[RandomIndex].Get();
 }
 
 void ABossCharacterBase::HandleDeath()

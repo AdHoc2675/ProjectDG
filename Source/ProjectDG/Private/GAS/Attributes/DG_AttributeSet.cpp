@@ -194,18 +194,11 @@ void UDG_AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbac
 			const float NewHealth = OldHealth - LocalDamageDone;
 			SetHealth(FMath::Clamp(NewHealth, 0.0f, GetMaxHealth()));
 
-			Debug::Print(FString::Printf(
-				TEXT("[DG_AttributeSet] Damage Applied. Damage=%.2f Health %.2f -> %.2f / %.2f"),
-				LocalDamageDone,
-				OldHealth,
-				GetHealth(),
-				GetMaxHealth()
-			));
+			
 
 			// 만약 체력이 0 이하가 되었다면, 사망 처리 로직 호출
 			if (GetHealth() <= 0.0f)
 			{
-				Debug::Print(TEXT("[DG_AttributeSet] Health reached zero."));
 				// 통상적으로 Target의 ASC를 통해 캐릭터의 Die() 함수 등을 호출하는 이벤트를 보냅니다.
 			}
 		}

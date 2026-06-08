@@ -42,10 +42,7 @@ void UANS_BossAttackHitWindow::NotifyBegin(
 
 	InitializeRuntimeData(MeshComp);
 
-	if (bLogWindowLifecycle)
-	{
-		Debug::Print(TEXT("[ANS_BossAttackHitWindow] Begin"), FColor::Orange);
-	}
+	
 }
 
 void UANS_BossAttackHitWindow::NotifyTick(
@@ -75,10 +72,7 @@ void UANS_BossAttackHitWindow::NotifyEnd(
 
 	RuntimeDataMap.Remove(MeshComp);
 
-	if (bLogWindowLifecycle)
-	{
-		Debug::Print(TEXT("[ANS_BossAttackHitWindow] End"), FColor::Orange);
-	}
+	
 }
 
 void UANS_BossAttackHitWindow::InitializeRuntimeData(USkeletalMeshComponent* MeshComp)
@@ -182,7 +176,6 @@ void UANS_BossAttackHitWindow::TraceBodySockets(USkeletalMeshComponent* MeshComp
 			RuntimeData.HitActors.Add(HitActor);
 
 			DrawDebugSphere(World, HitResult.ImpactPoint, 20.f, 12, FColor::Cyan, false, 2.f);
-			Debug::Print(FString::Printf(TEXT("[BossHit] %s"), *GetNameSafe(HitActor)), FColor::Cyan);
 
 			SendHitEvent(OwnerActor, HitActor);
 		}

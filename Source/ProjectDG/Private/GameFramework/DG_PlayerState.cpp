@@ -308,14 +308,7 @@ void ADG_PlayerState::SetSessionMemberInfo(
 		{
 			CharacterClassTag = ParsedClassTag;
 		}
-		else
-		{
-			Debug::Print(FString::Printf(
-				TEXT("[DG_PlayerState] Invalid ClassTag from backend. Raw=%s Normalized=%s"),
-				*InClassTag,
-				*NormalizedClassTag
-			));
-		}
+		
 	}
 
 	ForceNetUpdate();

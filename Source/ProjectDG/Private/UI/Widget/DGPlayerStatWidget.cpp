@@ -54,7 +54,6 @@ void UDGPlayerStatWidget::BindToController(UDGOverlayWidgetController* Controlle
 	Controller->OnSkillCooldownChanged.AddDynamic(this, &UDGPlayerStatWidget::OnSkillCooldownChanged);
 	Controller->OnSkillIconUpdated.AddDynamic(this, &UDGPlayerStatWidget::OnSkillIconUpdated);
 
-	Debug::Print(FString::Printf(TEXT("[DGPlayerStatWidget] successfully bound to controller: %s"), *Controller->GetName()));
 }
 
 void UDGPlayerStatWidget::HealthChanged(float NewHealth)
