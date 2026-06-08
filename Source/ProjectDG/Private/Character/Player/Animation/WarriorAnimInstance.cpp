@@ -1,47 +1,57 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Character/Player/Animation/WarriorAnimInstance.h"
 
 #include "AbilitySystemComponent.h"
-  #include "Character/Player/PlayerCharacterBase.h"
-  #include "Core/DG_GameplayTags.h"
+#include "Character/Player/PlayerCharacterBase.h"
+#include "Core/DG_GameplayTags.h"
 
 void UWarriorAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
-	Super::NativeUpdateAnimation(DeltaSeconds);
+      Super::NativeUpdateAnimation(DeltaSeconds);
 
-	if (!PlayerCharacter)
-	{
-  		bIsSharpStrikeActive = false;
-  		bUseSharpStrikeUpperBody = false;
+      bIsWarriorMovingAttackActive = false;
+      bUseWarriorMovingAttackUpperBody = false;
+      bIsWarriorMeleeTwistCorrectionActive = false;
+      bUseWarriorMeleeTwistCorrection = false;
 
-  		SharpStrikeUpperBodyAlpha = FMath::FInterpTo(
-				  SharpStrikeUpperBodyAlpha,
-				  0.f,
-				  DeltaSeconds,
-				  SharpStrikeUpperBodyBlendInterpSpeed
-		  );
+      if (!PlayerCharacter)
+      {
+              WarriorMovingAttackUpperBodyAlpha = FMath::FInterpTo(
+                      WarriorMovingAttackUpperBodyAlpha,
+                      0.f,
+                      DeltaSeconds,
+                      WarriorMovingAttackUpperBodyBlendInterpSpeed
+              );
 
-  		return;
-	}
+              return;
+      }
 
-	bIsSharpStrikeActive = false;
+      if (UAbilitySystemComponent* ASC = PlayerCharacter->GetCharacterAbilitySystemComponent())
+      {
+              bIsWarriorMovingAttackActive = ASC->HasAnyMatchingGameplayTags(MovingAttackStateTags);
+              bIsWarriorMeleeTwistCorrectionActive = ASC->HasAnyMatchingGameplayTags(MeleeTwistCorrectionStateTags);
 
-	if (UAbilitySystemComponent* ASC = PlayerCharacter->GetCharacterAbilitySystemComponent())
-	{
-  		bIsSharpStrikeActive = ASC->HasMatchingGameplayTag(DGGameplayTags::State_Skill_Warrior_SharpStrike_Active.GetTag());
-	}
+              const bool bIsMovementLocked =
+                      ASC->HasMatchingGameplayTag(DGGameplayTags::State_Movement_Locked);
 
-	bUseSharpStrikeUpperBody = bIsSharpStrikeActive && GroundSpeed > SharpStrikeMovingThreshold;
+              bUseWarriorMovingAttackUpperBody =
+                      bIsWarriorMovingAttackActive &&
+                      !bIsMovementLocked &&
+                      GroundSpeed > WarriorMovingAttackThreshold;
 
-	const float TargetSharpStrikeUpperBodyAlpha = bUseSharpStrikeUpperBody ? 1.f : 0.f;
+              bUseWarriorMeleeTwistCorrection =
+                      bUseWarriorMovingAttackUpperBody &&
+                      bIsWarriorMeleeTwistCorrectionActive;
+      }
 
-	SharpStrikeUpperBodyAlpha = FMath::FInterpTo(
-		  SharpStrikeUpperBodyAlpha,
-		  TargetSharpStrikeUpperBodyAlpha,
-		  DeltaSeconds,
-		  SharpStrikeUpperBodyBlendInterpSpeed);
+      const float TargetWarriorMovingAttackUpperBodyAlpha =
+              bUseWarriorMovingAttackUpperBody ? 1.f : 0.f;
+
+      WarriorMovingAttackUpperBodyAlpha = FMath::FInterpTo(
+              WarriorMovingAttackUpperBodyAlpha,
+              TargetWarriorMovingAttackUpperBodyAlpha,
+              DeltaSeconds,
+              WarriorMovingAttackUpperBodyBlendInterpSpeed
+      );
 }
-
-

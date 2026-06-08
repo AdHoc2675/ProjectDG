@@ -48,6 +48,15 @@ namespace DGGameplayTags
 	
 	// MeleeAttack Combo Miss 완화
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_InputRequest, "Event.Combo.InputRequest")
+	
+	// Player 기본 이동 중 Jump GA Ending시 호출될 EventTag
+	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Jump_Landed, "Event.Movement.Jump.Landed")
+	
+	// 특정 스킬들을 사용하는 데에 있어 스킬 몽타주에서 이동이 가능한 시점을 알리는 EventTag 
+	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Skill_Unlock, "Event.Movement.Skill.Unlock")
+	
+	// 몽타주의 핵심 동작이 끝나고 이후부터는 이동 시 스킬이 끝나게끔
+	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Skill_CancelByMove, "Event.Movement.Skill.CancelByMove")
 
 	// DoomStrike(파멸의 맹타) 몽타주 출력 시 타겟팅 대상에게 Dash 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그
 	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Warrior_DoomStrike_DashBegin, "Event.Movement.Warrior.DoomStrike.DashBegin")
@@ -80,6 +89,7 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Weapon_Blade_BasicTrail, "GameplayCue.Weapon.Blade.BasicTrail")
 
 	// Skill.Common
+	UE_DEFINE_GAMEPLAY_TAG(Skill_Common_Jump, "Skill.Common.Jump")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Common_Dodge, "Skill.Common.Dodge")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Common_Sprint, "Skill.Common.Sprint")
 
@@ -167,6 +177,7 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Data_MentalCost, "Data.MentalCost")
 
 	// Block
+	UE_DEFINE_GAMEPLAY_TAG(Block_Movement_Jump, "Block.Movement.Jump")
 	UE_DEFINE_GAMEPLAY_TAG(Block_Movement_Dodge, "Block.Movement.Dodge")
 	UE_DEFINE_GAMEPLAY_TAG(Block_Movement_Sprint, "Block.Movement.Sprint")
 

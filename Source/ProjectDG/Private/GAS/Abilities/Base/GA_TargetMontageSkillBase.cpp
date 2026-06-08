@@ -57,6 +57,8 @@ void UGA_TargetMontageSkillBase::EndAbility(
 )
 {
 	ResetTargetMontageState();
+	
+	ClearSkillMovementPolicy();
 
 	MontageTask = nullptr;
 	AttackHitWindowBeginTask = nullptr;
@@ -572,6 +574,8 @@ void UGA_TargetMontageSkillBase::ContinueTargetMontageAbility()
 		return;
 	}
 
+	ApplySkillMovementPolicy();
+	
 	if (bFaceTargetOnActivate)
 	{
 		FaceCurrentTarget();
