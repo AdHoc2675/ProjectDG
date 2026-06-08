@@ -1,4 +1,4 @@
-﻿#include "UI/Widget/DGPlayerStatWidget.h"
+#include "UI/Widget/DGPlayerStatWidget.h"
 #include "UI/WidgetController/DGOverlayWidgetController.h"
 
 #include "UI/Widget/DGSkillSlotWidget.h"
@@ -31,6 +31,16 @@ void UDGPlayerStatWidget::BindToController(UDGOverlayWidgetController* Controlle
 	// 상속받은 DGUserWidget의 캐싱 변수에 저장 (혹시 블루프린트에서 필요할 수 있으므로)
 	SetWidgetController(Controller);
 
+	// 각 스킬 슬롯 위젯에도 컨트롤러를 전파하여 자체적으로 이벤트 바인딩을 할 수 있게 함
+	// (만약 아직 NativeConstruct가 안 불려서 배열이 비었다면, NativeConstruct에서 전파할 것임)
+	for (UDGSkillSlotWidget* SlotWidget : AllSkillSlots)
+	{
+		if (SlotWidget)
+		{
+			SlotWidget->SetWidgetController(Controller);
+		}
+	}
+
 	// 컨트롤러의 이벤트에 Dynamic 바인딩
 	Controller->OnHealthChanged.AddDynamic(this, &UDGPlayerStatWidget::HealthChanged);
 	Controller->OnMaxHealthChanged.AddDynamic(this, &UDGPlayerStatWidget::MaxHealthChanged);
@@ -42,6 +52,7 @@ void UDGPlayerStatWidget::BindToController(UDGOverlayWidgetController* Controlle
 	// 스킬 관련 이벤트 바인딩
 	Controller->OnSkillInfoSet.AddDynamic(this, &UDGPlayerStatWidget::OnSkillInfoSet);
 	Controller->OnSkillCooldownChanged.AddDynamic(this, &UDGPlayerStatWidget::OnSkillCooldownChanged);
+	Controller->OnSkillIconUpdated.AddDynamic(this, &UDGPlayerStatWidget::OnSkillIconUpdated);
 
 	Debug::Print(FString::Printf(TEXT("[DGPlayerStatWidget] successfully bound to controller: %s"), *Controller->GetName()));
 }
@@ -160,6 +171,19 @@ void UDGPlayerStatWidget::OnSkillCooldownChanged(FGameplayTag CooldownTag, float
 		if (SlotWidget && SlotWidget->MatchCooldownTag(CooldownTag))
 		{
 			SlotWidget->UpdateCooldown(TimeRemaining, Duration);
+			break;
+		}
+	}
+}
+
+void UDGPlayerStatWidget::OnSkillIconUpdated(FGameplayTag SlotTag, UTexture2D* NewIcon)
+{
+	for (UDGSkillSlotWidget* SlotWidget : AllSkillSlots)
+	{
+		// SlotWidget의 내부 SlotTag와 파라미터로 넘어온 SlotTag가 일치하는지 비교
+		if (SlotWidget && SlotWidget->GetSlotTag() == SlotTag)
+		{
+			SlotWidget->UpdateSkillIcon(NewIcon);
 			break;
 		}
 	}

@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "GameFramework/DG_PlayerState.h"
 
@@ -199,7 +199,12 @@ int32 ADG_PlayerState::GetCurrentSkillComboStepIndex(FGameplayTag SkillTag, int3
 
 void ADG_PlayerState::AdvanceSkillComboStep(FGameplayTag SkillTag, int32 ComboCount, float ExpireDuration)
 {
-	if (!HasAuthority())
+	APlayerController* PC = GetPlayerController();
+	bool bIsLocalPredicted = (!HasAuthority() && PC && PC->IsLocalPlayerController());
+	
+	UE_LOG(LogTemp, Log, TEXT("[DG_PlayerState] AdvanceSkillComboStep called! Tag: %s, Auth: %d, Local: %d"), *SkillTag.ToString(), HasAuthority(), bIsLocalPredicted);
+
+	if (!HasAuthority() && !bIsLocalPredicted)
 	{
 		return;
 	}
@@ -233,12 +238,20 @@ void ADG_PlayerState::AdvanceSkillComboStep(FGameplayTag SkillTag, int32 ComboCo
 		                          ? 0.f
 		                          : GetSkillComboServerTime() + FMath::Max(0.f, ExpireDuration);
 
-	ForceNetUpdate();
+	UE_LOG(LogTemp, Log, TEXT("[DG_PlayerState] Broadcasting OnSkillComboStepChanged! NextStep: %d"), NextStepIndex);
+	OnSkillComboStepChanged.Broadcast(SkillTag, NextStepIndex);
+
+	if (HasAuthority())
+	{
+		ForceNetUpdate();
+	}
 }
 
 void ADG_PlayerState::ResetSkillComboStep(FGameplayTag SkillTag)
 {
-	if (!HasAuthority())
+	APlayerController* PC = GetPlayerController();
+	bool bIsLocalPredicted = (!HasAuthority() && PC && PC->IsLocalPlayerController());
+	if (!HasAuthority() && !bIsLocalPredicted)
 	{
 		return;
 	}
@@ -252,7 +265,12 @@ void ADG_PlayerState::ResetSkillComboStep(FGameplayTag SkillTag)
 	State->CurrentStepIndex = 0;
 	State->ExpireServerTime = 0.f;
 
-	ForceNetUpdate();
+	OnSkillComboStepChanged.Broadcast(SkillTag, 0);
+
+	if (HasAuthority())
+	{
+		ForceNetUpdate();
+	}
 }
 
 void ADG_PlayerState::SetSessionMemberInfo(
@@ -358,6 +376,8 @@ void ADG_PlayerState::OnRep_CurrentExp()
 
 void ADG_PlayerState::OnRep_SkillComboStates()
 {
-	// 후속 작업:
-	// 스킬 UI에서 현재 Step 아이콘 갱신이 필요하면 여기서 이벤트/델리게이트 연결
+	for (const FPlayerSkillChainRuntimeState& State : SkillComboStates)
+	{
+		OnSkillComboStepChanged.Broadcast(State.SkillTag, State.CurrentStepIndex);
+	}
 }
