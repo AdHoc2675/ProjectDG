@@ -485,7 +485,7 @@ void UDGOverlayWidgetController::OnCooldownTagChanged(const FGameplayTag InCoold
 
 void UDGOverlayWidgetController::OnSkillComboStepChanged(FGameplayTag SkillTag, int32 NewStepIndex)
 {
-	UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] OnSkillComboStepChanged received! Tag: %s, Step: %d"), *SkillTag.ToString(), NewStepIndex);
+	// UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] OnSkillComboStepChanged received! Tag: %s, Step: %d"), *SkillTag.ToString(), NewStepIndex);
 	if (!SkillTag.IsValid()) return;
 
 	APlayerCharacterBase* PlayerChar = Cast<APlayerCharacterBase>(PlayerController->GetPawn());
@@ -508,7 +508,7 @@ void UDGOverlayWidgetController::OnSkillComboStepChanged(FGameplayTag SkillTag, 
 			}
 
 			FGameplayTag TargetSlotTag = SlotDef.SlotTag.IsValid() ? SlotDef.SlotTag : SlotDef.SkillData->DefaultSlotTag;
-			UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] Broadcasting OnSkillIconUpdated! SlotTag: %s"), *TargetSlotTag.ToString());
+			// UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] Broadcasting OnSkillIconUpdated! SlotTag: %s"), *TargetSlotTag.ToString());
 			OnSkillIconUpdated.Broadcast(TargetSlotTag, StepData->Icon);
 			
 			break;

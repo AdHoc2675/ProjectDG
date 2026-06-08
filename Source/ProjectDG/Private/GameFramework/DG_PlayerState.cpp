@@ -202,7 +202,7 @@ void ADG_PlayerState::AdvanceSkillComboStep(FGameplayTag SkillTag, int32 ComboCo
 	APlayerController* PC = GetPlayerController();
 	bool bIsLocalPredicted = (!HasAuthority() && PC && PC->IsLocalPlayerController());
 	
-	UE_LOG(LogTemp, Log, TEXT("[DG_PlayerState] AdvanceSkillComboStep called! Tag: %s, Auth: %d, Local: %d"), *SkillTag.ToString(), HasAuthority(), bIsLocalPredicted);
+	//UE_LOG(LogTemp, Log, TEXT("[DG_PlayerState] AdvanceSkillComboStep called! Tag: %s, Auth: %d, Local: %d"), *SkillTag.ToString(), HasAuthority(), bIsLocalPredicted);
 
 	if (!HasAuthority() && !bIsLocalPredicted)
 	{
@@ -238,7 +238,7 @@ void ADG_PlayerState::AdvanceSkillComboStep(FGameplayTag SkillTag, int32 ComboCo
 		                          ? 0.f
 		                          : GetSkillComboServerTime() + FMath::Max(0.f, ExpireDuration);
 
-	UE_LOG(LogTemp, Log, TEXT("[DG_PlayerState] Broadcasting OnSkillComboStepChanged! NextStep: %d"), NextStepIndex);
+	//UE_LOG(LogTemp, Log, TEXT("[DG_PlayerState] Broadcasting OnSkillComboStepChanged! NextStep: %d"), NextStepIndex);
 	OnSkillComboStepChanged.Broadcast(SkillTag, NextStepIndex);
 
 	if (HasAuthority())

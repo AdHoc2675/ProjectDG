@@ -38,10 +38,10 @@ void UDGSkillSlotWidget::InitSkillSlot(FGameplayTag InSlotTag, FGameplayTag InCo
 void UDGSkillSlotWidget::UpdateSkillIcon(UTexture2D* NewIcon)
 {
 
-	UE_LOG(LogTemp, Log, TEXT("[DGSkillSlotWidget] UpdateSkillIcon"));
+	//UE_LOG(LogTemp, Log, TEXT("[DGSkillSlotWidget] UpdateSkillIcon"));
 	if (SkillIconImage && NewIcon)
 	{
-		UE_LOG(LogTemp, Log, TEXT("[DGSkillSlotWidget] SetBrushFromTexture"));
+		//UE_LOG(LogTemp, Log, TEXT("[DGSkillSlotWidget] SetBrushFromTexture"));
 		SkillIconImage->SetBrushFromTexture(NewIcon);
 	}
 	else {
@@ -64,7 +64,7 @@ void UDGSkillSlotWidget::SetWidgetController(UObject* InWidgetController)
 
 void UDGSkillSlotWidget::OnSkillIconUpdatedCallback(FGameplayTag InSlotTag, UTexture2D* NewIcon)
 {
-	UE_LOG(LogTemp, Log, TEXT("[DGSkillSlotWidget] OnSkillIconUpdatedCallback called! InSlotTag: %s, MySlotTag: %s"), *InSlotTag.ToString(), *SlotTag.ToString());
+	//UE_LOG(LogTemp, Log, TEXT("[DGSkillSlotWidget] OnSkillIconUpdatedCallback called! InSlotTag: %s, MySlotTag: %s"), *InSlotTag.ToString(), *SlotTag.ToString());
 	if (SlotTag.IsValid() && SlotTag == InSlotTag)
 	{
 		UpdateSkillIcon(NewIcon);
