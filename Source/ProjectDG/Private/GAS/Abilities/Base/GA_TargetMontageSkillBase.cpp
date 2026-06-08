@@ -82,6 +82,7 @@ void UGA_TargetMontageSkillBase::ResetTargetMontageState()
 void UGA_TargetMontageSkillBase::StartTargetMontageEventTasks()
 {
 	RegisterSkillHitCheckEvent();
+	RegisterSkillCueEvents();
 
 	AttackHitWindowBeginTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this,

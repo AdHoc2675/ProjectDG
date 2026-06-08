@@ -3,17 +3,22 @@
 #include "GAS/Abilities/Base/GA_PlayerSkillBase.h"
 
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+
 #include "Character/Player/PlayerCharacterBase.h"
 #include "Character/Player/Data/PlayerSkillData.h"
+
 #include "Core/DG_Debug.h"
 #include "Core/DG_GameplayTags.h"
+
 #include "GameFramework/DG_PlayerState.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
+
 #include "GAS/Effects/Skills/GE_SkillCoolDown.h"
 #include "GAS/Effects/Skills/GE_SkillCost.h"
-
 #include "GAS/Attributes/DG_AttributeSet.h"
+
+#include "AbilitySystemComponent.h"
 
 UGA_PlayerSkillBase::UGA_PlayerSkillBase()
 {
@@ -161,6 +166,7 @@ void UGA_PlayerSkillBase::EndAbility(
 {
 	UnregisterSkillChainStepEvent();
 	UnregisterSkillHitCheckEvent();
+	UnregisterSkillCueEvents();
 
 	Super::EndAbility(
 		Handle,
@@ -373,6 +379,197 @@ void UGA_PlayerSkillBase::OnSkillHitCheckEvent(FGameplayEventData Payload)
 void UGA_PlayerSkillBase::HandleSkillHitCheckEvent(const FGameplayEventData& Payload)
 {
 	// 자식 Base에서 override해서 실제 판정 처리
+}
+
+void UGA_PlayerSkillBase::RegisterSkillCueEvents()
+{
+	RegisterSkillVFXEvent();
+	RegisterSkillSFXEvent();
+}
+
+void UGA_PlayerSkillBase::UnregisterSkillCueEvents()
+{
+	UnregisterSkillVFXEvent();
+	UnregisterSkillSFXEvent();
+}
+
+void UGA_PlayerSkillBase::RegisterSkillVFXEvent()
+{
+	if (SkillVFXEventTask)
+	{
+		return;
+	}
+
+	SkillVFXEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this,
+		DGGameplayTags::Event_Skill_VFX,
+		nullptr,
+		false,
+		false
+	);
+
+	if (!SkillVFXEventTask)
+	{
+		return;
+	}
+
+	SkillVFXEventTask->EventReceived.AddDynamic(
+		this,
+		&UGA_PlayerSkillBase::OnSkillVFXEvent
+	);
+
+	SkillVFXEventTask->ReadyForActivation();
+}
+
+void UGA_PlayerSkillBase::UnregisterSkillVFXEvent()
+{
+	if (!SkillVFXEventTask)
+	{
+		return;
+	}
+
+	SkillVFXEventTask->EndTask();
+	SkillVFXEventTask = nullptr;
+}
+
+void UGA_PlayerSkillBase::OnSkillVFXEvent(FGameplayEventData Payload)
+{
+	HandleSkillVFXEvent(Payload);
+}
+
+void UGA_PlayerSkillBase::HandleSkillVFXEvent(const FGameplayEventData& Payload)
+{
+	const FGameplayTag GameplayCueTag = ResolveSkillGameplayCueTagByEventTag(Payload.EventTag);
+	ExecuteSkillGameplayCue(GameplayCueTag, Payload);
+}
+
+void UGA_PlayerSkillBase::RegisterSkillSFXEvent()
+{
+	if (SkillSFXEventTask)
+	{
+		return;
+	}
+
+	SkillSFXEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this,
+		DGGameplayTags::Event_Skill_SFX,
+		nullptr,
+		false,
+		false
+	);
+
+	if (!SkillSFXEventTask)
+	{
+		return;
+	}
+
+	SkillSFXEventTask->EventReceived.AddDynamic(
+		this,
+		&UGA_PlayerSkillBase::OnSkillSFXEvent
+	);
+
+	SkillSFXEventTask->ReadyForActivation();
+}
+
+void UGA_PlayerSkillBase::UnregisterSkillSFXEvent()
+{
+	if (!SkillSFXEventTask)
+	{
+		return;
+	}
+
+	SkillSFXEventTask->EndTask();
+	SkillSFXEventTask = nullptr;
+}
+
+void UGA_PlayerSkillBase::OnSkillSFXEvent(FGameplayEventData Payload)
+{
+	HandleSkillSFXEvent(Payload);
+}
+
+void UGA_PlayerSkillBase::HandleSkillSFXEvent(const FGameplayEventData& Payload)
+{
+	const FGameplayTag GameplayCueTag = ResolveSkillGameplayCueTagByEventTag(Payload.EventTag);
+	ExecuteSkillGameplayCue(GameplayCueTag, Payload);
+}
+
+FGameplayTag UGA_PlayerSkillBase::ResolveSkillGameplayCueTagByEventTag(FGameplayTag EventTag) const
+{
+	if (EventTag == DGGameplayTags::Event_Skill_VFX_Cast)
+	{
+		return DGGameplayTags::GameplayCue_Skill_VFX_Cast;
+	}
+
+	if (EventTag == DGGameplayTags::Event_Skill_VFX_Hit)
+	{
+		return DGGameplayTags::GameplayCue_Skill_VFX_Hit;
+	}
+
+	if (EventTag == DGGameplayTags::Event_Skill_VFX_Impact)
+	{
+		return DGGameplayTags::GameplayCue_Skill_VFX_Impact;
+	}
+
+	if (EventTag == DGGameplayTags::Event_Skill_SFX_Cast)
+	{
+		return DGGameplayTags::GameplayCue_Skill_SFX_Cast;
+	}
+
+	if (EventTag == DGGameplayTags::Event_Skill_SFX_Hit)
+	{
+		return DGGameplayTags::GameplayCue_Skill_SFX_Hit;
+	}
+
+	if (EventTag == DGGameplayTags::Event_Skill_SFX_Impact)
+	{
+		return DGGameplayTags::GameplayCue_Skill_SFX_Impact;
+	}
+
+	return FGameplayTag::EmptyTag;
+}
+
+void UGA_PlayerSkillBase::ExecuteSkillGameplayCue(
+	FGameplayTag GameplayCueTag,
+	const FGameplayEventData& Payload
+) const
+{
+	if (!GameplayCueTag.IsValid())
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (!ASC)
+	{
+		return;
+	}
+
+	AActor* AvatarActor = GetAvatarActorFromActorInfo();
+	if (!AvatarActor)
+	{
+		return;
+	}
+
+	const UPlayerSkillData* CurrentSkillData = GetCurrentComboSkillData();
+	if (!CurrentSkillData)
+	{
+		CurrentSkillData = GetPlayerSkillData();
+	}
+
+	if (!CurrentSkillData)
+	{
+		return;
+	}
+
+	FGameplayCueParameters CueParameters;
+	CueParameters.Instigator = AvatarActor;
+	CueParameters.EffectCauser = AvatarActor;
+	CueParameters.SourceObject = CurrentSkillData;
+	CueParameters.Location = AvatarActor->GetActorLocation();
+	CueParameters.Normal = AvatarActor->GetActorForwardVector();
+	CueParameters.RawMagnitude = Payload.EventMagnitude;
+
+	ASC->ExecuteGameplayCue(GameplayCueTag, CueParameters);
 }
 
 ADG_PlayerState* UGA_PlayerSkillBase::GetDGPlayerState() const

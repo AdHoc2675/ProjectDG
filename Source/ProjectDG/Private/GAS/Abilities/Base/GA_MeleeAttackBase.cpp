@@ -65,6 +65,7 @@ void UGA_MeleeAttackBase::ActivateAbility(
 
 	RegisterSkillChainStepEvent();
 	RegisterSkillHitCheckEvent();
+	RegisterSkillCueEvents();
 
 	StartMeleeEventTasks();
 	PlayMeleeMontage();

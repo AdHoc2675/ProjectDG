@@ -13,7 +13,7 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Character_Class_Archer, "Character.Class.Archer")
 	UE_DEFINE_GAMEPLAY_TAG(Character_Class_Mage, "Character.Class.Mage")
 	UE_DEFINE_GAMEPLAY_TAG(Character_Class_Assassin, "Character.Class.Assassin")
-	
+
 	// Input
 	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_LeftMouse, "Input.SkillSlot.LeftMouse")
 	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_RightMouse, "Input.SkillSlot.RightMouse")
@@ -37,15 +37,27 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Attack_Hit, "Event.Attack.Hit")
 	UE_DEFINE_GAMEPLAY_TAG(Event_Attack_HitCheck, "Event.Attack.HitCheck")
 	UE_DEFINE_GAMEPLAY_TAG(Event_Attack_HitWindow_Begin, "Event.Attack.HitWindow.Begin")
-	
+
 	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_ChainStep, "Event.Skill.ChainStep")
 	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_ChainInput_Open, "Event.Skill.ChainInput.Open")
 	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_ChainInput_Close, "Event.Skill.ChainInput.Close")
-	
+
+	// Skill VFX Event
+	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_VFX, "Event.Skill.VFX")
+	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_VFX_Cast, "Event.Skill.VFX.Cast")
+	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_VFX_Hit, "Event.Skill.VFX.Hit")
+	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_VFX_Impact, "Event.Skill.VFX.Impact")
+
+	// Skill SFX Event
+	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_SFX, "Event.Skill.SFX")
+	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_SFX_Cast, "Event.Skill.SFX.Cast")
+	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_SFX_Hit, "Event.Skill.SFX.Hit")
+	UE_DEFINE_GAMEPLAY_TAG(Event_Skill_SFX_Impact, "Event.Skill.SFX.Impact")
+
 	// Weapon GameplayCue Event
 	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_Blade_BasicTrail_Begin, "Event.Weapon.Blade.BasicTrail.Begin")
 	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_Blade_BasicTrail_End, "Event.Weapon.Blade.BasicTrail.End")
-	
+
 	// MeleeAttack Combo Miss 완화
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_InputRequest, "Event.Combo.InputRequest")
 
@@ -54,15 +66,17 @@ namespace DGGameplayTags
 
 	// LeapingSlam(도약찍기) 몽타주 출력 시 타겟팅 대상에게 Leap 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그 
 	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Warrior_LeapingSlam_MoveBegin, "Event.Movement.Warrior.LeapingSlam.MoveBegin")
-	
+
 	// FlashSlash(섬광베기) 몽타주 출력 시 타겟 반대 방향 이동 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그
 	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Assassin_FlashSlash_MoveBegin, "Event.Movement.Assassin.FlashSlash.MoveBegin")
 
 	// ShadowAssult(암습) 몽타주 출력 시 타겟 반대 방향 이동 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그
-	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Assassin_ShadowAssault_MoveBegin, "Event.Movement.Assassin.ShadowAssault.MoveBegin")
-	
+	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Assassin_ShadowAssault_MoveBegin,
+	                       "Event.Movement.Assassin.ShadowAssault.MoveBegin")
+
 	// Infiltration(침투) 몽타주 출력 시 타겟 반대 방향 이동 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그
-	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Assassin_Infiltration_MoveBegin, "Event.Movement.Assassin.Infiltration.MoveBegin")
+	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Assassin_Infiltration_MoveBegin,
+	                       "Event.Movement.Assassin.Infiltration.MoveBegin")
 
 	// 전사스킬 예리한일격 탭으로 전달 시 필요 태그
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Warrior_SharpStrike, "Event.Input.Warrior.SharpStrike")
@@ -72,12 +86,21 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Warrior_DoomStrike, "Event.Input.Warrior.DoomStrike")
 
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Archer_Snipe, "Event.Input.Archer.Snipe")
-	
+
 	// 암살자 콤보공격 '빠른 베기(QuickSlash)'에서 다음 콤보로 넘어가기 위한 InputEvent Tag
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Assassin_QuickSlash, "Event.Input.Assassin.QuickSlash")
-	
+
 	// GameplayCue
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Weapon_Blade_BasicTrail, "GameplayCue.Weapon.Blade.BasicTrail")
+
+	// Skill GameplayCue
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Skill_VFX_Cast, "GameplayCue.Skill.VFX.Cast")
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Skill_VFX_Hit, "GameplayCue.Skill.VFX.Hit")
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Skill_VFX_Impact, "GameplayCue.Skill.VFX.Impact")
+
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Skill_SFX_Cast, "GameplayCue.Skill.SFX.Cast")
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Skill_SFX_Hit, "GameplayCue.Skill.SFX.Hit")
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Skill_SFX_Impact, "GameplayCue.Skill.SFX.Impact")
 
 	// Skill.Common
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Common_Dodge, "Skill.Common.Dodge")
@@ -91,7 +114,7 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Warrior_ShockWave, "Skill.Warrior.ShockWave")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Warrior_DoomStrike, "Skill.Warrior.DoomStrike")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Warrior_LeapingSlam, "Skill.Warrior.LeapingSlam")
-	
+
 	// Skill.Warrior.Cooldown
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_SharpStrike, "Cooldown.Skill.Warrior.SharpStrike")
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Warrior_CuttingSmash, "Cooldown.Skill.Warrior.CuttingSmash")
@@ -106,8 +129,8 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Archer_PiercingArrow, "Skill.Archer.PiercingArrow")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Archer_GaleArrow, "Skill.Archer.GaleArrow")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Archer_AimedArrow, "Skill.Archer.AimedArrow")
-	
-	
+
+
 	// Skill.Assassin
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Assassin_QuickSlash, "Skill.Assassin.QuickSlash")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Assassin_Ambush, "Skill.Assassin.Ambush")
@@ -115,7 +138,7 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Assassin_FlashSlash, "Skill.Assassin.FlashSlash")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Assassin_HeartStab, "Skill.Assassin.HeartStab")
 	UE_DEFINE_GAMEPLAY_TAG(Skill_Assassin_Infiltration, "Skill.Assassin.Infiltration")
-	
+
 	// Cooldown.Skill.Assassin
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Assassin_QuickSlash, "Cooldown.Skill.Assassin.QuickSlash")
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Assassin_Ambush, "Cooldown.Skill.Assassin.Ambush")
@@ -134,7 +157,7 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Movement_Jump, "State.Movement.Jump")
 	UE_DEFINE_GAMEPLAY_TAG(State_Movement_Locked, "State.Movement.Locked")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Active, "State.Skill.Active")
-		
+
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_SharpStrike_Active, "State.Skill.Warrior.SharpStrike.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_CuttingSmash_Active, "State.Skill.Warrior.CuttingSmash.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_GroundSlam_Active, "State.Skill.Warrior.GroundSlam.Active")
@@ -142,13 +165,13 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_ShockWave_Active, "State.Skill.Warrior.ShockWave.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_DoomStrike_Active, "State.Skill.Warrior.DoomStrike.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Warrior_LeapingSlam_Active, "State.Skill.Warrior.LeapingSlam.Active")
-	
+
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Archer_Snipe_Active, "State.Skill.Archer.Snipe.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Archer_RapidShot_Active, "State.Skill.Archer.RapidShot.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Archer_PiercingArrow_Active, "State.Skill.Archer.PiercingArrow.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Archer_GaleArrow_Active, "State.Skill.Archer.GaleArrow.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Archer_AimedArrow_Active, "State.Skill.Archer.AimedArrow.Active")
-	
+
 	// State.Skill.Assassin
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Assassin_QuickSlash_Active, "State.Skill.Assassin.QuickSlash.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Assassin_Ambush_Active, "State.Skill.Assassin.Ambush.Active")
@@ -161,7 +184,7 @@ namespace DGGameplayTags
 	// Data
 	UE_DEFINE_GAMEPLAY_TAG(Data_Damage, "Data.Damage")
 	UE_DEFINE_GAMEPLAY_TAG(Data_BaseDamage, "Data.BaseDamage")
-	UE_DEFINE_GAMEPLAY_TAG(Data_DamageMultiplier, "Data.DamageMultiplier")	
+	UE_DEFINE_GAMEPLAY_TAG(Data_DamageMultiplier, "Data.DamageMultiplier")
 	UE_DEFINE_GAMEPLAY_TAG(Data_GroggyDamage, "Data.GroggyDamage")
 	UE_DEFINE_GAMEPLAY_TAG(Data_Cooldown, "Data.Cooldown")
 	UE_DEFINE_GAMEPLAY_TAG(Data_MentalCost, "Data.MentalCost")
@@ -175,12 +198,12 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Enemy_Returning, "State.Enemy.Returning")
 	UE_DEFINE_GAMEPLAY_TAG(State_Enemy_Groggy, "State.Enemy.Groggy")
 	UE_DEFINE_GAMEPLAY_TAG(Event_Enemy_Groggy, "Event.Enemy.Groggy")
-	
+
 	// Boss Phase
 	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Phase_1, "State.Boss.Phase.1")
 	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Phase_2, "State.Boss.Phase.2")
 	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Phase_3, "State.Boss.Phase.3")
-	
+
 	// Boss State
 	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Groggy, "State.Boss.Groggy")
 	UE_DEFINE_GAMEPLAY_TAG(State_Boss_Dead, "State.Boss.Dead")
