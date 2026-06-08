@@ -32,10 +32,8 @@ void UGA_ChargeSkillBase::ActivateAbility(
 
 	ChargeStartWorldTime = World->GetTimeSeconds();
 	
-	Debug::Print(FString::Printf(
-	TEXT("[ChargeSkillBase] Begin. Skill=%s"),
-	*GetSkillTag().ToString()
-));
+	
+
 
 	InputReleaseTask = UAbilityTask_WaitInputRelease::WaitInputRelease(
 		this,
@@ -166,12 +164,7 @@ void UGA_ChargeSkillBase::OnInputReleased(float TimeHeld)
 		return;
 	}
 	
-	Debug::Print(FString::Printf(
-	TEXT("[ChargeSkillBase] Released. Skill=%s Level=%d Time=%.2f"),
-	*GetSkillTag().ToString(),
-	CurrentChargeLevel,
-	CurrentChargeTime
-));
+	
 
 
 	ExecuteChargedSkill(CurrentChargeLevel, CurrentChargeTime);

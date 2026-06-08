@@ -26,7 +26,7 @@ void ADGLobbyPlayerController::ShowLobbyWidget()
 
     if (!LobbyWidgetClass)
     {
-        Debug::Print(TEXT("[DGLobbyPlayerController] LobbyWidgetClass is null."));
+        
         return;
     }
 
@@ -37,7 +37,6 @@ void ADGLobbyPlayerController::ShowLobbyWidget()
 
     if (!LobbyWidgetInstance)
     {
-        Debug::Print(TEXT("[DGLobbyPlayerController] Failed to create lobby widget."));
         return;
     }
 
@@ -52,5 +51,4 @@ void ADGLobbyPlayerController::ShowLobbyWidget()
 
     SetInputMode(InputMode);
 
-    Debug::Print(TEXT("[DGLobbyPlayerController] Lobby widget shown."));
 }

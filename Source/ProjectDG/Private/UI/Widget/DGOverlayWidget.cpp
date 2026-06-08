@@ -40,6 +40,5 @@ void UDGOverlayWidget::InitializeSubWidgets()
 		// if (EnemyStatusWidget) { ... }
 		// if (ChatWidget) { ... }
 
-		Debug::Print(FString::Printf(TEXT("[DGOverlayWidget] Initialized subwidgets with controller: %s"), *OverlayController->GetName()));
 	}
 }

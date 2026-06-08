@@ -22,20 +22,32 @@ public:
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
 protected:
-	UPROPERTY(BlueprintReadOnly, Category = "Warrior|SharpStrike")
-	bool bIsSharpStrikeActive = false;
+	UPROPERTY(BlueprintReadOnly, Category = "Warrior|MovingAttack")
+	bool bIsWarriorMovingAttackActive = false;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Warrior|SharpStrike")
-	bool bUseSharpStrikeUpperBody = false;
+	UPROPERTY(BlueprintReadOnly, Category = "Warrior|MovingAttack")
+	bool bUseWarriorMovingAttackUpperBody = false;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Warrior|SharpStrike")
-	float SharpStrikeUpperBodyAlpha = 0.f;
+	UPROPERTY(BlueprintReadOnly, Category = "Warrior|MovingAttack")
+	float WarriorMovingAttackUpperBodyAlpha = 0.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Warrior|SharpStrike")
-	float SharpStrikeMovingThreshold = 10.f;
+	UPROPERTY(BlueprintReadOnly, Category = "Warrior|MovingAttack")
+	bool bIsWarriorMeleeTwistCorrectionActive = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Warrior|SharpStrike")
-	float SharpStrikeUpperBodyBlendInterpSpeed = 12.f;
+	UPROPERTY(BlueprintReadOnly, Category = "Warrior|MovingAttack")
+	bool bUseWarriorMeleeTwistCorrection = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Warrior|MovingAttack")
+	float WarriorMovingAttackThreshold = 10.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Warrior|MovingAttack")
+	float WarriorMovingAttackUpperBodyBlendInterpSpeed = 12.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Warrior|MovingAttack")
+	FGameplayTagContainer MovingAttackStateTags;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Warrior|MovingAttack")
+	FGameplayTagContainer MeleeTwistCorrectionStateTags;
 	
 	
 	

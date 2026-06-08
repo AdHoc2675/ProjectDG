@@ -244,19 +244,9 @@ UClass* ADGServerGameMode::GetDefaultPawnClassForController_Implementation(ACont
 				return AssassinPawnClass;
 			}
 
-			Debug::Print(FString::Printf(
-				TEXT("[DGServerGameMode] No PawnClass matched. RawClassTag=%s NormalizedClassTag=%s"),
-				*MemberInfo->ClassTag,
-				*ClassTag
-			));
+			
 		}
-		else
-		{
-			Debug::Print(FString::Printf(
-				TEXT("[DGServerGameMode] ConnectedMemberInfo not found. Controller=%s"),
-				*InController->GetName()
-			));
-		}
+		
 	}
 
 	return Super::GetDefaultPawnClassForController_Implementation(InController);
@@ -411,10 +401,7 @@ void ADGServerGameMode::ValidateJoinTokenAsync(
 					MemberInfo.Role
 				);
 			}
-			else
-			{
-				Debug::Print(TEXT("[DGServerGameMode] DG_PlayerState is null when setting session member info."));
-			}
+			
 
 			if (APawn* ExistingPawn = PlayerController->GetPawn())
 			{

@@ -38,11 +38,7 @@ void UGA_Archer_AimedArrow::ExecuteChargedSkill(int32 ChargeLevel, float ChargeT
 		true
 	);
 	
-	Debug::Print(FString::Printf(
-	TEXT("[Archer_AimedArrow] Damage Applied. Target=%s Level=%d"),
-	*GetNameSafe(TargetActor),
-	ChargeLevel
-));
+	
 
 	// 후속 작업:
 	// - 그로기 대상이면 추가 피해 +20%

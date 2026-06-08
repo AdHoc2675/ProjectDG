@@ -10,7 +10,7 @@
 class UGameplayEffect;
 class AFieldEnemyBase;
 class UBehaviorTree;
-class UGameplayAbility;
+class UEnemySkillData;
 
 /**
  * UFieldCharacterClassData
@@ -23,7 +23,7 @@ class PROJECTDG_API UFieldCharacterClassData : public UPrimaryDataAsset
 
 public:
 	// --- 스폰 및 클래스 정보 ---
-	
+
 	/** 스폰할 몬스터의 실제 블루프린트 클래스 */
 	UPROPERTY(EditDefaultsOnly, Category = "FieldEnemy|Class")
 	TSubclassOf<AFieldEnemyBase> EnemyClass;
@@ -32,9 +32,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "FieldEnemy|AI")
 	TObjectPtr<UBehaviorTree> BehaviorTree;
 
-	/** 이 몬스터가 사용할 수 있는 공격용 어빌리티(GA) 목록. 랜덤으로 하나가 선택되어 실행됩니다. */
-	UPROPERTY(EditDefaultsOnly, Category = "FieldEnemy|Ability")
-	TArray<TSubclassOf<UGameplayAbility>> AttackAbilities;
+	/** 이 몬스터가 사용할 수 있는 공격 스킬 데이터 목록. 랜덤으로 하나가 선택되어 실행됩니다. */
+	UPROPERTY(EditDefaultsOnly, Category = "FieldEnemy|Skill")
+	TArray<TObjectPtr<UEnemySkillData>> AttackSkills;
 
 	// --- 몬스터 스탯 정보 ---
 

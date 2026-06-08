@@ -60,6 +60,12 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillHitCheckEventTask = nullptr;
 	
+	UPROPERTY()
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> MovementUnlockEventTask = nullptr;
+	
+	UPROPERTY()
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> MovementCancelEventTask = nullptr;
+	
 	// 쿨타임 관련 스킬 공통 로직
 public:
 	virtual const FGameplayTagContainer* GetCooldownTags() const override;
@@ -105,6 +111,14 @@ protected:
 
 	UFUNCTION()
 	void OnSkillChainStepEvent(FGameplayEventData Payload);
+	
+	void RegisterMovementCancelEvent();
+	void UnregisterMovementCancelEvent();
+
+	UFUNCTION()
+	void OnMovementCancelEvent(FGameplayEventData Payload);
+
+	void StopCurrentSkillMontage(float BlendOutTime = 0.15f);
 
 	/** 자식 Base에서 override해서 실제 스킬 실행 처리 */
 	virtual void HandleSkillChainStepEvent(const FGameplayEventData& Payload);
@@ -193,8 +207,17 @@ protected:
 
 	/** ApplySkillMovementPolicy에서 부여한 이동 정책 태그를 제거한다. */
 	void ClearSkillMovementPolicy();
+	
+	void RegisterMovementUnlockEvent();
+	void UnregisterMovementUnlockEvent();
+
+	UFUNCTION()
+	void OnMovementUnlockEvent(FGameplayEventData Payload);
+
+	void ClearSkillMovementLockOnly();
 
 protected:
 	bool bSkillActivePolicyApplied = false;
 	bool bSkillMovementLockedApplied = false;
 };
+

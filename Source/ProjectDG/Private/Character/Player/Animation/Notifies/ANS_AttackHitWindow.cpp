@@ -237,7 +237,7 @@ void UANS_AttackHitWindow::TraceWeaponSockets(USkeletalMeshComponent* CharacterM
                                         //         TEXT("[ANS_AttackHitWindow] Ignored hit actor: %s"),
                                         //         *GetNameSafe(HitActor)
                                         // );
-                                        // Debug::Print(Msg, FColor::Yellow);
+                                     
                                 }
 
                                 continue;
@@ -251,7 +251,7 @@ void UANS_AttackHitWindow::TraceWeaponSockets(USkeletalMeshComponent* CharacterM
                                 //         TEXT("[ANS_AttackHitWindow] Accepted hit actor: %s"),
                                 //         *GetNameSafe(HitActor)
                                 // );
-                                // Debug::Print(Msg, FColor::Green);
+                               
                         }
 
                         SendHitEvent(OwnerActor, HitActor);
@@ -266,7 +266,7 @@ void UANS_AttackHitWindow::TraceWeaponSockets(USkeletalMeshComponent* CharacterM
                         //         bAcceptedAnyHit ? 1 : 0,
                         //         bIgnoredAnyHit ? 1 : 0
                         // );
-                        // Debug::Print(Msg, FColor::Silver);
+                      
                 }
 
                 if (bEnableDebugDraw)

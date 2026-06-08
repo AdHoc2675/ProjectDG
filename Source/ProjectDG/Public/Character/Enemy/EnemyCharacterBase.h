@@ -19,6 +19,7 @@ struct FOnAttributeChangeData;
 class UDGLootDropComponent;
 class UDGMinimapMarkerComponent;
 class ADGDamageNumberActor;
+class UDG_EnemyAttributeSet;
 
 /**
  * AEnemyCharacterBase
@@ -54,6 +55,10 @@ protected:
 	//Attribute도 직접 소유
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|ASC")
 	TObjectPtr<UDG_AttributeSet> AttributeSet = nullptr;
+	
+	// 적 공통 AttributeSet
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|ASC")
+	TObjectPtr<UDG_EnemyAttributeSet> EnemyAttributeSet = nullptr;
 
 	// 사망 몽타주 (BP에서 지정)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemyCharacterBase|Animation")
@@ -68,6 +73,23 @@ protected:
 	
 	// 서버 측 기본 이펙트 부여 로직 (초기 스탯 등)
 	virtual void ApplyDefaultEffects();
+	
+	// Attribute delegate 중복 바인딩 방지
+	virtual void BindEnemyAttributeDelegatesOnce();
+
+	// 이미 부여된 AbilityClass인지 확인
+	bool HasGrantedAbilityClass(TSubclassOf<UGameplayAbility> AbilityClass) const;
+
+	// Startup Effect 중복 적용 방지
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "EnemyCharacterBase|GAS")
+	bool bDefaultEffectsApplied = false;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "EnemyCharacterBase|GAS")
+	bool bHealthDeathDelegateBound = false;
+
+	// Field / Boss에서 Groggy delegate 중복 방지용으로 사용
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "EnemyCharacterBase|GAS")
+	bool bGroggyDelegateBound = false;
 
 	// 공통 적 사망 처리 (태그 부여 등)
 	virtual void HandleDeath() override;
@@ -117,6 +139,9 @@ public:
 	/** 데미지가 들어왔을 때 모든 클라이언트에게 신호를 보내되, 자신이 때린 것만 띄우도록 */
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_ShowDamageNumber(float DamageAmount, bool bIsCritical, AActor* DamageInstigator);
+	
+	UFUNCTION(BlueprintCallable, Category = "EnemyCharacterBase|ASC")
+	UDG_EnemyAttributeSet* GetEnemyAttributeSet() const { return EnemyAttributeSet; }
 
 protected:
 	UPROPERTY()

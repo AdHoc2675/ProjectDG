@@ -8,7 +8,7 @@
 #include "BossCharacterClassData.generated.h"
 
 class UGameplayEffect;
-class UGameplayAbility;
+class UBossSkillData;
 
 USTRUCT(BlueprintType)
 struct FBossPhaseEntry
@@ -59,7 +59,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Boss|Phase")
 	TArray<FBossPhaseEntry> PhaseEntries;
 
-	/** 이 보스가 사용할 수 있는 공격용 어빌리티(GA) 목록. 랜덤으로 하나가 선택되어 실행됩니다. */
-	UPROPERTY(EditDefaultsOnly, Category = "Boss|Ability")
-	TArray<TSubclassOf<UGameplayAbility>> AttackAbilities;
+	/** 이 보스가 사용할 수 있는 공격 스킬 데이터 목록. 랜덤으로 하나가 선택되어 실행됩니다. */
+	UPROPERTY(EditDefaultsOnly, Category = "Boss|Skill")
+	TArray<TObjectPtr<UBossSkillData>> AttackSkills;
 };

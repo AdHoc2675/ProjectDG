@@ -30,7 +30,6 @@ void UGA_Boss_Attack::ActivateAbility(
 
 	if (!AttackMontage)
 	{
-		Debug::Print(TEXT("[GA_Boss_Attack] AttackMontage is null."), FColor::Red);
 		EndAbility(Handle, OwnerInfo, ActivationInfo, true, true);
 		return;
 	}
@@ -96,7 +95,6 @@ void UGA_Boss_Attack::OnAttackHit(FGameplayEventData Payload)
 
 	if (!DamageEffectClass)
 	{
-		Debug::Print(TEXT("[GA_Boss_Attack] DamageEffectClass is null."), FColor::Red);
 		return;
 	}
 
@@ -123,11 +121,7 @@ void UGA_Boss_Attack::OnAttackHit(FGameplayEventData Payload)
 
 	SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 
-	Debug::Print(FString::Printf(
-		TEXT("[GA_Boss_Attack] Hit %s for %.1f damage."),
-		*GetNameSafe(TargetActor),
-		AttackDamage
-	), FColor::Orange);
+	
 }
 
 void UGA_Boss_Attack::OnMontageCompleted()

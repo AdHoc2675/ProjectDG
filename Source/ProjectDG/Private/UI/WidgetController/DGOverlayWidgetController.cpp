@@ -75,7 +75,17 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 					// [방어 코드] ClassData 구조체에 SlotTag가 비어있다면 PlayerSkillData의 DefaultSlotTag를 당겨옴
 					Info.SlotTag = SlotDef.SlotTag.IsValid() ? SlotDef.SlotTag : SlotDef.SkillData->DefaultSlotTag;
 					Info.CooldownTag = SlotDef.SkillData->CooldownTag;
-					Info.Icon = SlotDef.SkillData->Icon; // null이어도 넘길 수 있음
+					
+					// 콤보 스킬인 경우 베이스 아이콘 대신 1타(Index 0) 아이콘을 초기 아이콘으로 설정
+					const int32 ComboCount = FMath::Max(1, SlotDef.SkillData->ComboCount);
+					if (ComboCount > 1 && SlotDef.SkillData->ComboSkillDataList.IsValidIndex(0) && SlotDef.SkillData->ComboSkillDataList[0])
+					{
+						Info.Icon = SlotDef.SkillData->ComboSkillDataList[0]->Icon;
+					}
+					else
+					{
+						Info.Icon = SlotDef.SkillData->Icon;
+					}
 
 					// 위젯으로 기본 스킬 정보 브로드캐스트
 					OnSkillInfoSet.Broadcast(Info);
@@ -159,6 +169,12 @@ void UDGOverlayWidgetController::BindCallbacksToDependencies()
 			GameState->OnPlayerJoinedDelegate.AddDynamic(this, &UDGOverlayWidgetController::HandlePartyMemberJoined);
 			GameState->OnPlayerLeftDelegate.AddDynamic(this, &UDGOverlayWidgetController::HandlePartyMemberLeft);
 		}
+	}
+
+	// PlayerState 콤보 갱신 델리게이트 바인딩
+	if (ADG_PlayerState* PS = Cast<ADG_PlayerState>(PlayerState))
+	{
+		PS->OnSkillComboStepChanged.AddDynamic(this, &UDGOverlayWidgetController::OnSkillComboStepChanged);
 	}
 
 	// 플레이어 스킬의 쿨타임 태그들을 리스닝
@@ -464,5 +480,38 @@ void UDGOverlayWidgetController::OnCooldownTagChanged(const FGameplayTag InCoold
 	{
 		// 쿨타임이 종료됨
 		OnSkillCooldownChanged.Broadcast(InCooldownTag, 0.f, 0.f);
+	}
+}
+
+void UDGOverlayWidgetController::OnSkillComboStepChanged(FGameplayTag SkillTag, int32 NewStepIndex)
+{
+	// UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] OnSkillComboStepChanged received! Tag: %s, Step: %d"), *SkillTag.ToString(), NewStepIndex);
+	if (!SkillTag.IsValid()) return;
+
+	APlayerCharacterBase* PlayerChar = Cast<APlayerCharacterBase>(PlayerController->GetPawn());
+	if (!PlayerChar || !PlayerChar->CharacterClassData) return;
+
+	for (const FSkillSlotDefinition& SlotDef : PlayerChar->CharacterClassData->SkillSlots)
+	{
+		if (SlotDef.SkillData && SlotDef.SkillData->SkillTag == SkillTag)
+		{
+			const int32 ComboCount = FMath::Max(1, SlotDef.SkillData->ComboCount);
+			const UPlayerSkillData* StepData = SlotDef.SkillData;
+
+			if (ComboCount > 1 && SlotDef.SkillData->ComboSkillDataList.IsValidIndex(NewStepIndex))
+			{
+				const UPlayerSkillData* FoundStepData = SlotDef.SkillData->ComboSkillDataList[NewStepIndex];
+				if (FoundStepData)
+				{
+					StepData = FoundStepData;
+				}
+			}
+
+			FGameplayTag TargetSlotTag = SlotDef.SlotTag.IsValid() ? SlotDef.SlotTag : SlotDef.SkillData->DefaultSlotTag;
+			// UE_LOG(LogTemp, Log, TEXT("[DGOverlayWidgetController] Broadcasting OnSkillIconUpdated! SlotTag: %s"), *TargetSlotTag.ToString());
+			OnSkillIconUpdated.Broadcast(TargetSlotTag, StepData->Icon);
+			
+			break;
+		}
 	}
 }

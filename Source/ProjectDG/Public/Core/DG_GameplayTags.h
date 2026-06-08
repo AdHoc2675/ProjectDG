@@ -49,6 +49,15 @@ namespace DGGameplayTags
 	
 	// MeleeAttack Combo Miss 완화
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combo_InputRequest)
+	
+	// Player 기본 이동 중 Jump GA Ending시 호출될 EventTag
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Movement_Jump_Landed)
+	
+	// 특정 스킬들을 사용하는 데에 있어 스킬 몽타주에서 이동이 가능한 시점을 알리는 EventTag 
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Movement_Skill_Unlock)
+	
+	// 몽타주의 핵심 동작이 끝나고 이후부터는 이동 시 스킬이 끝나게끔
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Movement_Skill_CancelByMove)
 
 	// Warrior DoomStrike(파멸의 맹타) 몽타주 출력 시 타겟팅 대상에게 Dash 시작을 알리는 ANS_SendGameplayEventWindow에서 사용될 태그 
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Movement_Warrior_DoomStrike_DashBegin)
@@ -81,6 +90,7 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Weapon_Blade_BasicTrail)
 
 	// Skill_Common
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Common_Jump)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Common_Dodge)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Skill_Common_Sprint)
 
@@ -174,6 +184,7 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Cooldown)
 
 	// Block
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Block_Movement_Jump)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Block_Movement_Dodge)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Block_Movement_Sprint)
 
