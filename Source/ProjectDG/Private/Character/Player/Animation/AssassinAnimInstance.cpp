@@ -17,6 +17,13 @@ void UAssassinAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	if (!PlayerCharacter)
 	{
+		AssassinMovingAttackUpperBodyAlpha = FMath::FInterpTo(
+					  AssassinMovingAttackUpperBodyAlpha,
+					  0.f,
+					  DeltaSeconds,
+					  AssassinMovingAttackUpperBodyBlendInterpSpeed
+			  );
+		
 		return;
 	}
 
@@ -37,6 +44,16 @@ void UAssassinAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 				bUseAssassinMovingAttackUpperBody &&
 				bIsAssassinMeleeTwistCorrectionActive;
 	}
+	
+	const float TargetAssassinMovingAttackUpperBodyAlpha =
+			  bUseAssassinMovingAttackUpperBody ? 1.f : 0.f;
+
+	AssassinMovingAttackUpperBodyAlpha = FMath::FInterpTo(
+			AssassinMovingAttackUpperBodyAlpha,
+			TargetAssassinMovingAttackUpperBodyAlpha,
+			DeltaSeconds,
+			AssassinMovingAttackUpperBodyBlendInterpSpeed
+	);
 }
 
 

@@ -33,6 +33,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Assassin|MovingAttack")
 	float AssassinMovingAttackThreshold = 10.f;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Assassin|MovingAttack")
+	float AssassinMovingAttackUpperBodyAlpha = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Assassin|MovingAttack")
+	float AssassinMovingAttackUpperBodyBlendInterpSpeed = 12.f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Assassin|MovingAttack")
 	FGameplayTagContainer MovingAttackStateTags;
