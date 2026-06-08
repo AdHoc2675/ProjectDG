@@ -1,11 +1,9 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "AI/Controller/EnemyAIController.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
-#include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Core/DG_GameplayTags.h"
 #include "Perception/AIPerceptionComponent.h"
@@ -18,11 +16,6 @@ void AEnemyAIController::BeginPlay()
 	if (IsAIStoppedByDeath())
 	{
 		return;
-	}
-
-	if (HasAuthority() && BehaviorTreeAsset)
-	{
-		RunBehaviorTree(BehaviorTreeAsset);
 	}
 
 	if (EnemyPerceptionComponent)
@@ -123,7 +116,7 @@ void AEnemyAIController::RefreshTargetFromPerception()
 	}
 }
 
-// 액터가 유효한 플레이어 타겟(Team_Player 태그 보유)인지 판별
+// 액터가 유효한 플레이어 타겟(Team.Player 태그 보유)인지 판별
 bool AEnemyAIController::IsValidPlayerTarget(AActor* Actor) const
 {
 	if (!IsValid(Actor))
@@ -164,4 +157,3 @@ void AEnemyAIController::ClearTargetOnBlackboard(UBlackboardComponent* Blackboar
 		BlackboardComp->ClearValue(TargetLocationKeyName);
 	}
 }
-

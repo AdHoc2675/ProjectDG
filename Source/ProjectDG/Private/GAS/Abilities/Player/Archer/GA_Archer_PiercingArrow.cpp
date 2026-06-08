@@ -33,10 +33,8 @@ void UGA_Archer_PiercingArrow::ExecuteRangedSkill(const FDGSkillTargetResult& Ta
 		true
 	);
 	
-	Debug::Print(FString::Printf(
-	TEXT("[Archer_PiercingArrow] Damage Applied. Target=%s"),
-	*GetNameSafe(TargetResult.TargetActor)
-));
+	
+
 
 	// 후속 연결 예정:
 	// - 치명타 판정

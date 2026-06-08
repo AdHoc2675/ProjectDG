@@ -4,6 +4,7 @@
 #include "TimerManager.h"
 #include "Engine/World.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "UI/WidgetController/DGOverlayWidgetController.h"
 
 void UDGSkillSlotWidget::NativeConstruct()
 {
@@ -31,6 +32,42 @@ void UDGSkillSlotWidget::InitSkillSlot(FGameplayTag InSlotTag, FGameplayTag InCo
 	if (SkillIconImage && InIcon)
 	{
 		SkillIconImage->SetBrushFromTexture(InIcon);
+	}
+}
+
+void UDGSkillSlotWidget::UpdateSkillIcon(UTexture2D* NewIcon)
+{
+
+	//UE_LOG(LogTemp, Log, TEXT("[DGSkillSlotWidget] UpdateSkillIcon"));
+	if (SkillIconImage && NewIcon)
+	{
+		//UE_LOG(LogTemp, Log, TEXT("[DGSkillSlotWidget] SetBrushFromTexture"));
+		SkillIconImage->SetBrushFromTexture(NewIcon);
+	}
+	else {
+		UE_LOG(LogTemp, Log, TEXT("[DGSkillSlotWidget] Failed to set BrushFromTexture."));
+	}
+}
+
+void UDGSkillSlotWidget::SetWidgetController(UObject* InWidgetController)
+{
+	Super::SetWidgetController(InWidgetController);
+
+	UE_LOG(LogTemp, Log, TEXT("[DGSkillSlotWidget] SetWidgetController called for slot %s"), *SlotTag.ToString());
+
+	if (UDGOverlayWidgetController* OverlayWC = Cast<UDGOverlayWidgetController>(InWidgetController))
+	{
+		OverlayWC->OnSkillIconUpdated.AddDynamic(this, &UDGSkillSlotWidget::OnSkillIconUpdatedCallback);
+		UE_LOG(LogTemp, Log, TEXT("[DGSkillSlotWidget] Bound to OnSkillIconUpdated successfully."));
+	}
+}
+
+void UDGSkillSlotWidget::OnSkillIconUpdatedCallback(FGameplayTag InSlotTag, UTexture2D* NewIcon)
+{
+	//UE_LOG(LogTemp, Log, TEXT("[DGSkillSlotWidget] OnSkillIconUpdatedCallback called! InSlotTag: %s, MySlotTag: %s"), *InSlotTag.ToString(), *SlotTag.ToString());
+	if (SlotTag.IsValid() && SlotTag == InSlotTag)
+	{
+		UpdateSkillIcon(NewIcon);
 	}
 }
 

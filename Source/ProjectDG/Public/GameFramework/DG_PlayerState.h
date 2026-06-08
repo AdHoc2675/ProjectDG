@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -12,6 +12,8 @@ class UAbilitySystemComponent;
 class UDG_AttributeSet;
 class UDataTable;
 class UPlayerCharacterClassData;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSkillComboStepChangedSignature, FGameplayTag, SkillTag, int32, NewStepIndex);
 
 /*
 ADG_PlayerState
@@ -68,6 +70,8 @@ public:
 
 public:
 	// Getter 함수 추가
+	UPROPERTY(BlueprintAssignable, Category = "Player|Skill")
+	FOnSkillComboStepChangedSignature OnSkillComboStepChanged;
 	UFUNCTION(BlueprintCallable, Category = "Player|Growth")
 	int32 GetCharacterLevel() const { return Level; }
 

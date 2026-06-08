@@ -546,18 +546,7 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[PlayerCharacterBase][ClassDataDebug] PossessedBy. Owner=%s PawnClass=%s Controller=%s HasAuthority=%d PS=%s CharacterClassData=%s"),
-			*GetName(),
-			*GetClass()->GetName(),
-			*GetNameSafe(NewController),
-			HasAuthority() ? 1 : 0,
-			*GetNameSafe(GetPlayerState()),
-			*GetNameSafe(CharacterClassData)
-		),
-		FColor::Yellow
-	);
+
 
 	/**
 	 * Controller가 Pawn을 점유한 시점은
@@ -630,10 +619,10 @@ void APlayerCharacterBase::InitializePlayerStateFromClassData()
 
 	ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>();
 	if (!PS)
-	{
+	{	
 		return;
 	}
-
+	
 	PS->InitializePlayerDataFromClassData(CharacterClassData);
 }
 
@@ -665,7 +654,9 @@ void APlayerCharacterBase::InitializeSkillSlotsFromClassData()
 		}
 
 		SkillSlotMapping.Add(SkillSlot.SlotTag, SkillSlot.SkillData->SkillTag);
+		
 	}
+
 	
 }
 
@@ -705,9 +696,10 @@ void APlayerCharacterBase::GrantClassSkillAbilities()
 		}
 
 		if (SkillSlot.UnlockLevel > CurrentLevel)
-		{
+		{			
 			continue;
 		}
+
 
 		FGameplayAbilitySpec AbilitySpec(
 			SkillSlot.SkillData->AbilityClass,
@@ -741,7 +733,7 @@ void APlayerCharacterBase::GrantDefaultAbilities()
 		}
 
 		if (HasGrantedAbilityClass(ASC, AbilityClass))
-		{
+		{	
 			continue;
 		}
 
@@ -1011,6 +1003,14 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 			// 	ServerSendSkillInputStartedEvent(SkillInputEventTag);
 			// }
 		}
+		else
+		{
+			
+		}
+	}
+	else
+	{
+		
 	}
 }
 
@@ -1244,75 +1244,3 @@ void APlayerCharacterBase::ServerHandleShiftAction_Implementation(
 	ASC->HandleGameplayEvent(Payload.EventTag, &Payload);
 }
 
-// void APlayerCharacterBase::Server_TestApplyDamage_Implementation()
-// {
-// 	if (!HasAuthority())
-// 	{
-// 		return;
-// 	}
-//
-// 	UCombatComponent* SourceCombatComponent = GetCombatComponent();
-// 	if (!SourceCombatComponent)
-// 	{
-// 		return;
-// 	}
-//
-// 	ABaseCharacter* BestTarget = nullptr;
-// 	float BestDistanceSq = TNumericLimits<float>::Max();
-//
-// 	TArray<AActor*> FoundActors;
-// 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ABaseCharacter::StaticClass(), FoundActors);
-//
-// 	for (AActor* Actor : FoundActors)
-// 	{
-// 		ABaseCharacter* Candidate = Cast<ABaseCharacter>(Actor);
-// 		if (!Candidate)
-// 		{
-// 			continue;
-// 		}
-//
-// 		if (Candidate == this)
-// 		{
-// 			continue;
-// 		}
-//
-// 		if (Candidate->IsDead())
-// 		{
-// 			continue;
-// 		}
-//
-// 		if (IsFriendlyTo(Candidate))
-// 		{
-// 			continue;
-// 		}
-//
-// 		const float DistanceSq = FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation());
-// 		constexpr float MaxTestDamageRange = 3000.f;
-//
-// 		if (DistanceSq > FMath::Square(MaxTestDamageRange))
-// 		{
-// 			continue;
-// 		}
-//
-// 		if (DistanceSq < BestDistanceSq)
-// 		{
-// 			BestDistanceSq = DistanceSq;
-/// 			BestTarget = Candidate;
-// 		}
-// 	}
-//
-// 	if (!BestTarget)
-// 	{
-// 		return;
-// 	}
-//
-// 	FDGDamageRequest DamageRequest;
-// 	DamageRequest.SourceActor = this;
-// 	DamageRequest.TargetActor = BestTarget;
-// 	DamageRequest.BaseDamage = 100.f;
-// 	DamageRequest.SourceTag = DGGameplayTags::Input_Slot_1;
-// 	DamageRequest.HitLocation = BestTarget->GetActorLocation();
-// 	DamageRequest.bHasHitLocation = true;
-//
-// 	const FDGDamageResult DamageResult = SourceCombatComponent->ApplyDamageRequest(DamageRequest);
-// }

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "UI/Widget/DGUserWidget.h"
@@ -72,6 +72,9 @@ private:
 
 	UFUNCTION()
 	void OnSkillCooldownChanged(FGameplayTag CooldownTag, float TimeRemaining, float Duration);
+
+	UFUNCTION()
+	void OnSkillIconUpdated(FGameplayTag SlotTag, UTexture2D* NewIcon);
 
 protected:
 	// 스킬 슬롯

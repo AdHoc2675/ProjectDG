@@ -47,6 +47,7 @@ struct FUIPlayerSkillInfo
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSkillInfoSetSignature, const FUIPlayerSkillInfo&, SkillInfo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSkillIconUpdatedSignature, FGameplayTag, SlotTag, UTexture2D*, NewIcon);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnSkillCooldownChangedSignature, FGameplayTag, CooldownTag, float, TimeRemaining, float, Duration);
 
 
@@ -187,6 +188,10 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Skills")
 	FOnSkillInfoSetSignature OnSkillInfoSet;
 
+	// 콤보 단계 등 아이콘이 바뀌어야 할 때 불림
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Skills")
+	FOnSkillIconUpdatedSignature OnSkillIconUpdated;
+
 	// 쿨타임이 돌기 시작할 때 불림 (TimeRemaining이 0이면 쿨타임 종료)
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Skills")
 	FOnSkillCooldownChangedSignature OnSkillCooldownChanged;
@@ -194,6 +199,10 @@ public:
 protected:
 	// 쿨타임 태그 이벤트 처리용
 	void OnCooldownTagChanged(const FGameplayTag InCooldownTag, int32 NewCount);
+
+	// 콤보 갱신 이벤트 처리용
+	UFUNCTION()
+	void OnSkillComboStepChanged(FGameplayTag SkillTag, int32 NewStepIndex);
 
 #pragma region Skill Info
 };

@@ -11,9 +11,9 @@
 struct FOnAttributeChangeData;
 
 class UBossCharacterClassData;
+class UBossSkillData;
 class UDG_BossAttributeSet;
 class UDG_EnemyAttributeSet;
-class UGameplayAbility;
 
 /**
  * 
@@ -39,10 +39,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "BossCharacterBase|ASC")
 	TObjectPtr<UDG_BossAttributeSet> BossAttributeSet = nullptr;
 
-	// 적 공통 AttributeSet
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "BossCharacterBase|ASC")
-	TObjectPtr<UDG_EnemyAttributeSet> EnemyAttributeSet = nullptr;
-
 	// 보스 전용 스탯 GE 적용 (소환 직후 1회)
 	void ApplyBossSpecialEffects();
 
@@ -52,7 +48,7 @@ protected:
 	// 보스는 DataAsset이 있으면 그 값을 우선 적용
 	virtual void ApplyDefaultEffects() override;
 
-	// DataAsset의 AttackAbilities를 ASC에 부여
+	// DataAsset의 AttackSkills를 ASC에 부여
 	virtual void GrantDefaultAbilities() override;
 
 	// 소환 직후 보스 전용 스탯 적용
@@ -74,19 +70,21 @@ protected:
 	virtual void HandleDeath() override;
 
 public:
-	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|ASC")
-	UDG_BossAttributeSet* GetBossAttributeSet() const { return BossAttributeSet; }
+	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Data")
+	UBossCharacterClassData* GetBossClassData() const { return BossClassData; }
 
 	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|ASC")
-	UDG_EnemyAttributeSet* GetEnemyAttributeSet() const { return EnemyAttributeSet; }
+	UDG_BossAttributeSet* GetBossAttributeSet() const { return BossAttributeSet; }
 
 	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Team")
 	FGameplayTag GetBossTag() const { return BossTag; }
 
-	/** DataAsset에 등록된 공격 어빌리티 중 무작위로 하나를 선택하여 반환 */
-	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Ability")
-	TSubclassOf<UGameplayAbility> GetRandomAttackAbilityClass() const;
+	/** DataAsset에 등록된 공격 스킬 데이터 중 무작위로 하나를 선택하여 반환 */
+	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Skill")
+	UBossSkillData* GetRandomAttackSkillData() const;
 
 private:
 	bool bBossSpecialEffectsApplied = false;
+	bool bBossDataEffectsApplied = false;
+	bool bBossHealthPhaseDelegateBound = false;
 };

@@ -26,7 +26,6 @@ void UDGEnemyStatusWidget::BindToController(UDGOverlayWidgetController* Controll
 	Controller->OnEnemyTargetCleared.AddDynamic(this, &UDGEnemyStatusWidget::HideEnemyStatus);
 
 
-	Debug::Print(FString::Printf(TEXT("[DGEnemyStatusWidget] successfully bound to controller: %s"), *Controller->GetName()));
 }
 
 void UDGEnemyStatusWidget::InitEnemyStatus(const FString& InName, int32 InMaxBars)

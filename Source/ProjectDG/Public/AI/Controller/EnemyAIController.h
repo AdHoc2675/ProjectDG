@@ -7,10 +7,16 @@
 #include "Perception/AIPerceptionTypes.h"
 #include "EnemyAIController.generated.h"
 
-class UBehaviorTree;
-
 /**
- * 
+ * 일반 몬스터 AI Controller.
+ *
+ * 담당:
+ * - Perception으로 플레이어 감지
+ * - Team.Player 태그 기반 타겟 필터링
+ * - Blackboard TargetActor / TargetLocation 갱신
+ *
+ * 주의:
+ * - BehaviorTree 실행은 Controller가 아니라 FieldCharacterClassData.BehaviorTree 기준으로 처리한다.
  */
 UCLASS()
 class PROJECTDG_API AEnemyAIController : public AAIControllerBase
@@ -26,6 +32,7 @@ protected:
 
 	UFUNCTION()
 	void HandleTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
+
 	bool IsValidPlayerTarget(AActor* Actor) const;
 	void ClearTargetOnBlackboard(class UBlackboardComponent* BlackboardComp);
 
@@ -34,9 +41,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "AI|Blackboard")
 	FName TargetLocationKeyName = TEXT("TargetLocation");
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Behavior")
-	TObjectPtr<UBehaviorTree> BehaviorTreeAsset;
 
 	UPROPERTY()
 	TSet<TWeakObjectPtr<AActor>> PerceivedPlayers;
