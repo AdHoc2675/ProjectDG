@@ -1,0 +1,190 @@
+#include "UI/Loading/DGLoadingScreenSubsystem.h"
+#include "Engine/GameInstance.h"
+#include "Engine/World.h"
+#include "GameFramework/Actor.h"
+#include "Kismet/GameplayStatics.h"
+#include "TimerManager.h"
+#include "UI/Loading/DGLoadingScreenWidget.h"
+#include "UI/Loading/DGLoadingTipRow.h"
+#include "WorldPartition/WorldPartitionSubsystem.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogDGLoadingScreen, Log, All);
+
+void UDGLoadingScreenSubsystem::Initialize(
+    FSubsystemCollectionBase &Collection) {
+  Super::Initialize(Collection);
+
+  FCoreUObjectDelegates::PreLoadMap.AddUObject(
+      this, &UDGLoadingScreenSubsystem::OnPreLoadMap);
+  FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(
+      this, &UDGLoadingScreenSubsystem::OnPostLoadMap);
+}
+
+void UDGLoadingScreenSubsystem::Deinitialize() {
+  FCoreUObjectDelegates::PreLoadMap.RemoveAll(this);
+  FCoreUObjectDelegates::PostLoadMapWithWorld.RemoveAll(this);
+
+  Super::Deinitialize();
+}
+
+void UDGLoadingScreenSubsystem::SetLoadingWidgetClass(
+    TSubclassOf<UDGLoadingScreenWidget> InWidgetClass) {
+  LoadingWidgetClass = InWidgetClass;
+}
+
+void UDGLoadingScreenSubsystem::SetTipsDataTable(UDataTable *InDataTable) {
+  TipsDataTable = InDataTable;
+}
+
+FText UDGLoadingScreenSubsystem::GetRandomTipText() const {
+  if (!TipsDataTable) {
+    return FText::GetEmpty();
+  }
+
+  TArray<FDGLoadingTipRow *> AllRows;
+  TipsDataTable->GetAllRows<FDGLoadingTipRow>(TEXT("LoadingScreenSubsystem"),
+                                              AllRows);
+
+  if (AllRows.Num() > 0) {
+    int32 RandomIndex = FMath::RandRange(0, AllRows.Num() - 1);
+    return AllRows[RandomIndex]->TipText;
+  }
+
+  return FText::GetEmpty();
+}
+
+void UDGLoadingScreenSubsystem::ShowLoadingScreen() {
+  if (ActiveLoadingWidget) {
+    return; // Already showing
+  }
+
+  if (!LoadingWidgetClass) {
+    // Fallback to loading BP if not set directly via C++
+    FSoftClassPath LoadingWidgetPath(
+        TEXT("/Game/__ProjectDG/__BP/UI/Loading_Screens/"
+             "WBP_LoadingScreen.WBP_LoadingScreen_C"));
+    UClass *LoadedClass =
+        LoadingWidgetPath.TryLoadClass<UDGLoadingScreenWidget>();
+    if (LoadedClass) {
+      LoadingWidgetClass = LoadedClass;
+    }
+  }
+
+  if (!TipsDataTable) {
+    // Fallback to loading Data Table if not set directly via C++
+    FSoftObjectPath DataTablePath(
+        TEXT("/Game/__ProjectDG/__BP/UI/Loading_Screens/"
+             "DT_LoadingTips.DT_LoadingTips"));
+    UDataTable *LoadedTable = Cast<UDataTable>(DataTablePath.TryLoad());
+    if (LoadedTable) {
+      TipsDataTable = LoadedTable;
+    }
+  }
+
+  if (!LoadingWidgetClass) {
+    UE_LOG(LogDGLoadingScreen, Warning,
+           TEXT("LoadingWidgetClass is not set. Cannot show loading screen."));
+    return;
+  }
+
+  UWorld *World = GetWorld();
+  if (!World) {
+    return;
+  }
+
+  ActiveLoadingWidget =
+      CreateWidget<UDGLoadingScreenWidget>(World, LoadingWidgetClass);
+  if (ActiveLoadingWidget) {
+    ActiveLoadingWidget->SetTipText(GetRandomTipText());
+    ActiveLoadingWidget->AddToViewport(9999); // High Z-order to render on top
+  }
+}
+
+void UDGLoadingScreenSubsystem::HideLoadingScreen() {
+  if (ActiveLoadingWidget) {
+    ActiveLoadingWidget->RemoveFromParent();
+    ActiveLoadingWidget = nullptr;
+  }
+
+  UWorld *World = GetWorld();
+  if (World) {
+    World->GetTimerManager().ClearTimer(StreamingCheckTimerHandle);
+    World->GetTimerManager().ClearTimer(HideDelayTimerHandle);
+  }
+}
+
+void UDGLoadingScreenSubsystem::StartStreamingCheck() {
+  UWorld *World = GetWorld();
+  if (World) {
+    World->GetTimerManager().SetTimer(
+        StreamingCheckTimerHandle, this,
+        &UDGLoadingScreenSubsystem::CheckStreamingStatus,
+        0.1f, // Check every 0.1 seconds
+        true);
+  }
+}
+
+void UDGLoadingScreenSubsystem::TeleportWithLoadingScreen(
+    AActor *TargetActor, const FTransform &DestTransform) {
+  if (!TargetActor)
+    return;
+
+  // 1. Show Loading Screen
+  ShowLoadingScreen();
+
+  // 2. Teleport the Actor
+  TargetActor->SetActorTransform(DestTransform);
+
+  // 3. Wait for world partition streaming
+  StartStreamingCheck();
+}
+
+void UDGLoadingScreenSubsystem::CheckStreamingStatus() {
+  UWorld *World = GetWorld();
+  if (!World)
+    return;
+
+  UWorldPartitionSubsystem *WPSubsystem =
+      World->GetSubsystem<UWorldPartitionSubsystem>();
+  if (!WPSubsystem) {
+    // Not a world partition world, hide immediately
+    UE_LOG(
+        LogDGLoadingScreen, Log,
+        TEXT("Not a World Partition map. Hiding loading screen immediately."));
+    HideLoadingScreen();
+    return;
+  }
+
+  // Check if the world partition streaming is completed
+  bool bIsStreamingDone = WPSubsystem->IsStreamingCompleted();
+
+  UE_LOG(LogDGLoadingScreen, Log,
+         TEXT("Checking Streaming Status... IsCompleted: %s"),
+         bIsStreamingDone ? TEXT("True") : TEXT("False"));
+
+  if (bIsStreamingDone) {
+    UE_LOG(LogDGLoadingScreen, Log,
+           TEXT("Streaming completed. Hiding loading screen after %.1f seconds."),
+           PostStreamingDelay);
+
+    // 스트리밍 체크 타이머 중지
+    World->GetTimerManager().ClearTimer(StreamingCheckTimerHandle);
+
+    // PostStreamingDelay만큼 대기 후 Hide
+    World->GetTimerManager().SetTimer(
+        HideDelayTimerHandle, this,
+        &UDGLoadingScreenSubsystem::HideLoadingScreen,
+        PostStreamingDelay, false);
+  }
+}
+
+void UDGLoadingScreenSubsystem::OnPreLoadMap(const FString &MapName) {
+  // ClientTravel 로 인한 맵 이동 시 호출됨
+  // TODO: 만약 MoviePlayer 모듈을 사용한다면 여기서 셋업을 해야 메인 스레드
+  // 블록 중에도 애니메이션이 돌아감. 현재는 간단히 UserWidget을 띄우는 형태로
+  // 시도 (단, 메인 스레드 블록 시 Throbber가 멈출 수 있음) ShowLoadingScreen();
+}
+
+void UDGLoadingScreenSubsystem::OnPostLoadMap(UWorld *LoadedWorld) {
+  // HideLoadingScreen();
+}
