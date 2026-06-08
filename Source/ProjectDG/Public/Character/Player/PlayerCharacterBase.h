@@ -49,6 +49,8 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
+	virtual void Landed(const FHitResult& Hit) override;
+	
 protected:
 	/** 모든 컴포넌트가 생성된 후 초기화 단계 */
     virtual void PostInitializeComponents() override;
@@ -193,6 +195,10 @@ protected:
 protected:
 	void LookAction(const FInputActionValue& InputActionValue);
 	void MoveAction(const FInputActionValue& InputActionValue);
+	
+	void JumpActionStarted();
+	void JumpActionCompleted();
+	void SendJumpEvent();
 	
 	bool IsMovementInputLocked() const;
 	

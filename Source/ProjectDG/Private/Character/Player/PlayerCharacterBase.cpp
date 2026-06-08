@@ -177,6 +177,21 @@ void APlayerCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
+void APlayerCharacterBase::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+	
+	FGameplayEventData Payload;
+	Payload.EventTag = DGGameplayTags::Event_Movement_Jump_Landed;
+	Payload.Instigator = this;
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+			this,
+			DGGameplayTags::Event_Movement_Jump_Landed,
+			Payload
+	);
+}
+
 void APlayerCharacterBase::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
@@ -389,8 +404,8 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 
 	if (IA_Jump)
 	{
-		EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Started, this, &ACharacter::Jump);
-		EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+		EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Started, this, &APlayerCharacterBase::JumpActionStarted);
+		EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Completed, this, &APlayerCharacterBase::JumpActionCompleted);
 	}
 
 	if (IA_Shift)
@@ -552,13 +567,10 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 		const int32 AbilityCountBeforeClear = ASC ? ASC->GetActivatableAbilities().Num() : -1;
 		const bool bWasAbilityListEmpty = ASC && ASC->GetActivatableAbilities().Num() == 0;
 
-		
 
 		if (ASC)
 		{
 			const int32 ClearedClassSkillCount = ClearGrantedClassSkillAbilities(ASC);
-
-			
 
 			GrantDefaultAbilities();
 			GrantClassSkillAbilities();
@@ -568,7 +580,6 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 				ApplyDefaultEffects();
 			}
 
-			
 		}
 	}
 
@@ -579,8 +590,6 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 void APlayerCharacterBase::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
-
-
 
 	/**
 	 * PlayerState가 복제 완료된 뒤 ASC 초기화 재시도
@@ -597,7 +606,6 @@ void APlayerCharacterBase::OnRep_PlayerState()
 
 void APlayerCharacterBase::InitializePlayerStateFromClassData()
 {
-	
 
 	if (!HasAuthority())
 	{
@@ -606,31 +614,25 @@ void APlayerCharacterBase::InitializePlayerStateFromClassData()
 
 	if (!CharacterClassData)
 	{
-		
 		return;
 	}
 
 	ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>();
 	if (!PS)
-	{
-		
+	{	
 		return;
 	}
-
 	
-
 	PS->InitializePlayerDataFromClassData(CharacterClassData);
 }
 
 void APlayerCharacterBase::InitializeSkillSlotsFromClassData()
 {
-	
 
 	SkillSlotMapping.Empty();
 
 	if (!CharacterClassData)
 	{
-		
 		return;
 	}
 
@@ -638,24 +640,20 @@ void APlayerCharacterBase::InitializeSkillSlotsFromClassData()
 	{
 		if (!SkillSlot.SlotTag.IsValid())
 		{
-			
 			continue;
 		}
 
 		if (!SkillSlot.SkillData)
 		{
-			
 			continue;
 		}
 
 		if (!SkillSlot.SkillData->SkillTag.IsValid())
 		{
-			
 			continue;
 		}
 
 		SkillSlotMapping.Add(SkillSlot.SlotTag, SkillSlot.SkillData->SkillTag);
-
 		
 	}
 
@@ -664,7 +662,6 @@ void APlayerCharacterBase::InitializeSkillSlotsFromClassData()
 
 void APlayerCharacterBase::GrantClassSkillAbilities()
 {
-	
 
 	if (!HasAuthority())
 	{
@@ -674,42 +671,35 @@ void APlayerCharacterBase::GrantClassSkillAbilities()
 	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
 	if (!ASC)
 	{
-		
 		return;
 	}
 
 	if (!CharacterClassData)
 	{
-	
 		return;
 	}
 
 	const ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>();
 	const int32 CurrentLevel = PS ? PS->GetCharacterLevel() : 1;
-
 	
 
 	for (const FSkillSlotDefinition& SkillSlot : CharacterClassData->SkillSlots)
 	{
 		if (!SkillSlot.SkillData)
 		{
-			
 			continue;
 		}
 
 		if (!SkillSlot.SkillData->AbilityClass)
 		{
-			
 			continue;
 		}
 
 		if (SkillSlot.UnlockLevel > CurrentLevel)
-		{
-			
+		{			
 			continue;
 		}
 
-		
 
 		FGameplayAbilitySpec AbilitySpec(
 			SkillSlot.SkillData->AbilityClass,
@@ -720,8 +710,6 @@ void APlayerCharacterBase::GrantClassSkillAbilities()
 
 		ASC->GiveAbility(AbilitySpec);
 	}
-
-
 }
 
 void APlayerCharacterBase::GrantDefaultAbilities()
@@ -737,7 +725,6 @@ void APlayerCharacterBase::GrantDefaultAbilities()
 		return;
 	}
 
-
 	for (const auto& AbilityClass : CharacterClassData->StartupAbilities)
 	{
 		if (!AbilityClass)
@@ -746,12 +733,9 @@ void APlayerCharacterBase::GrantDefaultAbilities()
 		}
 
 		if (HasGrantedAbilityClass(ASC, AbilityClass))
-		{
-			
+		{	
 			continue;
 		}
-
-		
 
 		ASC->GiveAbility(FGameplayAbilitySpec(AbilityClass, 1));
 	}
@@ -813,6 +797,42 @@ void APlayerCharacterBase::MoveAction(const FInputActionValue& InputActionValue)
 		GetCameraRightOnPlane() * CurrentMoveInput.X;
 
 	AddMovementInput(MoveDirection.GetSafeNormal());
+	
+	FGameplayEventData Payload;
+	Payload.EventTag = DGGameplayTags::Event_Movement_Skill_CancelByMove;
+	Payload.Instigator = this;
+	Payload.Target = this;
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+		  this,
+		  DGGameplayTags::Event_Movement_Skill_CancelByMove,
+		  Payload
+	);
+}
+
+void APlayerCharacterBase::JumpActionStarted()
+{
+	SendJumpEvent();
+}
+
+void APlayerCharacterBase::JumpActionCompleted()
+{
+	StopJumping();
+}
+
+void APlayerCharacterBase::SendJumpEvent()
+{
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC)
+	{
+		return;
+	}
+
+	FGameplayEventData Payload;
+	Payload.EventTag = DGGameplayTags::Skill_Common_Jump;
+	Payload.Instigator = this;
+
+	ASC->HandleGameplayEvent(Payload.EventTag, &Payload);
 }
 
 bool APlayerCharacterBase::IsMovementInputLocked() const
@@ -960,25 +980,21 @@ void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
 	if (!ASC)
 	{
-		
 		return;
 	}
 
 	const FGameplayTag SkillTag = GetSkillTagForSlot(SlotTag);
-
 	
 
 	if (SkillTag.IsValid())
 	{
 		const bool bActivated = ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(SkillTag));
-
 		
 
 		const FGameplayTag SkillInputEventTag = GetSkillInputEventTag(SkillTag);
 
 		if (SkillInputEventTag.IsValid())
 		{
-			
 
 			SendSkillInputStartedEvent(SkillInputEventTag);
 
@@ -1167,7 +1183,6 @@ void APlayerCharacterBase::ServerRequestMeleeComboInput_Implementation(FGameplay
 
 void APlayerCharacterBase::InitializeMovementStats()
 {
-	
 
 	if (!CharacterClassData || !CharacterClassData->MovementData)
 	{
