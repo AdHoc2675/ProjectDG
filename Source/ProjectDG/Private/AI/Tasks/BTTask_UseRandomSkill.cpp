@@ -17,7 +17,10 @@ struct FBTUseRandomSkillMemory
 
 namespace
 {
-	FGameplayAbilitySpecHandle FindAbilitySpecHandleBySourceObject(UAbilitySystemComponent* ASC, const UObject* SourceObject)
+	FGameplayAbilitySpecHandle FindUseRandomSkillAbilitySpecHandleBySourceObject(
+		UAbilitySystemComponent* ASC,
+		const UObject* SourceObject
+	)
 	{
 		if (!ASC || !SourceObject)
 		{
@@ -35,8 +38,35 @@ namespace
 		return FGameplayAbilitySpecHandle();
 	}
 
+	bool DoesUseRandomSkillTargetMatchTags(AActor* TargetActor, const UEnemySkillData* SkillData)
+	{
+		if (!TargetActor || !SkillData)
+		{
+			return false;
+		}
+
+		if (SkillData->TargetRequiredTags.IsEmpty())
+		{
+			return true;
+		}
+
+		UAbilitySystemComponent* TargetASC =
+			UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
+
+		if (!TargetASC)
+		{
+			return false;
+		}
+
+		FGameplayTagContainer OwnedTags;
+		TargetASC->GetOwnedGameplayTags(OwnedTags);
+
+		return OwnedTags.HasAll(SkillData->TargetRequiredTags);
+	}
+
 	UEnemySkillData* SelectWeightedEnemySkill(
 		const TArray<TObjectPtr<UEnemySkillData>>& Skills,
+		AActor* TargetActor,
 		float DistanceToTarget,
 		const UEnemySkillData* LastUsedSkill,
 		bool bExcludeLastSkill
@@ -68,6 +98,11 @@ namespace
 				continue;
 			}
 
+			if (!DoesUseRandomSkillTargetMatchTags(TargetActor, SkillData))
+			{
+				continue;
+			}
+
 			ValidSkills.Add(SkillData);
 			TotalWeight += SkillData->SelectionWeight;
 		}
@@ -95,7 +130,7 @@ namespace
 
 UBTTask_UseRandomSkill::UBTTask_UseRandomSkill()
 {
-	NodeName = "Use Random Enemy Skill";
+	NodeName = TEXT("Use Random Enemy Skill");
 	bNotifyTick = true;
 }
 
@@ -104,7 +139,10 @@ uint16 UBTTask_UseRandomSkill::GetInstanceMemorySize() const
 	return sizeof(FBTUseRandomSkillMemory);
 }
 
-EBTNodeResult::Type UBTTask_UseRandomSkill::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
+EBTNodeResult::Type UBTTask_UseRandomSkill::ExecuteTask(
+	UBehaviorTreeComponent& OwnerComp,
+	uint8* NodeMemory
+)
 {
 	AAIController* AIController = OwnerComp.GetAIOwner();
 	UBlackboardComponent* BlackboardComp = OwnerComp.GetBlackboardComponent();
@@ -132,8 +170,12 @@ EBTNodeResult::Type UBTTask_UseRandomSkill::ExecuteTask(UBehaviorTreeComponent& 
 		return EBTNodeResult::Failed;
 	}
 
-	AActor* TargetActor = Cast<AActor>(BlackboardComp->GetValueAsObject(TargetKey.SelectedKeyName));
-	UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(ControlledPawn);
+	AActor* TargetActor = Cast<AActor>(
+		BlackboardComp->GetValueAsObject(TargetKey.SelectedKeyName)
+	);
+
+	UAbilitySystemComponent* ASC =
+		UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(ControlledPawn);
 
 	if (!ASC || !TargetActor)
 	{
@@ -148,6 +190,7 @@ EBTNodeResult::Type UBTTask_UseRandomSkill::ExecuteTask(UBehaviorTreeComponent& 
 
 	UEnemySkillData* SelectedSkill = SelectWeightedEnemySkill(
 		FieldClassData->AttackSkills,
+		TargetActor,
 		DistanceToTarget,
 		LastUsedSkill,
 		true
@@ -158,6 +201,7 @@ EBTNodeResult::Type UBTTask_UseRandomSkill::ExecuteTask(UBehaviorTreeComponent& 
 	{
 		SelectedSkill = SelectWeightedEnemySkill(
 			FieldClassData->AttackSkills,
+			TargetActor,
 			DistanceToTarget,
 			LastUsedSkill,
 			false
@@ -169,7 +213,9 @@ EBTNodeResult::Type UBTTask_UseRandomSkill::ExecuteTask(UBehaviorTreeComponent& 
 		return EBTNodeResult::Failed;
 	}
 
-	const FGameplayAbilitySpecHandle AbilityHandle = FindAbilitySpecHandleBySourceObject(ASC, SelectedSkill);
+	const FGameplayAbilitySpecHandle AbilityHandle =
+		FindUseRandomSkillAbilitySpecHandleBySourceObject(ASC, SelectedSkill);
+
 	if (!AbilityHandle.IsValid())
 	{
 		return EBTNodeResult::Failed;
@@ -179,7 +225,9 @@ EBTNodeResult::Type UBTTask_UseRandomSkill::ExecuteTask(UBehaviorTreeComponent& 
 
 	if (ASC->TryActivateAbility(AbilityHandle))
 	{
-		FBTUseRandomSkillMemory* MyMemory = reinterpret_cast<FBTUseRandomSkillMemory*>(NodeMemory);
+		FBTUseRandomSkillMemory* MyMemory =
+			reinterpret_cast<FBTUseRandomSkillMemory*>(NodeMemory);
+
 		MyMemory->ASC = ASC;
 		MyMemory->ActiveAbilityHandle = AbilityHandle;
 
@@ -189,9 +237,14 @@ EBTNodeResult::Type UBTTask_UseRandomSkill::ExecuteTask(UBehaviorTreeComponent& 
 	return EBTNodeResult::Failed;
 }
 
-void UBTTask_UseRandomSkill::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
+void UBTTask_UseRandomSkill::TickTask(
+	UBehaviorTreeComponent& OwnerComp,
+	uint8* NodeMemory,
+	float DeltaSeconds
+)
 {
-	FBTUseRandomSkillMemory* MyMemory = reinterpret_cast<FBTUseRandomSkillMemory*>(NodeMemory);
+	FBTUseRandomSkillMemory* MyMemory =
+		reinterpret_cast<FBTUseRandomSkillMemory*>(NodeMemory);
 
 	if (!MyMemory || !MyMemory->ASC || !MyMemory->ActiveAbilityHandle.IsValid())
 	{
@@ -199,7 +252,9 @@ void UBTTask_UseRandomSkill::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* 
 		return;
 	}
 
-	const FGameplayAbilitySpec* Spec = MyMemory->ASC->FindAbilitySpecFromHandle(MyMemory->ActiveAbilityHandle);
+	const FGameplayAbilitySpec* Spec =
+		MyMemory->ASC->FindAbilitySpecFromHandle(MyMemory->ActiveAbilityHandle);
+
 	if (!Spec)
 	{
 		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
@@ -214,5 +269,7 @@ void UBTTask_UseRandomSkill::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* 
 
 FString UBTTask_UseRandomSkill::GetStaticDescription() const
 {
-	return FString::Printf(TEXT("FieldClassData.AttackSkills에서 EnemySkillData를 선택하고 SourceObject 기반 AbilitySpec을 실행합니다."));
+	return FString::Printf(
+		TEXT("FieldClassData.AttackSkills에서 EnemySkillData를 선택하고 SourceObject 기반 AbilitySpec을 실행합니다.")
+	);
 }

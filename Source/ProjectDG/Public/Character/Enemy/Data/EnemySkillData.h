@@ -150,4 +150,18 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|VFX")
 	TObjectPtr<UNiagaraSystem> HitVFX = nullptr;
+	
+	//--- SFX---
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|SFX")
+	TObjectPtr<USoundBase> TelegraphSFX = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|SFX")
+	TObjectPtr<USoundBase> HitSFX = nullptr;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|SFX")
+	TObjectPtr<USoundBase> CastSFX = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|SFX")
+	TObjectPtr<USoundBase> ImpactSFX = nullptr;
 };

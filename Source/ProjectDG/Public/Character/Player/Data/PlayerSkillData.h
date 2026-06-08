@@ -284,4 +284,13 @@ public:
 	/** 사운드 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|SFX")
 	TObjectPtr<USoundBase> SFX = nullptr;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|SFX")
+	TObjectPtr<USoundBase> CastSFX = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|SFX")
+	TObjectPtr<USoundBase> HitSFX = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|SFX")
+	TObjectPtr<USoundBase> ImpactSFX = nullptr;
 };

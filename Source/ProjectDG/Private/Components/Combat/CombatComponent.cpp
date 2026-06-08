@@ -83,10 +83,7 @@ FDGDamageResult UCombatComponent::ApplyDamageRequest(const FDGDamageRequest& Dam
 	if (!ValidateDamageRequest(DamageRequest, FailReason))
 	{
 		Result.Message = FailReason;
-		// Debug::Print(FString::Printf(
-		// 	TEXT("[CombatComponent] Damage request failed. Reason=%s"),
-		// 	*FailReason
-		// ));
+		
 		return Result;
 	}
 
@@ -180,12 +177,7 @@ FDGDamageResult UCombatComponent::ApplyDamageRequest(const FDGDamageRequest& Dam
 	Result.FinalDamage = 0.f;
 	Result.Message = TEXT("Damage GameplayEffect applied.");
 
-	// Debug::Print(FString::Printf(
-	// 	TEXT("[CombatComponent] Damage applied. Source=%s Target=%s IncomingDamage=%.2f"),
-	// 	*GetNameSafe(SourceActor),
-	// 	*GetNameSafe(TargetActor),
-	// 	DamageRequest.BaseDamage
-	// ));
+	
 
 	if (SourceActor)
 	{

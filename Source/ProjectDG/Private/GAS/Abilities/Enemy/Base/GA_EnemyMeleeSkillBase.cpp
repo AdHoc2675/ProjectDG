@@ -20,28 +20,26 @@ void UGA_EnemyMeleeSkillBase::ActivateAbility(
 	UEnemySkillData* CurrentSkillData = GetEnemySkillData();
 	if (!CurrentSkillData)
 	{
-		Debug::Print(TEXT("[GA_EnemyMeleeSkillBase] Activate failed. SkillData is null."), FColor::Red);
+		
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
 	if (!CurrentSkillData->Montage)
 	{
-		Debug::Print(TEXT("[GA_EnemyMeleeSkillBase] Activate failed. Montage is null."), FColor::Red);
+		
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
 	if (!CanStartEnemyMeleeSkill())
 	{
-		Debug::Print(TEXT("[GA_EnemyMeleeSkillBase] Activate failed. CanStartEnemyMeleeSkill returned false."), FColor::Red);
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		Debug::Print(TEXT("[GA_EnemyMeleeSkillBase] Activate failed. CommitAbility failed."), FColor::Red);
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
@@ -52,7 +50,6 @@ void UGA_EnemyMeleeSkillBase::ActivateAbility(
 
 	if (!PlaySkillMontageFromData(TEXT("EnemyMeleeSkillMontageTask")))
 	{
-		Debug::Print(TEXT("[GA_EnemyMeleeSkillBase] Activate failed. PlaySkillMontageFromData failed."), FColor::Red);
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
@@ -100,18 +97,8 @@ void UGA_EnemyMeleeSkillBase::HandleEnemySkillHitCheckEvent(const FGameplayEvent
 	UEnemySkillData* CurrentSkillData = GetEnemySkillData();
 	if (!CurrentSkillData)
 	{
-		Debug::Print(TEXT("[GA_EnemyMeleeSkillBase] HitCheck failed. SkillData is null."), FColor::Red);
 		return;
 	}
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[GA_EnemyMeleeSkillBase] HitCheck Event Received. SkillData=%s HitShape=%d HitOrigin=%d EventMagnitude=%.2f"),
-			*GetNameSafe(CurrentSkillData),
-			static_cast<int32>(CurrentSkillData->HitShape),
-			static_cast<int32>(CurrentSkillData->HitOrigin),
-			Payload.EventMagnitude
-		),
-		FColor::Green
-	);
+	
 }

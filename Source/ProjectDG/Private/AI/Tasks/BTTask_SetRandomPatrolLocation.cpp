@@ -3,6 +3,7 @@
 #include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Character/Enemy/Field/FieldEnemyBase.h"
+#include "NavigationPath.h"
 #include "NavigationSystem.h"
 
 UBTTask_SetRandomPatrolLocation::UBTTask_SetRandomPatrolLocation()
@@ -52,6 +53,8 @@ EBTNodeResult::Type UBTTask_SetRandomPatrolLocation::ExecuteTask(
 	}
 
 	const FVector OriginLocation = FieldEnemy->GetSpawnOriginLocation();
+	const FVector CurrentLocation = FieldEnemy->GetActorLocation();
+
 	const float PatrolRadius = bUseOverrideRadius
 		? OverridePatrolRadius
 		: FieldEnemy->GetPatrolRadius();
@@ -60,6 +63,9 @@ EBTNodeResult::Type UBTTask_SetRandomPatrolLocation::ExecuteTask(
 	{
 		return EBTNodeResult::Failed;
 	}
+
+	const float MinDistance = FMath::Max(0.f, MinPatrolDistance);
+	const float MinDistanceSq2D = FMath::Square(MinDistance);
 
 	for (int32 AttemptIndex = 0; AttemptIndex < MaxFindAttempts; ++AttemptIndex)
 	{
@@ -72,6 +78,33 @@ EBTNodeResult::Type UBTTask_SetRandomPatrolLocation::ExecuteTask(
 		);
 
 		if (!bFoundLocation)
+		{
+			continue;
+		}
+
+		const float DistanceSq2D = FVector::DistSquared2D(
+			CurrentLocation,
+			RandomNavLocation.Location
+		);
+
+		if (MinDistance > 0.f && DistanceSq2D < MinDistanceSq2D)
+		{
+			continue;
+		}
+
+		UNavigationPath* Path = UNavigationSystemV1::FindPathToLocationSynchronously(
+			World,
+			CurrentLocation,
+			RandomNavLocation.Location,
+			FieldEnemy
+		);
+
+		const bool bHasValidPath =
+			Path &&
+			Path->IsValid() &&
+			Path->PathPoints.Num() > 1;
+
+		if (!bHasValidPath)
 		{
 			continue;
 		}
@@ -90,7 +123,8 @@ EBTNodeResult::Type UBTTask_SetRandomPatrolLocation::ExecuteTask(
 FString UBTTask_SetRandomPatrolLocation::GetStaticDescription() const
 {
 	return FString::Printf(
-		TEXT("SpawnOrigin 기준 NavMesh 위 랜덤 패트롤 위치를 %s에 저장합니다."),
-		*PatrolLocationKey.SelectedKeyName.ToString()
+		TEXT("SpawnOrigin 기준 NavMesh 위 랜덤 패트롤 위치를 %s에 저장합니다.\nMinPatrolDistance: %.1f"),
+		*PatrolLocationKey.SelectedKeyName.ToString(),
+		MinPatrolDistance
 	);
 }

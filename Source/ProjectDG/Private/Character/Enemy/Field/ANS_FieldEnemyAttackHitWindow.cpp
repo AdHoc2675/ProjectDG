@@ -42,10 +42,7 @@ void UANS_FieldEnemyAttackHitWindow::NotifyBegin(
 
 	InitializeRuntimeData(MeshComp);
 
-	if (bLogWindowLifecycle)
-	{
-		Debug::Print(TEXT("[ANS_FieldEnemyAttackHitWindow] Begin"), FColor::Green);
-	}
+	
 }
 
 void UANS_FieldEnemyAttackHitWindow::NotifyTick(
@@ -75,10 +72,7 @@ void UANS_FieldEnemyAttackHitWindow::NotifyEnd(
 
 	RuntimeDataMap.Remove(MeshComp);
 
-	if (bLogWindowLifecycle)
-	{
-		Debug::Print(TEXT("[ANS_FieldEnemyAttackHitWindow] End"), FColor::Green);
-	}
+	
 }
 
 void UANS_FieldEnemyAttackHitWindow::InitializeRuntimeData(USkeletalMeshComponent* MeshComp)
@@ -182,7 +176,6 @@ void UANS_FieldEnemyAttackHitWindow::TraceBodySockets(USkeletalMeshComponent* Me
 			RuntimeData.HitActors.Add(HitActor);
 
 			DrawDebugSphere(World, HitResult.ImpactPoint, 20.f, 12, FColor::Cyan, false, 2.f);
-			Debug::Print(FString::Printf(TEXT("[FieldEnemyHit] %s"), *GetNameSafe(HitActor)), FColor::Cyan);
 
 			SendHitEvent(OwnerActor, HitActor);
 		}

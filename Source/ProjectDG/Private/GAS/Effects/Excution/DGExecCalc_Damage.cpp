@@ -183,18 +183,7 @@ void UDGExecCalc_Damage::Execute_Implementation(
 		? IncomingDamage / DamageDivisor
 		: IncomingDamage;
 
-	Debug::Print(FString::Printf(
-		TEXT("[DGExecCalc_Damage] AttackPower=%.2f BaseDamage=%.2f Multiplier=%.2f LegacyDamage=%.2f Incoming=%.2f Defense=%.2f DefenseCoeff=%.2f EffectiveArmor=%.2f FinalDamage=%.2f"),
-		SourceAttackPower,
-		BaseDamage,
-		DamageMultiplier,
-		LegacyIncomingDamage,
-		IncomingDamage,
-		TargetDefense,
-		TargetDefenseCoefficient,
-		EffectiveArmor,
-		FinalDamageTaken
-	));
+	
 
 	if (FinalDamageTaken <= 0.0f)
 	{
@@ -265,13 +254,7 @@ void UDGExecCalc_Damage::Execute_Implementation(
 					)
 				);
 
-				Debug::Print(FString::Printf(
-					TEXT("[DGExecCalc_Damage] BaseGroggy=%.2f SourceGroggy=%.2f IncRate=%.2f FinalGroggy=%.2f"),
-					BaseGroggyDamage,
-					SourceGroggyDamage,
-					SourceGroggyDamageIncreaseRate,
-					FinalGroggyDamage
-				));
+				
 			}
 		}
 	}

@@ -10,7 +10,9 @@
  * 필드 몬스터의 SpawnOriginLocation / PatrolRadius 기준으로
  * NavMesh 위 랜덤 패트롤 위치를 찾아 Blackboard Vector Key에 저장한다.
  *
- * 실제 이동은 BT의 Move To 노드가 담당한다.
+ * - 현재 위치 기준 MinPatrolDistance보다 가까운 위치는 제외한다.
+ * - 현재 위치에서 목적지까지 Path 유효성도 검사한다.
+ * - 실제 이동은 BT의 Move To 노드가 담당한다.
  */
 UCLASS()
 class PROJECTDG_API UBTTask_SetRandomPatrolLocation : public UBTTaskNode
@@ -36,7 +38,11 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Patrol", meta = (ClampMin = "0.0"))
 	float OverridePatrolRadius = 800.f;
 
+	/** 현재 위치 기준 이 거리보다 가까운 랜덤 위치는 제외 */
+	UPROPERTY(EditAnywhere, Category = "Patrol", meta = (ClampMin = "0.0"))
+	float MinPatrolDistance = 300.f;
+
 	/** NavMesh 랜덤 위치 탐색 최대 시도 횟수 */
-	UPROPERTY(EditAnywhere, Category = "Patrol", meta = (ClampMin = "1", ClampMax = "50"))
-	int32 MaxFindAttempts = 10;
+	UPROPERTY(EditAnywhere, Category = "Patrol", meta = (ClampMin = "1", ClampMax = "100"))
+	int32 MaxFindAttempts = 50;
 };
