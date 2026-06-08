@@ -4,6 +4,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
 #include "Character/Player/PlayerCharacterBase.h"
+#include "UI/Loading/DGLoadingScreenSubsystem.h"
 #include "UI/HUD/DG_HUD.h" 
 
 ADGWaypoint::ADGWaypoint()
@@ -51,6 +52,13 @@ void ADGWaypoint::ExecuteTeleport_Implementation(ACharacter* LocalPlayerCharacte
 	// -------------------------------------------------------------
 	// [멀티플레이] 서버에게 이동 요청
 	// -------------------------------------------------------------
+	if (UGameInstance *GI = GetGameInstance()) {
+		if (UDGLoadingScreenSubsystem *LoadingSS =GI->GetSubsystem<UDGLoadingScreenSubsystem>()) 
+			{
+			LoadingSS->ShowLoadingScreen();
+		LoadingSS->StartStreamingCheck();
+			}
+	}
 	if (APlayerCharacterBase* DGPlayer = Cast<APlayerCharacterBase>(LocalPlayerCharacter))
 	{
 		// 이 코드는 클라이언트에서 불리더라도, Server RPC이므로 서버에게 패킷을 보내 서버에서 SetActorLocation이 실행
