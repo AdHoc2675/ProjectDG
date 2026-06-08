@@ -14,6 +14,10 @@ void UAssassinAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	bUseAssassinMovingAttackUpperBody = false;
 	bIsAssassinMeleeTwistCorrectionActive = false;
 	bUseAssassinMeleeTwistCorrection = false;
+	
+	MovingAttackFullBodyLockCurveValue = GetCurveValue(MovingAttackFullBodyLockCurveName);
+
+	bIsMovingAttackFullBodyLockedByCurve = MovingAttackFullBodyLockCurveValue > MovingAttackFullBodyLockThreshold;
 
 	if (!PlayerCharacter)
 	{
@@ -38,6 +42,7 @@ void UAssassinAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bUseAssassinMovingAttackUpperBody =
 				bIsAssassinMovingAttackActive &&
 				!bIsMovementLocked &&
+				!bIsMovingAttackFullBodyLockedByCurve &&
 				GroundSpeed > AssassinMovingAttackThreshold;
 
 		bUseAssassinMeleeTwistCorrection =

@@ -45,4 +45,16 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Assassin|MovingAttack")
 	FGameplayTagContainer MeleeTwistCorrectionStateTags;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Assassin|MovingAttack")
+	float MovingAttackFullBodyLockCurveValue = 0.f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Assassin|MovingAttack")
+	bool bIsMovingAttackFullBodyLockedByCurve = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Assassin|MovingAttack")
+	FName MovingAttackFullBodyLockCurveName = TEXT("MovingAttackFullBodyLock");
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Assassin|MovingAttack")
+	float MovingAttackFullBodyLockThreshold = 0.5f;
 };
