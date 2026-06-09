@@ -22,6 +22,9 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_SkillSlot_Key2)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_SkillSlot_Key3)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_SkillSlot_Key4)
+	
+	// Player Damage Event
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Player_Damage)
 
 	// Event (주로 ANS에서 사용됨)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combo_InputWindow_Open)
@@ -172,6 +175,9 @@ namespace DGGameplayTags
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Assassin_HeartStab_Active)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Skill_Assassin_Infiltration_Active)
 	
+	// Player Damage State
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Player_Damage)
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Player_Dead)
 	
 
 	// Data
