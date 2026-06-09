@@ -26,6 +26,12 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_Key2, "Input.SkillSlot.Key2")
 	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_Key3, "Input.SkillSlot.Key3")
 	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_Key4, "Input.SkillSlot.Key4")
+	
+	// Player Damage Event
+	UE_DEFINE_GAMEPLAY_TAG(Event_Player_Damage, "Event.Player.Damage")
+	
+	// DG_GameplayTags.cpp
+	UE_DEFINE_GAMEPLAY_TAG(Event_Player_Death, "Event.Player.Death")
 
 	// Event
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_InputWindow_Open, "Event.Combo.InputWindow.Open")
@@ -194,6 +200,10 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Assassin_FlashSlash_Active, "State.Skill.Assassin.FlashSlash.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Assassin_HeartStab_Active, "State.Skill.Assassin.HeartStab.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Assassin_Infiltration_Active, "State.Skill.Assassin.Infiltration.Active")
+	
+	// Player Damage State
+	UE_DEFINE_GAMEPLAY_TAG(State_Player_Damage, "State.Player.Damage")
+	UE_DEFINE_GAMEPLAY_TAG(State_Player_Dead, "State.Player.Dead")
 
 
 	// Data
