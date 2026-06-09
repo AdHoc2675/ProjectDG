@@ -65,6 +65,8 @@ void UGA_AOESkillBase::EndAbility(
 
 void UGA_AOESkillBase::StartAOEEventTasks()
 {
+	RegisterSkillCueEvents();
+	
       AOEWindowBeginTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
               this,
               DGGameplayTags::Event_AOE_OverlapWindow_Begin.GetTag(),
