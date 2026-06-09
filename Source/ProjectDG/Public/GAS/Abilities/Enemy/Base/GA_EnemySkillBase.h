@@ -65,6 +65,9 @@ protected:
 	FVector LastPathSweepCenter = FVector::ZeroVector;
 	FVector LastPathSweepDebugStart = FVector::ZeroVector;
 	FVector LastPathSweepDebugEnd = FVector::ZeroVector;
+	
+	// Ability 1회당 같은 대상 1회 타격 정책용 런타임 상태
+	mutable TSet<TWeakObjectPtr<AActor>> HitActorsThisAbility;
 
 protected:
 	UEnemySkillData* GetEnemySkillData() const;
@@ -126,6 +129,9 @@ protected:
 	// --- SkillData 기반 판정 공통 함수 ---
 
 	void ResetEnemySkillRuntimeHitState();
+	
+	bool HasActorAlreadyHitThisAbility(AActor* CandidateActor) const;
+	void MarkActorHitThisAbility(AActor* HitActor) const;
 
 	bool CollectEnemySkillTargetsFromData(
 		const FGameplayEventData& Payload,
