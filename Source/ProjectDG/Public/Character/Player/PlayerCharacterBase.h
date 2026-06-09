@@ -321,6 +321,9 @@ public:
 	
 #pragma endregion Movement
 	
+public:
+	void SendDamageEvent(FVector DamageSourceLocation,bool bHasDamageSourceLocation);
+	
 protected:
 	UFUNCTION(Server, Reliable)
 	void ServerHandleShiftAction(FVector_NetQuantizeNormal DodgeDirection, bool bHasInput);

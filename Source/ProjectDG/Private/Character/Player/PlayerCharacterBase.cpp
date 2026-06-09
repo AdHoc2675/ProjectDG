@@ -1214,6 +1214,38 @@ const FPlayerMovementAnimationSet& APlayerCharacterBase::GetCurrentMovementAnims
 	return CharacterClassData->StandardAnims;
 }
 
+void APlayerCharacterBase::SendDamageEvent(FVector DamageSourceLocation, bool bHasDamageSourceLocation)
+{
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC)
+	{
+		return;
+	}
+
+	FGameplayEventData Payload;
+	Payload.EventTag = DGGameplayTags::Event_Player_Damage;
+	Payload.Instigator = this;
+	Payload.Target = this;
+
+	if (bHasDamageSourceLocation)
+	{
+		FHitResult HitResult;
+		HitResult.ImpactPoint = DamageSourceLocation;
+		HitResult.Location = DamageSourceLocation;
+
+		FGameplayEffectContextHandle ContextHandle = ASC->MakeEffectContext();
+		ContextHandle.AddHitResult(HitResult);
+
+		Payload.ContextHandle = ContextHandle;
+	}
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+			this,
+			DGGameplayTags::Event_Player_Damage,
+			Payload
+	);
+}
+
 void APlayerCharacterBase::ServerTeleportToLocation_Implementation(FVector TargetLocation)
 {
 	SetActorLocation(TargetLocation);

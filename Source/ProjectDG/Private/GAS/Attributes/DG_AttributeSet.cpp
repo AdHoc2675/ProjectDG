@@ -6,6 +6,7 @@
 #include "Core/DG_Debug.h"
 #include "GameplayEffectExtension.h"
 #include "Character/Enemy/EnemyCharacterBase.h"
+#include "Character/Player/PlayerCharacterBase.h"
 
 UDG_AttributeSet::UDG_AttributeSet()
 {
@@ -193,6 +194,47 @@ void UDG_AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbac
 			// 현재 체력에서 데미지 차감
 			const float NewHealth = OldHealth - LocalDamageDone;
 			SetHealth(FMath::Clamp(NewHealth, 0.0f, GetMaxHealth()));
+
+			// AttributeSet의 OwningActor는 PlayerState이므로
+			// Target ASC의 AvatarActor에서 실제 PlayerCharacter를 가져온다.
+			APlayerCharacterBase* TargetPlayer = nullptr;
+
+			if (Data.Target.AbilityActorInfo.IsValid())
+			{
+				TargetPlayer = Cast<APlayerCharacterBase>(
+						Data.Target.AbilityActorInfo->AvatarActor.Get()
+				);
+			}
+
+			if (TargetPlayer && GetHealth() > 0.f)
+			{
+				AActor* DamageSourceActor =
+						Data.EffectSpec.GetContext().GetEffectCauser();
+
+				if (!DamageSourceActor)
+				{
+					DamageSourceActor =
+							Data.EffectSpec.GetContext().GetInstigator();
+				}
+
+				const bool bHasDamageSourceLocation =
+						IsValid(DamageSourceActor);
+
+				const FVector DamageSourceLocation =
+						bHasDamageSourceLocation
+								? DamageSourceActor->GetActorLocation()
+								: FVector::ZeroVector;
+
+				TargetPlayer->SendDamageEvent(
+						DamageSourceLocation,
+						bHasDamageSourceLocation
+				);
+			}
+
+			if (GetHealth() <= 0.0f)
+			{
+				// 이후 사망 처리
+			}
 
 			
 
