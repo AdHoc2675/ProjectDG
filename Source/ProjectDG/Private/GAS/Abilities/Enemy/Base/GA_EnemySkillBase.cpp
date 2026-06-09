@@ -135,6 +135,11 @@ void UGA_EnemySkillBase::ApplyDamageToTargets(const TArray<AActor*>& TargetActor
 			continue;
 		}
 
+		if (HasActorAlreadyHitThisAbility(TargetActor))
+		{
+			continue;
+		}
+
 		const FVector HitLocation = TargetActor->GetActorLocation();
 
 		const bool bDamageApplied = ApplyDamageToTarget(
@@ -143,7 +148,10 @@ void UGA_EnemySkillBase::ApplyDamageToTargets(const TArray<AActor*>& TargetActor
 			true
 		);
 
-		
+		if (bDamageApplied)
+		{
+			MarkActorHitThisAbility(TargetActor);
+		}
 	}
 }
 
@@ -492,6 +500,29 @@ void UGA_EnemySkillBase::ResetEnemySkillRuntimeHitState()
 	LastPathSweepCenter = FVector::ZeroVector;
 	LastPathSweepDebugStart = FVector::ZeroVector;
 	LastPathSweepDebugEnd = FVector::ZeroVector;
+
+	HitActorsThisAbility.Reset();
+}
+
+bool UGA_EnemySkillBase::HasActorAlreadyHitThisAbility(AActor* CandidateActor) const
+{
+	if (!CandidateActor)
+	{
+		return true;
+	}
+
+	const TWeakObjectPtr<AActor> WeakCandidate(CandidateActor);
+	return HitActorsThisAbility.Contains(WeakCandidate);
+}
+
+void UGA_EnemySkillBase::MarkActorHitThisAbility(AActor* HitActor) const
+{
+	if (!HitActor)
+	{
+		return;
+	}
+
+	HitActorsThisAbility.Add(TWeakObjectPtr<AActor>(HitActor));
 }
 
 bool UGA_EnemySkillBase::CollectEnemySkillTargetsFromData(
@@ -801,7 +832,18 @@ void UGA_EnemySkillBase::AddTargetIfValid(
 		return;
 	}
 
+	if (CurrentSkillData->MaxHitTargets > 0 &&
+		OutTargetActors.Num() >= CurrentSkillData->MaxHitTargets)
+	{
+		return;
+	}
+
 	if (UniqueActors.Contains(CandidateActor))
+	{
+		return;
+	}
+
+	if (HasActorAlreadyHitThisAbility(CandidateActor))
 	{
 		return;
 	}
@@ -813,12 +855,6 @@ void UGA_EnemySkillBase::AddTargetIfValid(
 
 	UniqueActors.Add(CandidateActor);
 	OutTargetActors.Add(CandidateActor);
-
-	if (CurrentSkillData->MaxHitTargets > 0 &&
-		OutTargetActors.Num() >= CurrentSkillData->MaxHitTargets)
-	{
-		return;
-	}
 }
 
 bool UGA_EnemySkillBase::ResolveSkillHitCenter(
