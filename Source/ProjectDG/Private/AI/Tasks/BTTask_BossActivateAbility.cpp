@@ -20,7 +20,8 @@ struct FBTBossActivateAbilityMemory
 
 namespace
 {
-	FGameplayAbilitySpecHandle FindAbilitySpecHandleBySourceObject(UAbilitySystemComponent* ASC, const UObject* SourceObject)
+	FGameplayAbilitySpecHandle FindAbilitySpecHandleBySourceObject(UAbilitySystemComponent* ASC,
+	                                                               const UObject* SourceObject)
 	{
 		if (!ASC || !SourceObject)
 		{
@@ -172,8 +173,8 @@ EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(UBehaviorTreeCompon
 
 	if (!SelectedSkillData)
 	{
-		UBossCharacterClassData* BossClassData = Boss->GetBossClassData();
-		if (!BossClassData || BossClassData->AttackSkills.Num() == 0)
+		const TArray<TObjectPtr<UBossSkillData>>& AttackSkills = Boss->GetAttackSkillDataList();
+		if (AttackSkills.Num() == 0)
 		{
 			return EBTNodeResult::Failed;
 		}
@@ -199,7 +200,7 @@ EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(UBehaviorTreeCompon
 
 		SelectedSkillData = SelectWeightedBossSkill(
 			Boss,
-			BossClassData->AttackSkills,
+			AttackSkills,
 			DistanceToTarget,
 			bUseDistanceFilter,
 			LastUsedSkill,
@@ -211,7 +212,7 @@ EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(UBehaviorTreeCompon
 		{
 			SelectedSkillData = SelectWeightedBossSkill(
 				Boss,
-				BossClassData->AttackSkills,
+				AttackSkills,
 				DistanceToTarget,
 				bUseDistanceFilter,
 				LastUsedSkill,

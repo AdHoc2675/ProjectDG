@@ -64,7 +64,8 @@ protected:
 	void OnGroggyGaugeChanged(const FOnAttributeChangeData& Data);
 
 	// Health 비율에 따라 Phase 태그 갱신 (단방향)
-	void UpdateHealthPhaseTags(float HealthRatio);
+	// 새 DA 기반 보스는 PhaseDataList 기준으로 처리한다.
+	virtual void UpdateHealthPhaseTags(float HealthRatio);
 
 	// 보스 사망 처리 (보스/적 공통 태그 부여)
 	virtual void HandleDeath() override;
@@ -79,9 +80,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Team")
 	FGameplayTag GetBossTag() const { return BossTag; }
 
+	virtual const TArray<TObjectPtr<UBossSkillData>>& GetAttackSkillDataList() const;
+	
 	/** DataAsset에 등록된 공격 스킬 데이터 중 무작위로 하나를 선택하여 반환 */
 	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Skill")
 	UBossSkillData* GetRandomAttackSkillData() const;
+	
+	virtual FGameplayTag GetAttributeSourceTag() const override;
 
 private:
 	bool bBossSpecialEffectsApplied = false;
