@@ -26,6 +26,7 @@
 #include "Animation/AnimInstance.h"
 #include "Character/Player/Data/PlayerCharacterMovementData.h"
 #include "Character/Player/Data/PlayerCharacterClassData.h"
+#include "Components/CapsuleComponent.h"
 #include "Perception/AIPerceptionStimuliSourceComponent.h"
 #include "Perception/AISense_Sight.h"
 
@@ -36,6 +37,7 @@
 #include "Components/UI/DGMinimapMarkerComponent.h"
 #include "Components/Targeting/LockOnComponent.h"
 #include "Components/Inventory/DGInventoryComponent.h"
+#include "GameFramework/GameModeBase.h"
 
 
 namespace
@@ -163,6 +165,18 @@ void APlayerCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		InitialCapsuleCollisionEnabled =
+				Capsule->GetCollisionEnabled();
+	}
+
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		InitialMeshCollisionEnabled =
+				MeshComp->GetCollisionEnabled();
+	}
+	
 	// 월드시작시 ASC초기화
 	InitializePlayerAbilitySystem();
 }
@@ -175,6 +189,8 @@ void APlayerCharacterBase::Tick(float DeltaSeconds)
 void APlayerCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(APlayerCharacterBase,bPlayerDead);
 }
 
 void APlayerCharacterBase::Landed(const FHitResult& Hit)
@@ -491,6 +507,177 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	}
 }
 
+void APlayerCharacterBase::HandleDeath()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	bPlayerDead = true;
+
+	if (UAbilitySystemComponent* ASC =
+			GetCharacterAbilitySystemComponent())
+	{
+		ASC->CancelAllAbilities();
+
+		ASC->AddLooseGameplayTag(
+				DGGameplayTags::State_Player_Dead,
+				1,
+				EGameplayTagReplicationState::TagOnly
+		);
+
+		ASC->AddLooseGameplayTag(
+				DGGameplayTags::State_Movement_Locked,
+				1,
+				EGameplayTagReplicationState::TagOnly
+		);
+	}
+	
+	Super::HandleDeath();
+	
+	SendDeathEvent();
+
+	GetWorldTimerManager().SetTimer(
+			RespawnTimerHandle,
+			this,
+			&APlayerCharacterBase::RespawnPlayer,
+			RespawnDelay,
+			false
+	);
+
+	ForceNetUpdate();
+}
+
+void APlayerCharacterBase::SendDeathEvent()
+{
+	FGameplayEventData Payload;
+	Payload.EventTag = DGGameplayTags::Event_Player_Death;
+	Payload.Instigator = this;
+	Payload.Target = this;
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+			this,
+			DGGameplayTags::Event_Player_Death,
+			Payload
+	);
+}
+
+void APlayerCharacterBase::RespawnPlayer()
+{
+	if (!HasAuthority() || !bPlayerDead)
+      {
+              return;
+      }
+
+      UAbilitySystemComponent* ASC =
+              GetCharacterAbilitySystemComponent();
+
+      if (ASC)
+      {
+              // Death GA 또는 남아 있는 Ability를 종료한다.
+              ASC->CancelAllAbilities();
+
+              if (const UDG_AttributeSet* Attributes =
+                      GetPlayerDGAttributeSet())
+              {
+                      ASC->SetNumericAttributeBase(
+                              UDG_AttributeSet::GetHealthAttribute(),
+                              Attributes->GetMaxHealth()
+                      );
+
+                      ASC->SetNumericAttributeBase(
+                              UDG_AttributeSet::GetMentalAttribute(),
+                              Attributes->GetMaxMental()
+                      );
+
+                      ASC->SetNumericAttributeBase(
+                              UDG_AttributeSet::GetStaminaAttribute(),
+                              Attributes->GetMaxStamina()
+                      );
+              }
+      }
+
+      AGameModeBase* GameMode =
+              GetWorld() ? GetWorld()->GetAuthGameMode() : nullptr;
+
+      AActor* RespawnPoint = GameMode
+              ? GameMode->FindPlayerStart(
+                      GetController(),
+                      RespawnPlayerStartTag.ToString()
+              )
+              : nullptr;
+
+      if (RespawnPoint)
+      {
+              SetActorLocationAndRotation(
+                      RespawnPoint->GetActorLocation(),
+                      RespawnPoint->GetActorRotation(),
+                      false,
+                      nullptr,
+                      ETeleportType::TeleportPhysics
+              );
+      }
+
+      if (ASC)
+      {
+              ASC->RemoveLooseGameplayTag(
+                      DGGameplayTags::State_Player_Dead,
+                      1
+              );
+
+              ASC->RemoveLooseGameplayTag(
+                      DGGameplayTags::State_Movement_Locked,
+                      1
+              );
+      }
+
+      // BaseCharacter::Die()에서 설정된 서버 사망 상태
+      bIsDead = false;
+
+      // 클라이언트에 복제되는 플레이어 사망 상태
+      bPlayerDead = false;
+
+      RestorePlayerAfterRespawn();
+      ForceNetUpdate();
+}
+
+void APlayerCharacterBase::RestorePlayerAfterRespawn()
+{
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		Capsule->SetCollisionEnabled(
+				InitialCapsuleCollisionEnabled
+		);
+	}
+
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		MeshComp->SetCollisionEnabled(
+				InitialMeshCollisionEnabled
+		);
+	}
+
+	if (UCharacterMovementComponent* Movement =
+			GetCharacterMovement())
+	{
+		Movement->StopMovementImmediately();
+		Movement->SetMovementMode(MOVE_Walking);
+	}
+}
+
+void APlayerCharacterBase::OnRep_PlayerDead()
+{
+	if (bPlayerDead)
+	{
+		DisableCharacterAfterDeath();
+	}
+	else
+	{
+		RestorePlayerAfterRespawn();
+	}
+}
+
 UAbilitySystemComponent* APlayerCharacterBase::GetCharacterAbilitySystemComponent() const
 {
 	/**
@@ -780,6 +967,11 @@ void APlayerCharacterBase::LookAction(const FInputActionValue& InputActionValue)
 
 void APlayerCharacterBase::MoveAction(const FInputActionValue& InputActionValue)
 {
+	if (bPlayerDead || IsDead())
+	{
+		return;
+	}
+	
 	CurrentMoveInput = InputActionValue.Get<FVector2D>();
 
 	if (IsMovementInputLocked())
@@ -970,6 +1162,11 @@ void APlayerCharacterBase::ToggleInventoryAction()
 
 void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 {
+	if (bPlayerDead || IsDead())
+	{
+		return;
+	}
+	
 	HeldSkillSlots.FindOrAdd(SlotTag) = true;
 
 	// if (!HasAuthority())

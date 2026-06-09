@@ -206,43 +206,38 @@ void UDG_AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbac
 				);
 			}
 
-			if (TargetPlayer && GetHealth() > 0.f)
+			if (TargetPlayer)
 			{
-				AActor* DamageSourceActor =
-						Data.EffectSpec.GetContext().GetEffectCauser();
-
-				if (!DamageSourceActor)
+				if (GetHealth() <= 0.f)
 				{
-					DamageSourceActor =
-							Data.EffectSpec.GetContext().GetInstigator();
+					TargetPlayer->Die();
 				}
+				else
+				{
+					AActor* DamageSourceActor =
+							Data.EffectSpec.GetContext().GetEffectCauser();
 
-				const bool bHasDamageSourceLocation =
-						IsValid(DamageSourceActor);
+					if (!DamageSourceActor)
+					{
+						DamageSourceActor =
+								Data.EffectSpec.GetContext().GetInstigator();
+					}
 
-				const FVector DamageSourceLocation =
-						bHasDamageSourceLocation
-								? DamageSourceActor->GetActorLocation()
-								: FVector::ZeroVector;
+					const bool bHasDamageSourceLocation =
+							IsValid(DamageSourceActor);
 
-				TargetPlayer->SendDamageEvent(
-						DamageSourceLocation,
-						bHasDamageSourceLocation
-				);
+					const FVector DamageSourceLocation =
+							bHasDamageSourceLocation
+									? DamageSourceActor->GetActorLocation()
+									: FVector::ZeroVector;
+
+					TargetPlayer->SendDamageEvent(
+							DamageSourceLocation,
+							bHasDamageSourceLocation
+					);
+				}
 			}
-
-			if (GetHealth() <= 0.0f)
-			{
-				// 이후 사망 처리
-			}
-
 			
-
-			// 만약 체력이 0 이하가 되었다면, 사망 처리 로직 호출
-			if (GetHealth() <= 0.0f)
-			{
-				// 통상적으로 Target의 ASC를 통해 캐릭터의 Die() 함수 등을 호출하는 이벤트를 보냅니다.
-			}
 		}
 
 		if (AEnemyCharacterBase* TargetEnemy = Cast<AEnemyCharacterBase>(GetOwningActor()))
