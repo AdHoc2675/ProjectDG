@@ -31,6 +31,7 @@ void UGA_EnemySkillBase::EndAbility(
 )
 {
 	UnregisterEnemySkillHitCheckEvent();
+	UnregisterEnemySkillCueEvents();
 	ResetEnemySkillRuntimeHitState();
 
 	if (MontageTask)
@@ -134,6 +135,11 @@ void UGA_EnemySkillBase::ApplyDamageToTargets(const TArray<AActor*>& TargetActor
 			continue;
 		}
 
+		if (HasActorAlreadyHitThisAbility(TargetActor))
+		{
+			continue;
+		}
+
 		const FVector HitLocation = TargetActor->GetActorLocation();
 
 		const bool bDamageApplied = ApplyDamageToTarget(
@@ -142,7 +148,10 @@ void UGA_EnemySkillBase::ApplyDamageToTargets(const TArray<AActor*>& TargetActor
 			true
 		);
 
-		
+		if (bDamageApplied)
+		{
+			MarkActorHitThisAbility(TargetActor);
+		}
 	}
 }
 
@@ -201,7 +210,9 @@ bool UGA_EnemySkillBase::PlaySkillMontageFromData(
 	MontageTask->OnBlendOut.AddDynamic(this, &UGA_EnemySkillBase::HandleSkillMontageBlendOut);
 	MontageTask->OnInterrupted.AddDynamic(this, &UGA_EnemySkillBase::HandleSkillMontageInterrupted);
 	MontageTask->OnCancelled.AddDynamic(this, &UGA_EnemySkillBase::HandleSkillMontageCancelled);
-
+	
+	RegisterEnemySkillCueEvents();
+	
 	OnSkillMontageStarted();
 
 	MontageTask->ReadyForActivation();
@@ -296,6 +307,192 @@ void UGA_EnemySkillBase::HandleEnemySkillHitCheckEvent(const FGameplayEventData&
 	ApplyDamageToTargets(HitActors);
 }
 
+void UGA_EnemySkillBase::RegisterEnemySkillCueEvents()
+{
+	RegisterEnemySkillVFXEvent();
+	RegisterEnemySkillSFXEvent();
+}
+
+void UGA_EnemySkillBase::UnregisterEnemySkillCueEvents()
+{
+	UnregisterEnemySkillVFXEvent();
+	UnregisterEnemySkillSFXEvent();
+}
+
+void UGA_EnemySkillBase::RegisterEnemySkillVFXEvent()
+{
+	if (SkillVFXEventTask)
+	{
+		return;
+	}
+
+	SkillVFXEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this,
+		DGGameplayTags::Event_Skill_VFX,
+		nullptr,
+		false,
+		false
+	);
+
+	if (!SkillVFXEventTask)
+	{
+		return;
+	}
+
+	SkillVFXEventTask->EventReceived.AddDynamic(
+		this,
+		&UGA_EnemySkillBase::OnEnemySkillVFXEvent
+	);
+
+	SkillVFXEventTask->ReadyForActivation();
+}
+
+void UGA_EnemySkillBase::UnregisterEnemySkillVFXEvent()
+{
+	if (!SkillVFXEventTask)
+	{
+		return;
+	}
+
+	SkillVFXEventTask->EndTask();
+	SkillVFXEventTask = nullptr;
+}
+
+void UGA_EnemySkillBase::OnEnemySkillVFXEvent(FGameplayEventData Payload)
+{
+	HandleEnemySkillVFXEvent(Payload);
+}
+
+void UGA_EnemySkillBase::HandleEnemySkillVFXEvent(const FGameplayEventData& Payload)
+{
+	const FGameplayTag GameplayCueTag = ResolveEnemySkillGameplayCueTagByEventTag(Payload.EventTag);
+	ExecuteEnemySkillGameplayCue(GameplayCueTag, Payload);
+}
+
+void UGA_EnemySkillBase::RegisterEnemySkillSFXEvent()
+{
+	if (SkillSFXEventTask)
+	{
+		return;
+	}
+
+	SkillSFXEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this,
+		DGGameplayTags::Event_Skill_SFX,
+		nullptr,
+		false,
+		false
+	);
+
+	if (!SkillSFXEventTask)
+	{
+		return;
+	}
+
+	SkillSFXEventTask->EventReceived.AddDynamic(
+		this,
+		&UGA_EnemySkillBase::OnEnemySkillSFXEvent
+	);
+
+	SkillSFXEventTask->ReadyForActivation();
+}
+
+void UGA_EnemySkillBase::UnregisterEnemySkillSFXEvent()
+{
+	if (!SkillSFXEventTask)
+	{
+		return;
+	}
+
+	SkillSFXEventTask->EndTask();
+	SkillSFXEventTask = nullptr;
+}
+
+void UGA_EnemySkillBase::OnEnemySkillSFXEvent(FGameplayEventData Payload)
+{
+	HandleEnemySkillSFXEvent(Payload);
+}
+
+void UGA_EnemySkillBase::HandleEnemySkillSFXEvent(const FGameplayEventData& Payload)
+{
+	const FGameplayTag GameplayCueTag = ResolveEnemySkillGameplayCueTagByEventTag(Payload.EventTag);
+	ExecuteEnemySkillGameplayCue(GameplayCueTag, Payload);
+}
+
+FGameplayTag UGA_EnemySkillBase::ResolveEnemySkillGameplayCueTagByEventTag(FGameplayTag EventTag) const
+{
+	if (EventTag == DGGameplayTags::Event_Skill_VFX_Cast)
+	{
+		return DGGameplayTags::GameplayCue_Skill_VFX_Cast;
+	}
+
+	if (EventTag == DGGameplayTags::Event_Skill_VFX_Hit)
+	{
+		return DGGameplayTags::GameplayCue_Skill_VFX_Hit;
+	}
+
+	if (EventTag == DGGameplayTags::Event_Skill_VFX_Impact)
+	{
+		return DGGameplayTags::GameplayCue_Skill_VFX_Impact;
+	}
+
+	if (EventTag == DGGameplayTags::Event_Skill_SFX_Cast)
+	{
+		return DGGameplayTags::GameplayCue_Skill_SFX_Cast;
+	}
+
+	if (EventTag == DGGameplayTags::Event_Skill_SFX_Hit)
+	{
+		return DGGameplayTags::GameplayCue_Skill_SFX_Hit;
+	}
+
+	if (EventTag == DGGameplayTags::Event_Skill_SFX_Impact)
+	{
+		return DGGameplayTags::GameplayCue_Skill_SFX_Impact;
+	}
+
+	return FGameplayTag::EmptyTag;
+}
+
+void UGA_EnemySkillBase::ExecuteEnemySkillGameplayCue(
+	FGameplayTag GameplayCueTag,
+	const FGameplayEventData& Payload
+) const
+{
+	if (!GameplayCueTag.IsValid())
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (!ASC)
+	{
+		return;
+	}
+
+	AEnemyCharacterBase* EnemyCharacter = GetEnemyCharacterFromActorInfo();
+	if (!EnemyCharacter)
+	{
+		return;
+	}
+
+	UEnemySkillData* CurrentSkillData = GetEnemySkillData();
+	if (!CurrentSkillData)
+	{
+		return;
+	}
+
+	FGameplayCueParameters CueParameters;
+	CueParameters.Instigator = EnemyCharacter;
+	CueParameters.EffectCauser = EnemyCharacter;
+	CueParameters.SourceObject = CurrentSkillData;
+	CueParameters.Location = EnemyCharacter->GetActorLocation();
+	CueParameters.Normal = EnemyCharacter->GetActorForwardVector();
+	CueParameters.RawMagnitude = Payload.EventMagnitude;
+
+	ASC->ExecuteGameplayCue(GameplayCueTag, CueParameters);
+}
+
 void UGA_EnemySkillBase::ResetEnemySkillRuntimeHitState()
 {
 	bHasLastPathSweepCenter = false;
@@ -303,6 +500,29 @@ void UGA_EnemySkillBase::ResetEnemySkillRuntimeHitState()
 	LastPathSweepCenter = FVector::ZeroVector;
 	LastPathSweepDebugStart = FVector::ZeroVector;
 	LastPathSweepDebugEnd = FVector::ZeroVector;
+
+	HitActorsThisAbility.Reset();
+}
+
+bool UGA_EnemySkillBase::HasActorAlreadyHitThisAbility(AActor* CandidateActor) const
+{
+	if (!CandidateActor)
+	{
+		return true;
+	}
+
+	const TWeakObjectPtr<AActor> WeakCandidate(CandidateActor);
+	return HitActorsThisAbility.Contains(WeakCandidate);
+}
+
+void UGA_EnemySkillBase::MarkActorHitThisAbility(AActor* HitActor) const
+{
+	if (!HitActor)
+	{
+		return;
+	}
+
+	HitActorsThisAbility.Add(TWeakObjectPtr<AActor>(HitActor));
 }
 
 bool UGA_EnemySkillBase::CollectEnemySkillTargetsFromData(
@@ -612,7 +832,18 @@ void UGA_EnemySkillBase::AddTargetIfValid(
 		return;
 	}
 
+	if (CurrentSkillData->MaxHitTargets > 0 &&
+		OutTargetActors.Num() >= CurrentSkillData->MaxHitTargets)
+	{
+		return;
+	}
+
 	if (UniqueActors.Contains(CandidateActor))
+	{
+		return;
+	}
+
+	if (HasActorAlreadyHitThisAbility(CandidateActor))
 	{
 		return;
 	}
@@ -624,12 +855,6 @@ void UGA_EnemySkillBase::AddTargetIfValid(
 
 	UniqueActors.Add(CandidateActor);
 	OutTargetActors.Add(CandidateActor);
-
-	if (CurrentSkillData->MaxHitTargets > 0 &&
-		OutTargetActors.Num() >= CurrentSkillData->MaxHitTargets)
-	{
-		return;
-	}
 }
 
 bool UGA_EnemySkillBase::ResolveSkillHitCenter(

@@ -50,6 +50,12 @@ protected:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillHitCheckEventTask = nullptr;
+	
+	UPROPERTY(Transient)
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillVFXEventTask = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillSFXEventTask = nullptr;
 
 	bool bIsFinishingEnemySkill = false;
 
@@ -59,6 +65,9 @@ protected:
 	FVector LastPathSweepCenter = FVector::ZeroVector;
 	FVector LastPathSweepDebugStart = FVector::ZeroVector;
 	FVector LastPathSweepDebugEnd = FVector::ZeroVector;
+	
+	// Ability 1회당 같은 대상 1회 타격 정책용 런타임 상태
+	mutable TSet<TWeakObjectPtr<AActor>> HitActorsThisAbility;
 
 protected:
 	UEnemySkillData* GetEnemySkillData() const;
@@ -90,10 +99,39 @@ protected:
 	void OnEnemySkillHitCheckEvent(FGameplayEventData Payload);
 
 	virtual void HandleEnemySkillHitCheckEvent(const FGameplayEventData& Payload);
+	
+	void RegisterEnemySkillCueEvents();
+	void UnregisterEnemySkillCueEvents();
+
+	void RegisterEnemySkillVFXEvent();
+	void UnregisterEnemySkillVFXEvent();
+
+	UFUNCTION()
+	void OnEnemySkillVFXEvent(FGameplayEventData Payload);
+
+	void HandleEnemySkillVFXEvent(const FGameplayEventData& Payload);
+
+	void RegisterEnemySkillSFXEvent();
+	void UnregisterEnemySkillSFXEvent();
+
+	UFUNCTION()
+	void OnEnemySkillSFXEvent(FGameplayEventData Payload);
+
+	void HandleEnemySkillSFXEvent(const FGameplayEventData& Payload);
+
+	FGameplayTag ResolveEnemySkillGameplayCueTagByEventTag(FGameplayTag EventTag) const;
+
+	void ExecuteEnemySkillGameplayCue(
+		FGameplayTag GameplayCueTag,
+		const FGameplayEventData& Payload
+	) const;
 
 	// --- SkillData 기반 판정 공통 함수 ---
 
 	void ResetEnemySkillRuntimeHitState();
+	
+	bool HasActorAlreadyHitThisAbility(AActor* CandidateActor) const;
+	void MarkActorHitThisAbility(AActor* HitActor) const;
 
 	bool CollectEnemySkillTargetsFromData(
 		const FGameplayEventData& Payload,

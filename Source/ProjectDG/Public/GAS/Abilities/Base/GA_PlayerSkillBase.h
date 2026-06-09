@@ -60,11 +60,13 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillHitCheckEventTask = nullptr;
 	
+	/** AN_VFX 이벤트 수신용 Task */
 	UPROPERTY()
-	TObjectPtr<UAbilityTask_WaitGameplayEvent> MovementUnlockEventTask = nullptr;
-	
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillVFXEventTask = nullptr;
+
+	/** AN_SFX 이벤트 수신용 Task */
 	UPROPERTY()
-	TObjectPtr<UAbilityTask_WaitGameplayEvent> MovementCancelEventTask = nullptr;
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillSFXEventTask = nullptr;
 	
 	// 쿨타임 관련 스킬 공통 로직
 public:
@@ -111,14 +113,6 @@ protected:
 
 	UFUNCTION()
 	void OnSkillChainStepEvent(FGameplayEventData Payload);
-	
-	void RegisterMovementCancelEvent();
-	void UnregisterMovementCancelEvent();
-
-	UFUNCTION()
-	void OnMovementCancelEvent(FGameplayEventData Payload);
-
-	void StopCurrentSkillMontage(float BlendOutTime = 0.15f);
 
 	/** 자식 Base에서 override해서 실제 스킬 실행 처리 */
 	virtual void HandleSkillChainStepEvent(const FGameplayEventData& Payload);
@@ -131,6 +125,32 @@ protected:
 
 	/** 자식 Base에서 override해서 실제 판정 처리 */
 	virtual void HandleSkillHitCheckEvent(const FGameplayEventData& Payload);
+	
+	void RegisterSkillCueEvents();
+	void UnregisterSkillCueEvents();
+
+	void RegisterSkillVFXEvent();
+	void UnregisterSkillVFXEvent();
+
+	UFUNCTION()
+	void OnSkillVFXEvent(FGameplayEventData Payload);
+
+	void HandleSkillVFXEvent(const FGameplayEventData& Payload);
+
+	void RegisterSkillSFXEvent();
+	void UnregisterSkillSFXEvent();
+
+	UFUNCTION()
+	void OnSkillSFXEvent(FGameplayEventData Payload);
+
+	void HandleSkillSFXEvent(const FGameplayEventData& Payload);
+
+	FGameplayTag ResolveSkillGameplayCueTagByEventTag(FGameplayTag EventTag) const;
+
+	void ExecuteSkillGameplayCue(
+		FGameplayTag GameplayCueTag,
+		const FGameplayEventData& Payload
+	) const;
 
 	ADG_PlayerState* GetDGPlayerState() const;
 
@@ -207,17 +227,8 @@ protected:
 
 	/** ApplySkillMovementPolicy에서 부여한 이동 정책 태그를 제거한다. */
 	void ClearSkillMovementPolicy();
-	
-	void RegisterMovementUnlockEvent();
-	void UnregisterMovementUnlockEvent();
-
-	UFUNCTION()
-	void OnMovementUnlockEvent(FGameplayEventData Payload);
-
-	void ClearSkillMovementLockOnly();
 
 protected:
 	bool bSkillActivePolicyApplied = false;
 	bool bSkillMovementLockedApplied = false;
 };
-

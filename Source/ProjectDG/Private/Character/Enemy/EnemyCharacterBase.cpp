@@ -5,16 +5,24 @@
 #include "Abilities/GameplayAbility.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
+
 #include "AttributeSet.h"
+#include "Data/Attribute/DT_Attribute.h"
+#include "Engine/DataTable.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "Core/DG_Debug.h"
+
+
 #include "Core/DG_GameplayTags.h"
+
 #include "GAS/Attributes/DG_AttributeSet.h"
 #include "GAS/Attributes/DG_EnemyAttributeSet.h"
+
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Components/UI/DGMinimapMarkerComponent.h"
+#include "Core/DG_Debug.h"
 
 #include "System/DGDamageNumberPoolSubsystem.h"
 #include "UI/Widget/Damage/DGDamageNumberActor.h"
@@ -67,7 +75,20 @@ void AEnemyCharacterBase::PossessedBy(AController* NewController)
 	if (HasAuthority())
 	{
 		GrantDefaultAbilities();
+		ApplyAttributeRowFromDataTable();
 		ApplyDefaultEffects();
+		
+		if (AttributeSet)
+		{
+			Debug::Print(FString::Printf(
+				TEXT("[EnemyAttribute] After GE. Health=%.1f MaxHealth=%.1f AttackPower=%.1f Defense=%.1f"),
+				AttributeSet->GetHealth(),
+				AttributeSet->GetMaxHealth(),
+				AttributeSet->GetAttackPower(),
+				AttributeSet->GetDefense()
+			));
+		}
+		
 		BindEnemyAttributeDelegatesOnce();
 	}
 }
@@ -174,6 +195,147 @@ void AEnemyCharacterBase::ApplyDefaultEffects()
 	}
 
 	bDefaultEffectsApplied = true;
+}
+
+void AEnemyCharacterBase::ApplyAttributeRowFromDataTable()
+{
+	if (!HasAuthority() || !AbilitySystemComponent || !AttributeSet)
+	{
+		Debug::Print(TEXT("[EnemyAttribute] Skip: Authority/ASC/AttributeSet invalid"));
+		return;
+	}
+
+	if (bAttributeRowApplied)
+	{
+		Debug::Print(TEXT("[EnemyAttribute] Skip: already applied"));
+		return;
+	}
+
+	if (!AttributeDataTable)
+	{
+		Debug::Print(TEXT("[EnemyAttribute] Skip: AttributeDataTable is null"));
+		return;
+	}
+
+	const FGameplayTag SourceTag = GetAttributeSourceTag();
+	const FName RowName = ResolveAttributeRowNameFromTag(SourceTag);
+
+	Debug::Print(FString::Printf(
+		TEXT("[EnemyAttribute] SourceTag=%s RowName=%s"),
+		*SourceTag.ToString(),
+		*RowName.ToString()
+	));
+
+	if (RowName.IsNone())
+	{
+		Debug::Print(TEXT("[EnemyAttribute] Skip: RowName is none"));
+		return;
+	}
+
+	const FDT_Attribute* AttributeRow = AttributeDataTable->FindRow<FDT_Attribute>(
+		RowName,
+		TEXT("AEnemyCharacterBase::ApplyAttributeRowFromDataTable")
+	);
+
+	if (!AttributeRow)
+	{
+		Debug::Print(FString::Printf(
+			TEXT("[EnemyAttribute] Row not found. RowName=%s"),
+			*RowName.ToString()
+		));
+		return;
+	}
+
+	Debug::Print(FString::Printf(
+		TEXT("[EnemyAttribute] Row found. Health=%.1f MaxHealth=%.1f AttackPower=%.1f Defense=%.1f"),
+		AttributeRow->Health,
+		AttributeRow->MaxHealth,
+		AttributeRow->AttackPower,
+		AttributeRow->Defense
+	));
+
+	ApplyAttributeRowToAttributeSet(*AttributeRow);
+
+	Debug::Print(FString::Printf(
+		TEXT("[EnemyAttribute] Applied. ASC Health=%.1f MaxHealth=%.1f"),
+		AttributeSet->GetHealth(),
+		AttributeSet->GetMaxHealth()
+	));
+
+	bAttributeRowApplied = true;
+}
+
+FGameplayTag AEnemyCharacterBase::GetAttributeSourceTag() const
+{
+	return DGGameplayTags::Team_Enemy;
+}
+
+FName AEnemyCharacterBase::ResolveAttributeRowNameFromTag(const FGameplayTag& SourceTag) const
+{
+	if (!SourceTag.IsValid())
+	{
+		return NAME_None;
+	}
+
+	const FString TagString = SourceTag.ToString();
+
+	FString LeftString;
+	FString RightString;
+
+	if (TagString.Split(TEXT("."), &LeftString, &RightString, ESearchCase::IgnoreCase, ESearchDir::FromEnd))
+	{
+		return FName(*RightString);
+	}
+
+	return FName(*TagString);
+}
+
+void AEnemyCharacterBase::ApplyAttributeRowToAttributeSet(const FDT_Attribute& AttributeRow) const
+{
+	if (!AbilitySystemComponent)
+	{
+		return;
+	}
+
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetMaxHealthAttribute(), AttributeRow.MaxHealth);
+	AbilitySystemComponent->SetNumericAttributeBase(
+		UDG_AttributeSet::GetHealthAttribute(),
+		FMath::Clamp(AttributeRow.Health, 0.f, AttributeRow.MaxHealth)
+	);
+
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetMaxMentalAttribute(), AttributeRow.MaxMental);
+	AbilitySystemComponent->SetNumericAttributeBase(
+		UDG_AttributeSet::GetMentalAttribute(),
+		FMath::Clamp(AttributeRow.Mental, 0.f, AttributeRow.MaxMental)
+	);
+
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetMaxStaminaAttribute(), AttributeRow.MaxStamina);
+	AbilitySystemComponent->SetNumericAttributeBase(
+		UDG_AttributeSet::GetStaminaAttribute(),
+		FMath::Clamp(AttributeRow.Stamina, 0.f, AttributeRow.MaxStamina)
+	);
+
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetMainStatAttribute(), AttributeRow.MainStat);
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetAttackPowerAttribute(), AttributeRow.AttackPower);
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetDefenseAttribute(), AttributeRow.Defense);
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetHealthCoefficientAttribute(), AttributeRow.HealthCoefficient);
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetDefenseCoefficientAttribute(), AttributeRow.DefenseCoefficient);
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetCriticalRateAttribute(), AttributeRow.CriticalRate);
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetCriticalDamageAttribute(), AttributeRow.CriticalDamage);
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetMoveSpeedAttribute(), AttributeRow.MoveSpeed);
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetAttackSpeedAttribute(), AttributeRow.AttackSpeed);
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetGroggyDamageAttribute(), AttributeRow.GroggyDamage);
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetFinalDamageIncreaseAttribute(), AttributeRow.FinalDamageIncrease);
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetDamageReductionAttribute(), AttributeRow.DamageReduction);
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetCooldownReductionAttribute(), AttributeRow.CooldownReduction);
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetMentalRecoveryIncreaseAttribute(), AttributeRow.MentalRecoveryIncrease);
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetLifeStealAttribute(), AttributeRow.LifeSteal);
+	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetGroggyDamageIncreaseRateAttribute(), AttributeRow.GroggyDamageIncreaseRate);
+
+	if (UCharacterMovementComponent* MovementComp = GetCharacterMovement())
+	{
+		MovementComp->MaxWalkSpeed = AttributeRow.MoveSpeed;
+	}
 }
 
 void AEnemyCharacterBase::BindEnemyAttributeDelegatesOnce()

@@ -53,6 +53,8 @@ void UGA_RangedSkillBase::ActivateAbility(
 	}
 
 	RegisterSkillChainStepEvent();
+	RegisterSkillCueEvents();
+	
 	PlayRangedMontage();
 }
 
