@@ -287,64 +287,54 @@ void ABossCharacterBase::OnGroggyGaugeChanged(const FOnAttributeChangeData& Data
 
 void ABossCharacterBase::UpdateHealthPhaseTags(float HealthRatio)
 {
-	if (!BossClassData || !AbilitySystemComponent || !BossAttributeSet)
+	if (!HasAuthority() || !BossClassData || !AbilitySystemComponent || !BossAttributeSet)
 	{
 		return;
 	}
 
-	// PhaseEntries는 HealthRatioThreshold 내림차순 정렬 가정
-	// (e.g. [{Phase2, 0.66}, {Phase3, 0.33}])
-	// 인덱스 0 → Phase 2, 인덱스 1 → Phase 3, ...
-	for (int32 i = 0; i < BossClassData->PhaseEntries.Num(); ++i)
+	const int32 CurrentPhase = FMath::RoundToInt(BossAttributeSet->GetCurrentPhase());
+
+	const FBossPhaseData* NextPhaseData = nullptr;
+
+	for (const FBossPhaseData& PhaseData : BossClassData->PhaseDataList)
 	{
-		const FBossPhaseEntry& Entry = BossClassData->PhaseEntries[i];
-
-		const float EntryPhaseIndex = static_cast<float>(i + 2);
-
-		if (!Entry.PhaseTag.IsValid())
+		if (PhaseData.PhaseIndex <= CurrentPhase)
 		{
 			continue;
 		}
 
-		// 단방향: 이미 해당 페이즈 이상이면 스킵
-		if (BossAttributeSet->GetCurrentPhase() >= EntryPhaseIndex)
+		if (!PhaseData.PhaseTag.IsValid())
 		{
 			continue;
 		}
 
-		if (HealthRatio <= Entry.HealthRatioThreshold)
+		if (HealthRatio > PhaseData.HealthRatioThreshold)
 		{
-			// 이전 페이즈 태그 제거 (i==0이면 InitialPhaseTag, 아니면 직전 Entry의 태그)
-			if (i == 0)
-			{
-				if (BossClassData->InitialPhaseTag.IsValid())
-				{
-					AbilitySystemComponent->RemoveLooseGameplayTag(BossClassData->InitialPhaseTag, 1);
-				}
-			}
-			else
-			{
-				const FGameplayTag& PrevTag = BossClassData->PhaseEntries[i - 1].PhaseTag;
-				if (PrevTag.IsValid())
-				{
-					AbilitySystemComponent->RemoveLooseGameplayTag(PrevTag, 1);
-				}
-			}
+			continue;
+		}
 
-			AbilitySystemComponent->AddLooseGameplayTag(Entry.PhaseTag, 1, EGameplayTagReplicationState::TagOnly);
-			BossAttributeSet->SetCurrentPhase(EntryPhaseIndex);
-
-			UE_LOG(
-				LogTemp,
-				Warning,
-				TEXT("[BossCharacterBase] Phase transition → Phase %.0f (HealthRatio=%.2f)"),
-				EntryPhaseIndex,
-				HealthRatio
-			);
-
-			break; // 한 사이클에 하나의 페이즈만 전환
+		if (!NextPhaseData || PhaseData.PhaseIndex > NextPhaseData->PhaseIndex)
+		{
+			NextPhaseData = &PhaseData;
 		}
 	}
+
+	if (!NextPhaseData)
+	{
+		return;
+	}
+
+	AbilitySystemComponent->RemoveLooseGameplayTag(DGGameplayTags::State_Boss_Phase_1, 1);
+	AbilitySystemComponent->RemoveLooseGameplayTag(DGGameplayTags::State_Boss_Phase_2, 1);
+	AbilitySystemComponent->RemoveLooseGameplayTag(DGGameplayTags::State_Boss_Phase_3, 1);
+
+	AbilitySystemComponent->AddLooseGameplayTag(
+		NextPhaseData->PhaseTag,
+		1,
+		EGameplayTagReplicationState::TagOnly
+	);
+
+	BossAttributeSet->SetCurrentPhase(static_cast<float>(NextPhaseData->PhaseIndex));
 }
 
 void ABossCharacterBase::GrantDefaultAbilities()
@@ -374,6 +364,19 @@ void ABossCharacterBase::GrantDefaultAbilities()
 	}
 }
 
+const TArray<TObjectPtr<UBossSkillData>>& ABossCharacterBase::GetAttackSkillDataList() const
+{
+	
+	static const TArray<TObjectPtr<UBossSkillData>> EmptySkills;
+
+	if (!BossClassData)
+	{
+		return EmptySkills;
+	}
+
+	return BossClassData->AttackSkills;
+}
+
 UBossSkillData* ABossCharacterBase::GetRandomAttackSkillData() const
 {
 	if (!BossClassData)
@@ -381,7 +384,7 @@ UBossSkillData* ABossCharacterBase::GetRandomAttackSkillData() const
 		return nullptr;
 	}
 
-	const TArray<TObjectPtr<UBossSkillData>>& Skills = BossClassData->AttackSkills;
+	const TArray<TObjectPtr<UBossSkillData>>& Skills = GetAttackSkillDataList();
 	if (Skills.Num() == 0)
 	{
 		return nullptr;
@@ -389,6 +392,16 @@ UBossSkillData* ABossCharacterBase::GetRandomAttackSkillData() const
 
 	const int32 RandomIndex = FMath::RandRange(0, Skills.Num() - 1);
 	return Skills[RandomIndex].Get();
+}
+
+FGameplayTag ABossCharacterBase::GetAttributeSourceTag() const
+{
+	if (BossClassData && BossClassData->BossTag.IsValid())
+	{
+		return BossClassData->BossTag;
+	}
+
+	return DGGameplayTags::Team_Enemy_Boss;
 }
 
 void ABossCharacterBase::HandleDeath()
