@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "Character/BaseCharacter.h"
 #include "Components/Item/DGLootDropComponent.h"
+#include "GameplayTagContainer.h"
+
 #include "EnemyCharacterBase.generated.h"
 
 class UAbilitySystemComponent;
@@ -15,11 +17,13 @@ class UGameplayEffect;
 class UAnimMontage;
 class UNiagaraSystem;
 class UNiagaraComponent;
-struct FOnAttributeChangeData;
 class UDGLootDropComponent;
 class UDGMinimapMarkerComponent;
 class ADGDamageNumberActor;
+class UDataTable;
 class UDG_EnemyAttributeSet;
+struct FOnAttributeChangeData;
+struct FDT_Attribute;
 
 /**
  * AEnemyCharacterBase
@@ -74,6 +78,18 @@ protected:
 	// 서버 측 기본 이펙트 부여 로직 (초기 스탯 등)
 	virtual void ApplyDefaultEffects();
 	
+	// DT_Attribute Row 적용
+	virtual void ApplyAttributeRowFromDataTable();
+
+	// Attribute RowName 추출에 사용할 태그
+	virtual FGameplayTag GetAttributeSourceTag() const;
+
+	// Team.Enemy.Boss.Kashapa -> Kashapa
+	FName ResolveAttributeRowNameFromTag(const FGameplayTag& SourceTag) const;
+
+	// FDT_Attribute 값을 UDG_AttributeSet에 적용
+	void ApplyAttributeRowToAttributeSet(const FDT_Attribute& AttributeRow) const;
+	
 	// Attribute delegate 중복 바인딩 방지
 	virtual void BindEnemyAttributeDelegatesOnce();
 
@@ -107,6 +123,13 @@ protected:
 	/** 서버에서 부여할 기본 지속 효과 목록 (초기 스탯 등) */
 	UPROPERTY(EditDefaultsOnly, Category = "EnemyCharacterBase|GAS")
 	TArray<TSubclassOf<UGameplayEffect>> DefaultEffects;
+	
+	/** DT_Attribute 기반 기본 스탯 데이터 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemyCharacterBase|Attribute")
+	TObjectPtr<UDataTable> AttributeDataTable = nullptr;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "EnemyCharacterBase|Attribute")
+	bool bAttributeRowApplied = false;
 	
 	// 아이템 드롭 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|Loot")

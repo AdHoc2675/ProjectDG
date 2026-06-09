@@ -4,9 +4,14 @@ namespace DGGameplayTags
 {
 	//Team (아군적군 구분하는태그)
 	UE_DEFINE_GAMEPLAY_TAG(Team_Player, "Team.Player")
+	UE_DEFINE_GAMEPLAY_TAG(Team_Object, "Team.Object")
 	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy, "Team.Enemy")
 	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Boss, "Team.Enemy.Boss")
-	UE_DEFINE_GAMEPLAY_TAG(Team_Object, "Team.Object")
+	
+	//보스들 태그
+	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Boss_Kashapa, "Team.Enemy.Boss.Kashapa")
+	
+	//필드 몬스터들 태그
 
 	// Character Class
 	UE_DEFINE_GAMEPLAY_TAG(Character_Class_Warrior, "Character.Class.Warrior")
