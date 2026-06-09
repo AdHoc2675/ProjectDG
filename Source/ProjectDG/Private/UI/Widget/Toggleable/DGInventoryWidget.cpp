@@ -83,6 +83,16 @@ void UDGInventoryWidget::NativeConstruct()
 	}
 }
 
+void UDGInventoryWidget::NativeDestruct()
+{
+	if (UDGInventoryWidgetController* C = Cast<UDGInventoryWidgetController>(WidgetController))
+	{
+		C->OnInventoryUpdated.RemoveDynamic(this, &UDGInventoryWidget::OnInventoryUpdatedCallback);
+	}
+
+	Super::NativeDestruct();
+}
+
 void UDGInventoryWidget::CloseInventory()
 {
 	if (APlayerController* PC = GetOwningPlayer())
