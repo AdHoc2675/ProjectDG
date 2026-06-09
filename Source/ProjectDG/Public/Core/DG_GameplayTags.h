@@ -25,6 +25,9 @@ namespace DGGameplayTags
 	
 	// Player Damage Event
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Player_Damage)
+	
+	// DG_GameplayTags.h
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Player_Death)
 
 	// Event (주로 ANS에서 사용됨)
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combo_InputWindow_Open)

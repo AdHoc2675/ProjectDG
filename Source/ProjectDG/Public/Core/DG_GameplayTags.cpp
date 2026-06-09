@@ -24,6 +24,9 @@ namespace DGGameplayTags
 	
 	// Player Damage Event
 	UE_DEFINE_GAMEPLAY_TAG(Event_Player_Damage, "Event.Player.Damage")
+	
+	// DG_GameplayTags.cpp
+	UE_DEFINE_GAMEPLAY_TAG(Event_Player_Death, "Event.Player.Death")
 
 	// Event
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_InputWindow_Open, "Event.Combo.InputWindow.Open")
