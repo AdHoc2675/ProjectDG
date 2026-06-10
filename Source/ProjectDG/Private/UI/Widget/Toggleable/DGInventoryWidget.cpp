@@ -35,13 +35,12 @@ void UDGInventoryWidget::NativeConstruct()
 	Super::NativeConstruct();
 
 	// 10x3 총 30개의 슬롯을 미리 생성하여 배치
-	if (InventoryGrid && SlotWidgetClass)
+	if (InventoryGrid && SlotWidgetClass && SlotWidgets.IsEmpty())
 	{
 		const int32 MaxSlots = 30; // 탭당 30칸 제한
 		const int32 Columns = 10;  // 가로 10칸
 
 		InventoryGrid->ClearChildren();
-		SlotWidgets.Empty();
 
 		for (int32 Index = 0; Index < MaxSlots; ++Index)
 		{
@@ -71,26 +70,19 @@ void UDGInventoryWidget::NativeConstruct()
 	// 탭 버튼 클릭 이벤트 바인딩
 	if (EquipmentItemsButton)
 	{
+		EquipmentItemsButton->OnClicked.RemoveDynamic(this, &UDGInventoryWidget::OnEquipmentTabClicked);
 		EquipmentItemsButton->OnClicked.AddDynamic(this, &UDGInventoryWidget::OnEquipmentTabClicked);
 	}
 	if (ConsumableItemsButton)
 	{
+		ConsumableItemsButton->OnClicked.RemoveDynamic(this, &UDGInventoryWidget::OnConsumableTabClicked);
 		ConsumableItemsButton->OnClicked.AddDynamic(this, &UDGInventoryWidget::OnConsumableTabClicked);
 	}
 	if (CraftingMaterialButton)
 	{
+		CraftingMaterialButton->OnClicked.RemoveDynamic(this, &UDGInventoryWidget::OnMaterialTabClicked);
 		CraftingMaterialButton->OnClicked.AddDynamic(this, &UDGInventoryWidget::OnMaterialTabClicked);
 	}
-}
-
-void UDGInventoryWidget::NativeDestruct()
-{
-	if (UDGInventoryWidgetController* C = Cast<UDGInventoryWidgetController>(WidgetController))
-	{
-		C->OnInventoryUpdated.RemoveDynamic(this, &UDGInventoryWidget::OnInventoryUpdatedCallback);
-	}
-
-	Super::NativeDestruct();
 }
 
 void UDGInventoryWidget::CloseInventory()
