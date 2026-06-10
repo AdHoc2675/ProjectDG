@@ -26,6 +26,7 @@ public:
 
 protected:
 	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 
 	// 위젯 닫기 버튼 등의 기능
 	UFUNCTION(BlueprintCallable, Category = "DG|UI")

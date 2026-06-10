@@ -139,6 +139,12 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|Minimap")
 	TObjectPtr<UDGMinimapMarkerComponent> MinimapMarkerComponent;
 
+public:
+	/** UI 등에 표시될 적의 이름 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "EnemyCharacterBase|UI")
+	FString EnemyCharacterName = TEXT("Enemy");
+
+
 
 public:
 	//BaseCharacter 공용 ASC getter 

@@ -12,6 +12,8 @@
 #include "Character/Player/PlayerCharacterBase.h"
 #include "Character/Player/Data/PlayerCharacterClassData.h"
 #include "Character/Player/Data/PlayerSkillData.h"
+#include "Character/Enemy/EnemyCharacterBase.h"
+
 
 void UDGOverlayWidgetController::BroadcastInitialValues()
 {
@@ -385,6 +387,11 @@ void UDGOverlayWidgetController::RefreshEnemyTargetPriority()
 
 			// 대상의 이름을 알 수 있는 함수(GetName 등)를 가져옵니다. 필요에 따라 형변환 가능 (예: AEnemyCharacterBase)
 			FString UnitName = TargetToShow->GetName();
+			
+			if (AEnemyCharacterBase* EnemyCharacter = Cast<AEnemyCharacterBase>(TargetToShow))
+			{
+				UnitName = EnemyCharacter->EnemyCharacterName;
+			}
 
 			SetEnemyTarget(TargetASC, const_cast<UAttributeSet*>(TargetAS), UnitName);
 		}
