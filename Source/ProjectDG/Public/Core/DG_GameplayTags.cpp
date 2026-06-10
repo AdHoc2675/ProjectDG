@@ -12,19 +12,7 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Boss_Kashapa, "Team.Enemy.Boss.Kashapa")
 	
 	//필드 몬스터들 태그
-	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field, "Team.Enemy.Field")
 
-	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_Beritra, "Team.Enemy.Field.Beritra")
-	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_Coradon, "Team.Enemy.Field.Coradon")
-	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_CorpeSpider, "Team.Enemy.Field.CorpeSpider")
-	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_DracoWar3, "Team.Enemy.Field.DracoWar3")
-	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_DracoWar5, "Team.Enemy.Field.DracoWar5")
-	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_DranaVar, "Team.Enemy.Field.DranaVar")
-	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_Neuth, "Team.Enemy.Field.Neuth")
-	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_Nihogg, "Team.Enemy.Field.Nihogg")
-	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_Ramfu_04, "Team.Enemy.Field.Ramfu_04")
-	
-	
 	// Character Class
 	UE_DEFINE_GAMEPLAY_TAG(Character_Class_Warrior, "Character.Class.Warrior")
 	UE_DEFINE_GAMEPLAY_TAG(Character_Class_Archer, "Character.Class.Archer")

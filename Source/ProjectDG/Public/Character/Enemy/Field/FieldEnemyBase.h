@@ -41,9 +41,6 @@ protected:
 	// 필드 몬스터 태그 초기화 (DataAsset 기반)
 	void InitializeFieldTagFromClassData();
 
-	// FieldClassData->FieldTag 기반 DT_Attribute Row 조회용
-	virtual FGameplayTag GetAttributeSourceTag() const override;
-
 	// Apply startup effects from class data
 	virtual void ApplyDefaultEffects() override;
 
