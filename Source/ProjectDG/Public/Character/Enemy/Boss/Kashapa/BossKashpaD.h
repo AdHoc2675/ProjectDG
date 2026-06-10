@@ -6,8 +6,8 @@
 #include "Character/Enemy/Boss/BossCharacterBase.h"
 #include "BossKashpaD.generated.h"
 
-class UBossSkillData;
 class UBossSkillSetData;
+class UEnemySkillData;
 struct FBossPhaseData;
 
 /**
@@ -20,6 +20,7 @@ struct FBossPhaseData;
  * - BossCharacterClassData.PhaseDataList 기반 페이즈 적용
  * - Phase별 SkeletalMesh / AnimClass / Materials 교체
  * - 현재 SkillSetData 캐시
+ * - 현재 Phase SkillSetData 기반 보스 스킬 선택/부여
  */
 UCLASS()
 class PROJECTDG_API ABossKashapaD : public ABossCharacterBase
@@ -39,6 +40,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Kashapa|Skill")
 	UBossSkillSetData* GetCurrentSkillSetData() const { return CurrentSkillSetData; }
+
+	virtual const TArray<TObjectPtr<UEnemySkillData>>& GetAttackSkillDataList() const override;
+	virtual UEnemySkillData* GetRandomAttackSkillData() const override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -64,5 +68,5 @@ protected:
 	void ApplyPhaseTags(const FBossPhaseData& PhaseData);
 	void GrantSkillSetAbilities(UBossSkillSetData* SkillSetData);
 
-	bool HasGrantedSkillDataAbility(UBossSkillData* SkillData);
+	bool HasGrantedSkillDataAbility(UEnemySkillData* SkillData);
 };

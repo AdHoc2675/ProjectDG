@@ -4,8 +4,8 @@
 
 #include "AbilitySystemComponent.h"
 #include "Character/Enemy/Boss/Data/BossCharacterClassData.h"
-#include "Character/Enemy/Data/BossSkillData.h"
 #include "Character/Enemy/Data/BossSkillSetData.h"
+#include "Character/Enemy/Data/EnemySkillData.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Core/DG_GameplayTags.h"
 #include "GAS/Attributes/DG_BossAttributeSet.h"
@@ -99,8 +99,6 @@ void ABossKashapaD::UpdateHealthPhaseTags(float HealthRatio)
 	ApplyPhaseDataByIndex(NextPhaseData->PhaseIndex);
 }
 
-
-
 void ABossKashapaD::OnRep_CurrentPhaseIndex()
 {
 	const FBossPhaseData* PhaseData = FindPhaseDataByIndex(CurrentPhaseIndex);
@@ -144,7 +142,7 @@ bool ABossKashapaD::ApplyPhaseDataByIndex(int32 PhaseIndex)
 
 	ApplyPhaseVisual(*PhaseData);
 	ApplyPhaseTags(*PhaseData);
-	GrantSkillSetAbilities(PhaseData->SkillSetData);
+	GrantSkillSetAbilities(CurrentSkillSetData);
 
 	ForceNetUpdate();
 
@@ -223,9 +221,9 @@ void ABossKashapaD::GrantSkillSetAbilities(UBossSkillSetData* SkillSetData)
 		return;
 	}
 
-	for (const TObjectPtr<UBossSkillData>& SkillDataPtr : SkillSetData->Skills)
+	for (const TObjectPtr<UEnemySkillData>& SkillDataPtr : SkillSetData->Skills)
 	{
-		UBossSkillData* SkillData = SkillDataPtr.Get();
+		UEnemySkillData* SkillData = SkillDataPtr.Get();
 		if (!SkillData || !SkillData->AbilityClass)
 		{
 			continue;
@@ -236,12 +234,18 @@ void ABossKashapaD::GrantSkillSetAbilities(UBossSkillSetData* SkillSetData)
 			continue;
 		}
 
-		FGameplayAbilitySpec AbilitySpec(SkillData->AbilityClass, 1, INDEX_NONE, SkillData);
+		FGameplayAbilitySpec AbilitySpec(
+			SkillData->AbilityClass,
+			1,
+			INDEX_NONE,
+			SkillData
+		);
+
 		ASC->GiveAbility(AbilitySpec);
 	}
 }
 
-bool ABossKashapaD::HasGrantedSkillDataAbility(UBossSkillData* SkillData)
+bool ABossKashapaD::HasGrantedSkillDataAbility(UEnemySkillData* SkillData)
 {
 	if (!SkillData || !SkillData->AbilityClass)
 	{
@@ -273,4 +277,28 @@ bool ABossKashapaD::HasGrantedSkillDataAbility(UBossSkillData* SkillData)
 	}
 
 	return false;
+}
+
+const TArray<TObjectPtr<UEnemySkillData>>& ABossKashapaD::GetAttackSkillDataList() const
+{
+	static const TArray<TObjectPtr<UEnemySkillData>> EmptySkills;
+
+	if (!CurrentSkillSetData)
+	{
+		return EmptySkills;
+	}
+
+	return CurrentSkillSetData->Skills;
+}
+
+UEnemySkillData* ABossKashapaD::GetRandomAttackSkillData() const
+{
+	const TArray<TObjectPtr<UEnemySkillData>>& Skills = GetAttackSkillDataList();
+	if (Skills.Num() == 0)
+	{
+		return nullptr;
+	}
+
+	const int32 RandomIndex = FMath::RandRange(0, Skills.Num() - 1);
+	return Skills[RandomIndex].Get();
 }

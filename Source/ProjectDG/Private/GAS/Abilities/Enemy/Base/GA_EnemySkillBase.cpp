@@ -1,20 +1,108 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
 #include "GAS/Abilities/Enemy/Base/GA_EnemySkillBase.h"
 
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+
+#include "AIController.h"
+
 #include "Character/Enemy/EnemyCharacterBase.h"
 #include "Character/Enemy/Data/EnemySkillData.h"
+#include "Character/Enemy/Indicator/EnemySkillIndicatorActor.h"
+
 #include "Components/Combat/CombatComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+
 #include "Core/DG_Debug.h"
 #include "Core/DG_Struct.h"
 #include "Core/DG_GameplayTags.h"
+
 #include "DrawDebugHelpers.h"
+#include "BehaviorTree/BlackboardComponent.h"
+
 #include "Engine/HitResult.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/World.h"
+
+#include "TimerManager.h"
+
+namespace
+{
+	FVector GetEnemySkillFlatForward(const AActor* Actor)
+	{
+		if (!Actor)
+		{
+			return FVector::ForwardVector;
+		}
+
+		FVector Forward = Actor->GetActorForwardVector();
+		Forward.Z = 0.0f;
+
+		if (!Forward.Normalize())
+		{
+			return FVector::ForwardVector;
+		}
+
+		return Forward;
+	}
+
+	FVector ApplyEnemySkillForwardOffset(
+		const AActor* Actor,
+		const FVector& BaseLocation,
+		float ForwardOffset
+	)
+	{
+		if (!Actor || FMath::IsNearlyZero(ForwardOffset))
+		{
+			return BaseLocation;
+		}
+
+		return BaseLocation + GetEnemySkillFlatForward(Actor) * ForwardOffset;
+	}
+
+	FVector ProjectEnemySkillDebugPointToGround(
+		UWorld* World,
+		const AActor* SourceActor,
+		const FVector& Location
+	)
+	{
+		if (!World)
+		{
+			return Location;
+		}
+
+		FVector Start = Location + FVector(0.0f, 0.0f, 300.0f);
+		FVector End = Location - FVector(0.0f, 0.0f, 3000.0f);
+
+		FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(EnemySkillDebugGroundTrace), false);
+		if (SourceActor)
+		{
+			QueryParams.AddIgnoredActor(SourceActor);
+		}
+
+		FHitResult HitResult;
+		const bool bHit = World->LineTraceSingleByChannel(
+			HitResult,
+			Start,
+			End,
+			ECC_Visibility,
+			QueryParams
+		);
+
+		if (bHit)
+		{
+			return HitResult.ImpactPoint + FVector(0.0f, 0.0f, 8.0f);
+		}
+
+		FVector FallbackLocation = Location;
+		FallbackLocation.Z -= 80.0f;
+		return FallbackLocation;
+	}
+}
 
 UGA_EnemySkillBase::UGA_EnemySkillBase()
 {
@@ -86,19 +174,28 @@ bool UGA_EnemySkillBase::ApplyDamageToTarget(
 	bool bHasHitLocation
 ) const
 {
+	return ApplyDamageToTargetWithSkillData(
+		TargetActor,
+		GetEnemySkillData(),
+		HitLocation,
+		bHasHitLocation
+	);
+}
+
+bool UGA_EnemySkillBase::ApplyDamageToTargetWithSkillData(
+	AActor* TargetActor,
+	const UEnemySkillData* CurrentSkillData,
+	const FVector& HitLocation,
+	bool bHasHitLocation
+) const
+{
 	AEnemyCharacterBase* EnemyCharacter = GetEnemyCharacterFromActorInfo();
 	if (!EnemyCharacter || !EnemyCharacter->HasAuthority())
 	{
 		return false;
 	}
 
-	if (!TargetActor)
-	{
-		return false;
-	}
-
-	UEnemySkillData* CurrentSkillData = GetEnemySkillData();
-	if (!CurrentSkillData)
+	if (!TargetActor || !CurrentSkillData)
 	{
 		return false;
 	}
@@ -128,6 +225,19 @@ bool UGA_EnemySkillBase::ApplyDamageToTarget(
 
 void UGA_EnemySkillBase::ApplyDamageToTargets(const TArray<AActor*>& TargetActors) const
 {
+	ApplyDamageToTargetsWithSkillData(GetEnemySkillData(), TargetActors);
+}
+
+void UGA_EnemySkillBase::ApplyDamageToTargetsWithSkillData(
+	const UEnemySkillData* CurrentSkillData,
+	const TArray<AActor*>& TargetActors
+) const
+{
+	if (!CurrentSkillData)
+	{
+		return;
+	}
+
 	for (AActor* TargetActor : TargetActors)
 	{
 		if (!TargetActor)
@@ -142,8 +252,9 @@ void UGA_EnemySkillBase::ApplyDamageToTargets(const TArray<AActor*>& TargetActor
 
 		const FVector HitLocation = TargetActor->GetActorLocation();
 
-		const bool bDamageApplied = ApplyDamageToTarget(
+		const bool bDamageApplied = ApplyDamageToTargetWithSkillData(
 			TargetActor,
+			CurrentSkillData,
 			HitLocation,
 			true
 		);
@@ -210,9 +321,16 @@ bool UGA_EnemySkillBase::PlaySkillMontageFromData(
 	MontageTask->OnBlendOut.AddDynamic(this, &UGA_EnemySkillBase::HandleSkillMontageBlendOut);
 	MontageTask->OnInterrupted.AddDynamic(this, &UGA_EnemySkillBase::HandleSkillMontageInterrupted);
 	MontageTask->OnCancelled.AddDynamic(this, &UGA_EnemySkillBase::HandleSkillMontageCancelled);
-	
+
+	// 일반 단타 스킬은 몽타주 시작 시점에 인디케이터 생성.
+	// HitStep 스킬은 각 Step마다 개별 인디케이터를 생성한다.
+	if (!CurrentSkillData->bUseHitSteps)
+	{
+		SpawnEnemySkillIndicatorFromData();
+	}
+
 	RegisterEnemySkillCueEvents();
-	
+
 	OnSkillMontageStarted();
 
 	MontageTask->ReadyForActivation();
@@ -294,7 +412,11 @@ void UGA_EnemySkillBase::HandleEnemySkillHitCheckEvent(const FGameplayEventData&
 		return;
 	}
 
-	
+	if (CurrentSkillData->bUseHitSteps && CurrentSkillData->HitStepList.Num() > 0)
+	{
+		TryStartEnemySkillHitSteps(Payload, CurrentSkillData);
+		return;
+	}
 
 	TArray<AActor*> HitActors;
 	if (!CollectEnemySkillTargetsFromData(Payload, CurrentSkillData, HitActors))
@@ -304,7 +426,7 @@ void UGA_EnemySkillBase::HandleEnemySkillHitCheckEvent(const FGameplayEventData&
 	}
 
 	DrawEnemySkillHitDebug(Payload, CurrentSkillData, HitActors);
-	ApplyDamageToTargets(HitActors);
+	ApplyDamageToTargetsWithSkillData(CurrentSkillData, HitActors);
 }
 
 void UGA_EnemySkillBase::RegisterEnemySkillCueEvents()
@@ -495,13 +617,19 @@ void UGA_EnemySkillBase::ExecuteEnemySkillGameplayCue(
 
 void UGA_EnemySkillBase::ResetEnemySkillRuntimeHitState()
 {
+	HitActorsThisAbility.Reset();
+
 	bHasLastPathSweepCenter = false;
 	bHasLastPathSweepDebugSegment = false;
 	LastPathSweepCenter = FVector::ZeroVector;
 	LastPathSweepDebugStart = FVector::ZeroVector;
 	LastPathSweepDebugEnd = FVector::ZeroVector;
 
-	HitActorsThisAbility.Reset();
+	bHasCachedSkillHitCenter = false;
+	CachedSkillHitCenter = FVector::ZeroVector;
+	CachedSkillHitRotation = FRotator::ZeroRotator;
+
+	RuntimeStepSkillDataList.Reset();
 }
 
 bool UGA_EnemySkillBase::HasActorAlreadyHitThisAbility(AActor* CandidateActor) const
@@ -539,6 +667,24 @@ bool UGA_EnemySkillBase::CollectEnemySkillTargetsFromData(
 		return false;
 	}
 
+	const FString HitShapeString = StaticEnum<EDGEnemySkillHitShape>()
+		? StaticEnum<EDGEnemySkillHitShape>()->GetNameStringByValue(
+			static_cast<int64>(CurrentSkillData->HitShape)
+		)
+		: TEXT("Unknown");
+
+	Debug::Print(
+		FString::Printf(
+			TEXT("[EnemySkillBase] HitShape=%s Radius=%.1f InnerRadius=%.1f SectorAngle=%.1f Skill=%s"),
+			*HitShapeString,
+			CurrentSkillData->Radius,
+			CurrentSkillData->InnerRadius,
+			CurrentSkillData->SectorAngleDegrees,
+			*CurrentSkillData->GetName()
+		),
+		FColor::Yellow
+	);
+
 	switch (CurrentSkillData->HitShape)
 	{
 	case EDGEnemySkillHitShape::AcquiredTarget:
@@ -550,7 +696,23 @@ bool UGA_EnemySkillBase::CollectEnemySkillTargetsFromData(
 		break;
 
 	case EDGEnemySkillHitShape::Radius:
+		Debug::Print(TEXT("[EnemySkillBase] Collect Radius Targets"), FColor::Red);
 		CollectRadiusTargetsFromSkillData(Payload, CurrentSkillData, OutTargetActors);
+		break;
+
+	case EDGEnemySkillHitShape::Sector:
+		Debug::Print(TEXT("[EnemySkillBase] Collect Sector Targets"), FColor::Cyan);
+		CollectSectorTargetsFromSkillData(CurrentSkillData, OutTargetActors);
+		break;
+
+	case EDGEnemySkillHitShape::SectorRing:
+		Debug::Print(TEXT("[EnemySkillBase] Collect SectorRing Targets"), FColor::Purple);
+		CollectSectorRingTargetsFromSkillData(Payload, CurrentSkillData, OutTargetActors);
+		break;
+
+	case EDGEnemySkillHitShape::Donut:
+		Debug::Print(TEXT("[EnemySkillBase] Collect Donut Targets"), FColor::Purple);
+		CollectDonutTargetsFromSkillData(Payload, CurrentSkillData, OutTargetActors);
 		break;
 
 	case EDGEnemySkillHitShape::PathBoxSweep:
@@ -558,11 +720,7 @@ bool UGA_EnemySkillBase::CollectEnemySkillTargetsFromData(
 		break;
 
 	case EDGEnemySkillHitShape::SocketSweep:
-		break;
-
 	case EDGEnemySkillHitShape::Projectile:
-		break;
-
 	case EDGEnemySkillHitShape::None:
 	default:
 		break;
@@ -657,7 +815,13 @@ void UGA_EnemySkillBase::CollectRadiusTargetsFromSkillData(
 		return;
 	}
 
-	const FCollisionShape SphereShape = FCollisionShape::MakeSphere(CurrentSkillData->Radius);
+	const float Radius = FMath::Max(CurrentSkillData->Radius, 0.0f);
+	if (Radius <= 0.0f)
+	{
+		return;
+	}
+
+	const FCollisionShape SphereShape = FCollisionShape::MakeSphere(Radius);
 
 	FCollisionObjectQueryParams ObjectQueryParams;
 	ObjectQueryParams.AddObjectTypesToQuery(ECC_Pawn);
@@ -686,6 +850,332 @@ void UGA_EnemySkillBase::CollectRadiusTargetsFromSkillData(
 	{
 		AddTargetIfValid(
 			Result.GetActor(),
+			CurrentSkillData,
+			OutTargetActors,
+			UniqueActors
+		);
+	}
+}
+
+void UGA_EnemySkillBase::CollectSectorTargetsFromSkillData(
+	const UEnemySkillData* CurrentSkillData,
+	TArray<AActor*>& OutTargetActors
+) const
+{
+	AActor* AvatarActor = GetAvatarActorFromActorInfo();
+	UWorld* World = AvatarActor ? AvatarActor->GetWorld() : nullptr;
+
+	if (!World || !AvatarActor || !CurrentSkillData)
+	{
+		return;
+	}
+
+	FVector Center = AvatarActor->GetActorLocation();
+
+	FVector Forward = AvatarActor->GetActorForwardVector();
+	Forward.Z = 0.0f;
+
+	if (CurrentSkillData->bUseIndicator && bHasCachedSkillHitCenter)
+	{
+		Center = CachedSkillHitCenter;
+
+		Forward = CachedSkillHitRotation.Vector();
+		Forward.Z = 0.0f;
+	}
+
+	if (!Forward.Normalize())
+	{
+		return;
+	}
+
+	if (!(CurrentSkillData->bUseIndicator && bHasCachedSkillHitCenter))
+	{
+		Center += Forward * CurrentSkillData->ForwardOffset;
+	}
+
+	const float Radius = FMath::Max(CurrentSkillData->Radius, 0.0f);
+	if (Radius <= 0.0f)
+	{
+		return;
+	}
+
+	const float ClampedAngle = FMath::Clamp(
+		CurrentSkillData->SectorAngleDegrees,
+		0.0f,
+		360.0f
+	);
+
+	const float HalfAngleRadians = FMath::DegreesToRadians(ClampedAngle * 0.5f);
+	const float CosHalfAngle = FMath::Cos(HalfAngleRadians);
+
+	const FCollisionShape SphereShape = FCollisionShape::MakeSphere(Radius);
+
+	FCollisionObjectQueryParams ObjectQueryParams;
+	ObjectQueryParams.AddObjectTypesToQuery(ECC_Pawn);
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(EnemySkillSector), false);
+	QueryParams.AddIgnoredActor(AvatarActor);
+
+	TArray<FOverlapResult> OverlapResults;
+	const bool bHit = World->OverlapMultiByObjectType(
+		OverlapResults,
+		Center,
+		FQuat::Identity,
+		ObjectQueryParams,
+		SphereShape,
+		QueryParams
+	);
+
+	if (!bHit)
+	{
+		return;
+	}
+
+	TSet<AActor*> UniqueActors;
+
+	for (const FOverlapResult& Result : OverlapResults)
+	{
+		AActor* CandidateActor = Result.GetActor();
+		if (!CandidateActor)
+		{
+			continue;
+		}
+
+		FVector DirectionToTarget = CandidateActor->GetActorLocation() - Center;
+		DirectionToTarget.Z = 0.0f;
+
+		if (!DirectionToTarget.Normalize())
+		{
+			continue;
+		}
+
+		const float Dot = FVector::DotProduct(Forward, DirectionToTarget);
+		if (Dot < CosHalfAngle)
+		{
+			continue;
+		}
+
+		AddTargetIfValid(
+			CandidateActor,
+			CurrentSkillData,
+			OutTargetActors,
+			UniqueActors
+		);
+	}
+}
+
+void UGA_EnemySkillBase::CollectSectorRingTargetsFromSkillData(
+	const FGameplayEventData& Payload,
+	const UEnemySkillData* CurrentSkillData,
+	TArray<AActor*>& OutTargetActors
+) const
+{
+	AActor* AvatarActor = GetAvatarActorFromActorInfo();
+	UWorld* World = AvatarActor ? AvatarActor->GetWorld() : nullptr;
+
+	if (!World || !AvatarActor || !CurrentSkillData)
+	{
+		return;
+	}
+
+	FVector Center = AvatarActor->GetActorLocation();
+
+	FVector Forward = AvatarActor->GetActorForwardVector();
+	Forward.Z = 0.0f;
+
+	if (CurrentSkillData->bUseIndicator && bHasCachedSkillHitCenter)
+	{
+		Center = CachedSkillHitCenter;
+
+		Forward = CachedSkillHitRotation.Vector();
+		Forward.Z = 0.0f;
+	}
+	else if (CurrentSkillData->HitOrigin != EDGEnemySkillHitOrigin::Self)
+	{
+		if (!ResolveSkillHitCenter(Payload, CurrentSkillData, Center))
+		{
+			return;
+		}
+	}
+
+	if (!Forward.Normalize())
+	{
+		return;
+	}
+
+	if (!(CurrentSkillData->bUseIndicator && bHasCachedSkillHitCenter) &&
+		CurrentSkillData->HitOrigin == EDGEnemySkillHitOrigin::Self)
+	{
+		Center += Forward * CurrentSkillData->ForwardOffset;
+	}
+
+	const float OuterRadius = FMath::Max(CurrentSkillData->Radius, 0.0f);
+	const float InnerRadius = FMath::Clamp(
+		CurrentSkillData->InnerRadius,
+		0.0f,
+		OuterRadius
+	);
+
+	if (OuterRadius <= 0.0f)
+	{
+		return;
+	}
+
+	const float InnerRadiusSq = InnerRadius * InnerRadius;
+
+	const float ClampedAngle = FMath::Clamp(
+		CurrentSkillData->SectorAngleDegrees,
+		0.0f,
+		360.0f
+	);
+
+	const float HalfAngleRadians = FMath::DegreesToRadians(ClampedAngle * 0.5f);
+	const float CosHalfAngle = FMath::Cos(HalfAngleRadians);
+
+	const FCollisionShape SphereShape = FCollisionShape::MakeSphere(OuterRadius);
+
+	FCollisionObjectQueryParams ObjectQueryParams;
+	ObjectQueryParams.AddObjectTypesToQuery(ECC_Pawn);
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(EnemySkillSectorRing), false);
+	QueryParams.AddIgnoredActor(AvatarActor);
+
+	TArray<FOverlapResult> OverlapResults;
+	const bool bHit = World->OverlapMultiByObjectType(
+		OverlapResults,
+		Center,
+		FQuat::Identity,
+		ObjectQueryParams,
+		SphereShape,
+		QueryParams
+	);
+
+	if (!bHit)
+	{
+		return;
+	}
+
+	TSet<AActor*> UniqueActors;
+
+	for (const FOverlapResult& Result : OverlapResults)
+	{
+		AActor* CandidateActor = Result.GetActor();
+		if (!CandidateActor)
+		{
+			continue;
+		}
+
+		FVector DirectionToTarget = CandidateActor->GetActorLocation() - Center;
+		DirectionToTarget.Z = 0.0f;
+
+		const float DistanceSq = DirectionToTarget.SizeSquared();
+
+		// 안쪽 안전지대 제외
+		if (DistanceSq < InnerRadiusSq)
+		{
+			continue;
+		}
+
+		if (!DirectionToTarget.Normalize())
+		{
+			continue;
+		}
+
+		const float Dot = FVector::DotProduct(Forward, DirectionToTarget);
+		if (Dot < CosHalfAngle)
+		{
+			continue;
+		}
+
+		AddTargetIfValid(
+			CandidateActor,
+			CurrentSkillData,
+			OutTargetActors,
+			UniqueActors
+		);
+	}
+}
+
+void UGA_EnemySkillBase::CollectDonutTargetsFromSkillData(
+	const FGameplayEventData& Payload,
+	const UEnemySkillData* CurrentSkillData,
+	TArray<AActor*>& OutTargetActors
+) const
+{
+	AActor* AvatarActor = GetAvatarActorFromActorInfo();
+	UWorld* World = AvatarActor ? AvatarActor->GetWorld() : nullptr;
+
+	if (!World || !AvatarActor || !CurrentSkillData)
+	{
+		return;
+	}
+
+	FVector Center = FVector::ZeroVector;
+	if (!ResolveSkillHitCenter(Payload, CurrentSkillData, Center))
+	{
+		return;
+	}
+
+	const float OuterRadius = FMath::Max(CurrentSkillData->Radius, 0.0f);
+	const float InnerRadius = FMath::Clamp(
+		CurrentSkillData->InnerRadius,
+		0.0f,
+		OuterRadius
+	);
+
+	if (OuterRadius <= 0.0f)
+	{
+		return;
+	}
+
+	const FCollisionShape SphereShape = FCollisionShape::MakeSphere(OuterRadius);
+
+	FCollisionObjectQueryParams ObjectQueryParams;
+	ObjectQueryParams.AddObjectTypesToQuery(ECC_Pawn);
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(EnemySkillDonut), false);
+	QueryParams.AddIgnoredActor(AvatarActor);
+
+	TArray<FOverlapResult> OverlapResults;
+	const bool bHit = World->OverlapMultiByObjectType(
+		OverlapResults,
+		Center,
+		FQuat::Identity,
+		ObjectQueryParams,
+		SphereShape,
+		QueryParams
+	);
+
+	if (!bHit)
+	{
+		return;
+	}
+
+	TSet<AActor*> UniqueActors;
+
+	const float InnerRadiusSq = InnerRadius * InnerRadius;
+
+	for (const FOverlapResult& Result : OverlapResults)
+	{
+		AActor* CandidateActor = Result.GetActor();
+		if (!CandidateActor)
+		{
+			continue;
+		}
+
+		FVector DirectionToTarget = CandidateActor->GetActorLocation() - Center;
+		DirectionToTarget.Z = 0.0f;
+
+		const float DistanceSq = DirectionToTarget.SizeSquared();
+
+		// 안쪽 안전지대는 제외
+		if (DistanceSq < InnerRadiusSq)
+		{
+			continue;
+		}
+
+		AddTargetIfValid(
+			CandidateActor,
 			CurrentSkillData,
 			OutTargetActors,
 			UniqueActors
@@ -872,18 +1362,48 @@ bool UGA_EnemySkillBase::ResolveSkillHitCenter(
 	switch (CurrentSkillData->HitOrigin)
 	{
 	case EDGEnemySkillHitOrigin::Self:
-		OutCenter = AvatarActor->GetActorLocation();
+		OutCenter = ApplyEnemySkillForwardOffset(
+			AvatarActor,
+			AvatarActor->GetActorLocation(),
+			CurrentSkillData->ForwardOffset
+		);
 		return true;
 
 	case EDGEnemySkillHitOrigin::Target:
 	{
+		if (bHasCachedSkillHitCenter)
+		{
+			OutCenter = CachedSkillHitCenter;
+			return true;
+		}
+
+		// 인디케이터가 있는 타겟형 장판은 시전 시작 위치를 고정해야 회피 가능하다.
+		// 캐시가 없다면 HitNotify 시점의 타겟 현재 위치를 다시 읽지 않는다.
+		if (CurrentSkillData->bUseIndicator)
+		{
+			Debug::Print(
+				TEXT("[EnemySkillBase] Target HitOrigin failed: no cached hit center"),
+				FColor::Red
+			);
+			return false;
+		}
+
 		AActor* TargetActor = const_cast<AActor*>(Payload.Target.Get());
+		if (!TargetActor)
+		{
+			TargetActor = ResolveEnemySkillIndicatorTargetActor();
+		}
+
 		if (!TargetActor)
 		{
 			return false;
 		}
 
-		OutCenter = TargetActor->GetActorLocation();
+		OutCenter = ApplyEnemySkillForwardOffset(
+			AvatarActor,
+			TargetActor->GetActorLocation(),
+			CurrentSkillData->ForwardOffset
+		);
 		return true;
 	}
 
@@ -897,7 +1417,11 @@ bool UGA_EnemySkillBase::ResolveSkillHitCenter(
 			return false;
 		}
 
-		OutCenter = MeshComp->GetSocketLocation(CurrentSkillData->TraceSocketNames[0]);
+		OutCenter = ApplyEnemySkillForwardOffset(
+			AvatarActor,
+			MeshComp->GetSocketLocation(CurrentSkillData->TraceSocketNames[0]),
+			CurrentSkillData->ForwardOffset
+		);
 		return true;
 	}
 
@@ -918,7 +1442,6 @@ bool UGA_EnemySkillBase::ResolvePathBoxSweepCenter(
 		return false;
 	}
 
-	// 돌진 / 이동 중 자기 몸 주변 박스는 ForwardOffset을 0으로 두면 몸 중심 박스가 됨.
 	OutCenter =
 		AvatarActor->GetActorLocation()
 		+ AvatarActor->GetActorForwardVector() * CurrentSkillData->ForwardOffset;
@@ -947,6 +1470,11 @@ void UGA_EnemySkillBase::DrawEnemySkillHitDebug(
 
 	const FColor DebugColor = HitActors.Num() > 0 ? FColor::Green : FColor::Red;
 	const float DebugDuration = 1.5f;
+
+	auto ProjectDebugPointToGround = [World, AvatarActor](const FVector& InLocation) -> FVector
+	{
+		return ProjectEnemySkillDebugPointToGround(World, AvatarActor, InLocation);
+	};
 
 	switch (CurrentSkillData->HitShape)
 	{
@@ -977,15 +1505,272 @@ void UGA_EnemySkillBase::DrawEnemySkillHitDebug(
 			Center = AvatarActor->GetActorLocation();
 		}
 
+		const FVector DebugCenter = ProjectDebugPointToGround(Center);
+
 		DrawDebugSphere(
 			World,
-			Center,
+			DebugCenter,
 			CurrentSkillData->Radius,
 			32,
 			DebugColor,
 			false,
 			DebugDuration
 		);
+
+		break;
+	}
+
+	case EDGEnemySkillHitShape::Sector:
+	{
+		FVector Center = AvatarActor->GetActorLocation();
+
+		FVector Forward = AvatarActor->GetActorForwardVector();
+		Forward.Z = 0.0f;
+
+		if (CurrentSkillData->bUseIndicator && bHasCachedSkillHitCenter)
+		{
+			Center = CachedSkillHitCenter;
+
+			Forward = CachedSkillHitRotation.Vector();
+			Forward.Z = 0.0f;
+		}
+
+		if (!Forward.Normalize())
+		{
+			break;
+		}
+
+		if (!(CurrentSkillData->bUseIndicator && bHasCachedSkillHitCenter))
+		{
+			Center += Forward * CurrentSkillData->ForwardOffset;
+		}
+
+		Center = ProjectDebugPointToGround(Center);
+
+		const float Radius = CurrentSkillData->Radius;
+		const float HalfAngle = CurrentSkillData->SectorAngleDegrees * 0.5f;
+
+		const FVector LeftDir = Forward.RotateAngleAxis(-HalfAngle, FVector::UpVector);
+		const FVector RightDir = Forward.RotateAngleAxis(HalfAngle, FVector::UpVector);
+
+		DrawDebugLine(
+			World,
+			Center,
+			Center + LeftDir * Radius,
+			DebugColor,
+			false,
+			DebugDuration,
+			0,
+			2.0f
+		);
+
+		DrawDebugLine(
+			World,
+			Center,
+			Center + RightDir * Radius,
+			DebugColor,
+			false,
+			DebugDuration,
+			0,
+			2.0f
+		);
+
+		const int32 SegmentCount = 24;
+		FVector PrevPoint = Center + LeftDir * Radius;
+
+		for (int32 Index = 1; Index <= SegmentCount; ++Index)
+		{
+			const float Alpha = static_cast<float>(Index) / static_cast<float>(SegmentCount);
+			const float Angle = FMath::Lerp(-HalfAngle, HalfAngle, Alpha);
+
+			const FVector Dir = Forward.RotateAngleAxis(Angle, FVector::UpVector);
+			const FVector CurrentPoint = Center + Dir * Radius;
+
+			DrawDebugLine(
+				World,
+				PrevPoint,
+				CurrentPoint,
+				DebugColor,
+				false,
+				DebugDuration,
+				0,
+				2.0f
+			);
+
+			PrevPoint = CurrentPoint;
+		}
+
+		break;
+	}
+
+	case EDGEnemySkillHitShape::SectorRing:
+	{
+		FVector Center = AvatarActor->GetActorLocation();
+
+		FVector Forward = AvatarActor->GetActorForwardVector();
+		Forward.Z = 0.0f;
+
+		if (CurrentSkillData->bUseIndicator && bHasCachedSkillHitCenter)
+		{
+			Center = CachedSkillHitCenter;
+
+			Forward = CachedSkillHitRotation.Vector();
+			Forward.Z = 0.0f;
+		}
+		else if (CurrentSkillData->HitOrigin != EDGEnemySkillHitOrigin::Self)
+		{
+			if (!ResolveSkillHitCenter(Payload, CurrentSkillData, Center))
+			{
+				Center = AvatarActor->GetActorLocation();
+			}
+		}
+
+		if (!Forward.Normalize())
+		{
+			break;
+		}
+
+		if (!(CurrentSkillData->bUseIndicator && bHasCachedSkillHitCenter) &&
+			CurrentSkillData->HitOrigin == EDGEnemySkillHitOrigin::Self)
+		{
+			Center += Forward * CurrentSkillData->ForwardOffset;
+		}
+
+		Center = ProjectDebugPointToGround(Center);
+
+		const float OuterRadius = CurrentSkillData->Radius;
+		const float InnerRadius = FMath::Clamp(
+			CurrentSkillData->InnerRadius,
+			0.0f,
+			OuterRadius
+		);
+
+		const float HalfAngle = CurrentSkillData->SectorAngleDegrees * 0.5f;
+
+		const int32 SegmentCount = 24;
+
+		FVector PrevOuterPoint = FVector::ZeroVector;
+		FVector PrevInnerPoint = FVector::ZeroVector;
+
+		for (int32 Index = 0; Index <= SegmentCount; ++Index)
+		{
+			const float Alpha = static_cast<float>(Index) / static_cast<float>(SegmentCount);
+			const float Angle = FMath::Lerp(-HalfAngle, HalfAngle, Alpha);
+
+			const FVector Dir = Forward.RotateAngleAxis(Angle, FVector::UpVector);
+
+			const FVector OuterPoint = Center + Dir * OuterRadius;
+			const FVector InnerPoint = Center + Dir * InnerRadius;
+
+			if (Index > 0)
+			{
+				DrawDebugLine(
+					World,
+					PrevOuterPoint,
+					OuterPoint,
+					DebugColor,
+					false,
+					DebugDuration,
+					0,
+					2.0f
+				);
+
+				if (InnerRadius > 0.0f)
+				{
+					DrawDebugLine(
+						World,
+						PrevInnerPoint,
+						InnerPoint,
+						FColor::Blue,
+						false,
+						DebugDuration,
+						0,
+						2.0f
+					);
+				}
+			}
+
+			PrevOuterPoint = OuterPoint;
+			PrevInnerPoint = InnerPoint;
+		}
+
+		const FVector LeftDir = Forward.RotateAngleAxis(-HalfAngle, FVector::UpVector);
+		const FVector RightDir = Forward.RotateAngleAxis(HalfAngle, FVector::UpVector);
+
+		DrawDebugLine(
+			World,
+			Center + LeftDir * InnerRadius,
+			Center + LeftDir * OuterRadius,
+			DebugColor,
+			false,
+			DebugDuration,
+			0,
+			2.0f
+		);
+
+		DrawDebugLine(
+			World,
+			Center + RightDir * InnerRadius,
+			Center + RightDir * OuterRadius,
+			DebugColor,
+			false,
+			DebugDuration,
+			0,
+			2.0f
+		);
+
+		break;
+	}
+
+	case EDGEnemySkillHitShape::Donut:
+	{
+		FVector Center = FVector::ZeroVector;
+		if (!ResolveSkillHitCenter(Payload, CurrentSkillData, Center))
+		{
+			Center = AvatarActor->GetActorLocation();
+		}
+
+		const FVector DebugCenter = ProjectDebugPointToGround(Center);
+
+		const float OuterRadius = CurrentSkillData->Radius;
+		const float InnerRadius = FMath::Clamp(
+			CurrentSkillData->InnerRadius,
+			0.0f,
+			OuterRadius
+		);
+
+		DrawDebugCircle(
+			World,
+			DebugCenter,
+			OuterRadius,
+			64,
+			DebugColor,
+			false,
+			DebugDuration,
+			0,
+			2.0f,
+			FVector(1.0f, 0.0f, 0.0f),
+			FVector(0.0f, 1.0f, 0.0f),
+			false
+		);
+
+		if (InnerRadius > 0.0f)
+		{
+			DrawDebugCircle(
+				World,
+				DebugCenter,
+				InnerRadius,
+				64,
+				FColor::Blue,
+				false,
+				DebugDuration,
+				0,
+				2.0f,
+				FVector(1.0f, 0.0f, 0.0f),
+				FVector(0.0f, 1.0f, 0.0f),
+				false
+			);
+		}
 
 		break;
 	}
@@ -1107,4 +1892,405 @@ void UGA_EnemySkillBase::OnSkillMontageCancelled()
 
 void UGA_EnemySkillBase::OnEnemySkillFinished(bool bWasCancelled)
 {
+}
+
+void UGA_EnemySkillBase::SpawnEnemySkillIndicatorFromData()
+{
+	AEnemyCharacterBase* EnemyCharacter = GetEnemyCharacterFromActorInfo();
+	if (!EnemyCharacter || !EnemyCharacter->HasAuthority())
+	{
+		return;
+	}
+
+	UEnemySkillData* CurrentSkillData = GetEnemySkillData();
+	if (!CurrentSkillData)
+	{
+		return;
+	}
+
+	if (!CurrentSkillData->bUseIndicator)
+	{
+		return;
+	}
+
+	if (!CurrentSkillData->IndicatorActorClass)
+	{
+		return;
+	}
+
+	const FTransform SpawnTransform =
+		MakeEnemySkillIndicatorTransform(CurrentSkillData);
+
+	CachedSkillHitCenter = SpawnTransform.GetLocation();
+	CachedSkillHitCenter.Z -= CurrentSkillData->IndicatorZOffset;
+
+	CachedSkillHitRotation = SpawnTransform.GetRotation().Rotator();
+	CachedSkillHitRotation.Yaw -= CurrentSkillData->IndicatorYawOffsetDegrees;
+	CachedSkillHitRotation.Normalize();
+
+	bHasCachedSkillHitCenter = true;
+
+	EnemyCharacter->Multicast_SpawnEnemySkillIndicator(
+		CurrentSkillData,
+		SpawnTransform
+	);
+}
+
+FTransform UGA_EnemySkillBase::MakeEnemySkillIndicatorTransform(
+	const UEnemySkillData* CurrentSkillData
+) const
+{
+	AEnemyCharacterBase* EnemyCharacter = GetEnemyCharacterFromActorInfo();
+	if (!EnemyCharacter || !CurrentSkillData)
+	{
+		return FTransform::Identity;
+	}
+
+	AActor* TargetActor = ResolveEnemySkillIndicatorTargetActor();
+
+	FVector IndicatorLocation = EnemyCharacter->GetActorLocation();
+	FRotator IndicatorRotation = EnemyCharacter->GetActorRotation();
+
+	if (CurrentSkillData->bIndicatorRotateToTargetDuringTelegraph && TargetActor)
+	{
+		FVector Direction = TargetActor->GetActorLocation() - IndicatorLocation;
+		Direction.Z = 0.0f;
+
+		if (!Direction.IsNearlyZero())
+		{
+			IndicatorRotation = Direction.Rotation();
+		}
+	}
+
+	if (CurrentSkillData->HitOrigin == EDGEnemySkillHitOrigin::Target && TargetActor)
+	{
+		IndicatorLocation = TargetActor->GetActorLocation();
+	}
+
+	IndicatorLocation = ApplyEnemySkillForwardOffset(
+		EnemyCharacter,
+		IndicatorLocation,
+		CurrentSkillData->ForwardOffset
+	);
+
+	if (!FMath::IsNearlyZero(CurrentSkillData->IndicatorYawOffsetDegrees))
+	{
+		IndicatorRotation.Yaw += CurrentSkillData->IndicatorYawOffsetDegrees;
+		IndicatorRotation.Normalize();
+	}
+
+	IndicatorLocation.Z += CurrentSkillData->IndicatorZOffset;
+
+	return FTransform(IndicatorRotation, IndicatorLocation);
+}
+
+AActor* UGA_EnemySkillBase::ResolveEnemySkillIndicatorTargetActor() const
+{
+	APawn* AvatarPawn = Cast<APawn>(GetAvatarActorFromActorInfo());
+	if (!AvatarPawn)
+	{
+		Debug::Print(
+			TEXT("[EnemySkillBase] ResolveTarget failed: AvatarPawn is null"),
+			FColor::Red
+		);
+		return nullptr;
+	}
+
+	AAIController* AIController = Cast<AAIController>(AvatarPawn->GetController());
+	if (!AIController)
+	{
+		Debug::Print(
+			FString::Printf(
+				TEXT("[EnemySkillBase] ResolveTarget failed: AIController is null. Avatar=%s"),
+				*AvatarPawn->GetName()
+			),
+			FColor::Red
+		);
+		return nullptr;
+	}
+
+	if (AActor* FocusActor = AIController->GetFocusActor())
+	{
+		Debug::Print(
+			FString::Printf(
+				TEXT("[EnemySkillBase] Resolved TargetActor by FocusActor: %s"),
+				*FocusActor->GetName()
+			),
+			FColor::Green
+		);
+		return FocusActor;
+	}
+
+	UBlackboardComponent* BlackboardComponent = AIController->GetBlackboardComponent();
+	if (!BlackboardComponent)
+	{
+		Debug::Print(
+			FString::Printf(
+				TEXT("[EnemySkillBase] ResolveTarget failed: BlackboardComponent is null. Controller=%s"),
+				*AIController->GetName()
+			),
+			FColor::Red
+		);
+		return nullptr;
+	}
+
+	static const FName TargetActorKeyName(TEXT("TargetActor"));
+
+	const FBlackboard::FKey TargetKeyID = BlackboardComponent->GetKeyID(TargetActorKeyName);
+	if (TargetKeyID == FBlackboard::InvalidKey)
+	{
+		Debug::Print(
+			TEXT("[EnemySkillBase] ResolveTarget failed: Blackboard key 'TargetActor' is INVALID"),
+			FColor::Red
+		);
+		return nullptr;
+	}
+
+	UObject* RawObject = BlackboardComponent->GetValueAsObject(TargetActorKeyName);
+	if (!RawObject)
+	{
+		Debug::Print(
+			TEXT("[EnemySkillBase] ResolveTarget failed: Blackboard 'TargetActor' value is NULL"),
+			FColor::Red
+		);
+		return nullptr;
+	}
+
+	AActor* TargetActor = Cast<AActor>(RawObject);
+	if (!TargetActor)
+	{
+		Debug::Print(
+			FString::Printf(
+				TEXT("[EnemySkillBase] ResolveTarget failed: Blackboard 'TargetActor' is not Actor. Object=%s Class=%s"),
+				*RawObject->GetName(),
+				*RawObject->GetClass()->GetName()
+			),
+			FColor::Red
+		);
+		return nullptr;
+	}
+
+	Debug::Print(
+		FString::Printf(
+			TEXT("[EnemySkillBase] Resolved TargetActor by Blackboard: %s"),
+			*TargetActor->GetName()
+		),
+		FColor::Green
+	);
+
+	return TargetActor;
+}
+
+void UGA_EnemySkillBase::TryStartEnemySkillHitSteps(
+	const FGameplayEventData& Payload,
+	const UEnemySkillData* CurrentSkillData
+)
+{
+	if (!CurrentSkillData || CurrentSkillData->HitStepList.Num() == 0)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	for (const FDGEnemySkillHitStep& HitStep : CurrentSkillData->HitStepList)
+	{
+		UEnemySkillData* RuntimeSkillData =
+			CreateRuntimeSkillDataFromHitStep(CurrentSkillData, HitStep);
+
+		if (!RuntimeSkillData)
+		{
+			continue;
+		}
+
+		RuntimeStepSkillDataList.Add(RuntimeSkillData);
+
+		TSharedRef<FDGEnemySkillRuntimeHitStepContext> StepContext =
+			MakeShared<FDGEnemySkillRuntimeHitStepContext>();
+
+		StepContext->RuntimeSkillData = RuntimeSkillData;
+		StepContext->Payload = Payload;
+
+		const float IndicatorDelay = FMath::Max(HitStep.Delay, 0.0f);
+		const float TelegraphTime = FMath::Max(HitStep.IndicatorTelegraphTime, 0.0f);
+		const float HitDelay = IndicatorDelay + TelegraphTime;
+
+		if (IndicatorDelay <= KINDA_SMALL_NUMBER)
+		{
+			SpawnIndicatorForRuntimeHitStep(StepContext);
+		}
+		else
+		{
+			FTimerHandle IndicatorTimerHandle;
+			World->GetTimerManager().SetTimer(
+				IndicatorTimerHandle,
+				FTimerDelegate::CreateUObject(
+					this,
+					&UGA_EnemySkillBase::SpawnIndicatorForRuntimeHitStep,
+					StepContext
+				),
+				IndicatorDelay,
+				false
+			);
+		}
+
+		if (HitDelay <= KINDA_SMALL_NUMBER)
+		{
+			ExecuteRuntimeHitStep(StepContext);
+		}
+		else
+		{
+			FTimerHandle HitTimerHandle;
+			World->GetTimerManager().SetTimer(
+				HitTimerHandle,
+				FTimerDelegate::CreateUObject(
+					this,
+					&UGA_EnemySkillBase::ExecuteRuntimeHitStep,
+					StepContext
+				),
+				HitDelay,
+				false
+			);
+		}
+	}
+}
+
+UEnemySkillData* UGA_EnemySkillBase::CreateRuntimeSkillDataFromHitStep(
+	const UEnemySkillData* SourceSkillData,
+	const FDGEnemySkillHitStep& HitStep
+)
+{
+	if (!SourceSkillData)
+	{
+		return nullptr;
+	}
+
+	UEnemySkillData* RuntimeSkillData =
+		DuplicateObject<UEnemySkillData>(
+			SourceSkillData,
+			this
+		);
+
+	if (!RuntimeSkillData)
+	{
+		return nullptr;
+	}
+
+	RuntimeSkillData->HitShape = HitStep.HitShape;
+	RuntimeSkillData->IndicatorShape = HitStep.IndicatorShape;
+
+	RuntimeSkillData->Radius = HitStep.Radius;
+	RuntimeSkillData->InnerRadius = HitStep.InnerRadius;
+	RuntimeSkillData->SectorAngleDegrees = HitStep.SectorAngleDegrees;
+	RuntimeSkillData->ForwardOffset = HitStep.ForwardOffset;
+
+	RuntimeSkillData->IndicatorTelegraphTime = HitStep.IndicatorTelegraphTime;
+
+	RuntimeSkillData->bUseIndicator =
+		HitStep.IndicatorShape != EDGEnemySkillIndicatorShape::None;
+
+	return RuntimeSkillData;
+}
+
+void UGA_EnemySkillBase::SpawnIndicatorForRuntimeHitStep(
+	TSharedRef<FDGEnemySkillRuntimeHitStepContext> StepContext
+)
+{
+	UEnemySkillData* RuntimeSkillData = StepContext->RuntimeSkillData.Get();
+	if (!RuntimeSkillData)
+	{
+		return;
+	}
+
+	AEnemyCharacterBase* EnemyCharacter = GetEnemyCharacterFromActorInfo();
+	if (!EnemyCharacter || !EnemyCharacter->HasAuthority())
+	{
+		return;
+	}
+
+	const FTransform SpawnTransform =
+		MakeEnemySkillIndicatorTransform(RuntimeSkillData);
+
+	StepContext->CachedHitCenter = SpawnTransform.GetLocation();
+	StepContext->CachedHitCenter.Z -= RuntimeSkillData->IndicatorZOffset;
+
+	StepContext->CachedHitRotation = SpawnTransform.GetRotation().Rotator();
+	StepContext->CachedHitRotation.Yaw -= RuntimeSkillData->IndicatorYawOffsetDegrees;
+	StepContext->CachedHitRotation.Normalize();
+
+	StepContext->bHasCachedHitCenter = true;
+
+	if (!RuntimeSkillData->bUseIndicator)
+	{
+		return;
+	}
+
+	if (!RuntimeSkillData->IndicatorActorClass)
+	{
+		return;
+	}
+
+	EnemyCharacter->Multicast_SpawnEnemySkillIndicator(
+		RuntimeSkillData,
+		SpawnTransform
+	);
+}
+
+void UGA_EnemySkillBase::ExecuteRuntimeHitStep(
+	TSharedRef<FDGEnemySkillRuntimeHitStepContext> StepContext
+)
+{
+	UEnemySkillData* RuntimeSkillData = StepContext->RuntimeSkillData.Get();
+	if (!RuntimeSkillData)
+	{
+		return;
+	}
+
+	if (!StepContext->bHasCachedHitCenter)
+	{
+		SpawnIndicatorForRuntimeHitStep(StepContext);
+	}
+
+	if (!StepContext->bHasCachedHitCenter)
+	{
+		Debug::Print(
+			TEXT("[EnemySkillBase] Runtime HitStep failed: no cached center"),
+			FColor::Red
+		);
+		return;
+	}
+
+	const bool bPrevHasCachedSkillHitCenter = bHasCachedSkillHitCenter;
+	const FVector PrevCachedSkillHitCenter = CachedSkillHitCenter;
+	const FRotator PrevCachedSkillHitRotation = CachedSkillHitRotation;
+
+	bHasCachedSkillHitCenter = true;
+	CachedSkillHitCenter = StepContext->CachedHitCenter;
+	CachedSkillHitRotation = StepContext->CachedHitRotation;
+
+	TArray<AActor*> TargetActors;
+	CollectEnemySkillTargetsFromData(
+		StepContext->Payload,
+		RuntimeSkillData,
+		TargetActors
+	);
+
+	DrawEnemySkillHitDebug(
+		StepContext->Payload,
+		RuntimeSkillData,
+		TargetActors
+	);
+
+	ApplyDamageToTargetsWithSkillData(
+		RuntimeSkillData,
+		TargetActors
+	);
+
+	bHasCachedSkillHitCenter = bPrevHasCachedSkillHitCenter;
+	CachedSkillHitCenter = PrevCachedSkillHitCenter;
+	CachedSkillHitRotation = PrevCachedSkillHitRotation;
 }

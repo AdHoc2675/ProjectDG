@@ -12,6 +12,9 @@ class UAbilityTask_PlayMontageAndWait;
 class UAbilityTask_WaitGameplayEvent;
 class UCombatComponent;
 class UEnemySkillData;
+class AActor;
+
+struct FDGEnemySkillHitStep;
 
 /**
  * 몬스터 / 보스 스킬 공통 Base.
@@ -23,6 +26,8 @@ class UEnemySkillData;
  * - SkillData 기반 공통 판정
  * - TargetRequiredTags 기반 대상 필터
  * - CombatComponent ApplyDamageRequest 연결
+ * - 인디케이터 기준 고정 판정
+ * - HitStep 기반 다단 판정
  */
 UCLASS()
 class PROJECTDG_API UGA_EnemySkillBase : public UGameplayAbilityBase
@@ -50,7 +55,7 @@ protected:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillHitCheckEventTask = nullptr;
-	
+
 	UPROPERTY(Transient)
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillVFXEventTask = nullptr;
 
@@ -65,9 +70,28 @@ protected:
 	FVector LastPathSweepCenter = FVector::ZeroVector;
 	FVector LastPathSweepDebugStart = FVector::ZeroVector;
 	FVector LastPathSweepDebugEnd = FVector::ZeroVector;
-	
+
+	// 인디케이터 생성 시점 기준 고정 판정용 캐시
+	bool bHasCachedSkillHitCenter = false;
+	FVector CachedSkillHitCenter = FVector::ZeroVector;
+	FRotator CachedSkillHitRotation = FRotator::ZeroRotator;
+
 	// Ability 1회당 같은 대상 1회 타격 정책용 런타임 상태
 	mutable TSet<TWeakObjectPtr<AActor>> HitActorsThisAbility;
+
+	struct FDGEnemySkillRuntimeHitStepContext
+	{
+		TWeakObjectPtr<UEnemySkillData> RuntimeSkillData;
+
+		FGameplayEventData Payload;
+
+		bool bHasCachedHitCenter = false;
+		FVector CachedHitCenter = FVector::ZeroVector;
+		FRotator CachedHitRotation = FRotator::ZeroRotator;
+	};
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UEnemySkillData>> RuntimeStepSkillDataList;
 
 protected:
 	UEnemySkillData* GetEnemySkillData() const;
@@ -80,7 +104,19 @@ protected:
 		bool bHasHitLocation
 	) const;
 
+	bool ApplyDamageToTargetWithSkillData(
+		AActor* TargetActor,
+		const UEnemySkillData* CurrentSkillData,
+		const FVector& HitLocation,
+		bool bHasHitLocation
+	) const;
+
 	void ApplyDamageToTargets(const TArray<AActor*>& TargetActors) const;
+
+	void ApplyDamageToTargetsWithSkillData(
+		const UEnemySkillData* CurrentSkillData,
+		const TArray<AActor*>& TargetActors
+	) const;
 
 	bool CanPlaySkillMontageFromData() const;
 
@@ -99,7 +135,7 @@ protected:
 	void OnEnemySkillHitCheckEvent(FGameplayEventData Payload);
 
 	virtual void HandleEnemySkillHitCheckEvent(const FGameplayEventData& Payload);
-	
+
 	void RegisterEnemySkillCueEvents();
 	void UnregisterEnemySkillCueEvents();
 
@@ -129,7 +165,7 @@ protected:
 	// --- SkillData 기반 판정 공통 함수 ---
 
 	void ResetEnemySkillRuntimeHitState();
-	
+
 	bool HasActorAlreadyHitThisAbility(AActor* CandidateActor) const;
 	void MarkActorHitThisAbility(AActor* HitActor) const;
 
@@ -151,6 +187,23 @@ protected:
 	) const;
 
 	void CollectRadiusTargetsFromSkillData(
+		const FGameplayEventData& Payload,
+		const UEnemySkillData* CurrentSkillData,
+		TArray<AActor*>& OutTargetActors
+	) const;
+
+	void CollectSectorTargetsFromSkillData(
+		const UEnemySkillData* CurrentSkillData,
+		TArray<AActor*>& OutTargetActors
+	) const;
+
+	void CollectSectorRingTargetsFromSkillData(
+		const FGameplayEventData& Payload,
+		const UEnemySkillData* CurrentSkillData,
+		TArray<AActor*>& OutTargetActors
+	) const;
+
+	void CollectDonutTargetsFromSkillData(
 		const FGameplayEventData& Payload,
 		const UEnemySkillData* CurrentSkillData,
 		TArray<AActor*>& OutTargetActors
@@ -190,6 +243,26 @@ protected:
 		const TArray<AActor*>& HitActors
 	) const;
 
+	// --- HitStep ---
+
+	void TryStartEnemySkillHitSteps(
+		const FGameplayEventData& Payload,
+		const UEnemySkillData* CurrentSkillData
+	);
+
+	UEnemySkillData* CreateRuntimeSkillDataFromHitStep(
+		const UEnemySkillData* SourceSkillData,
+		const FDGEnemySkillHitStep& HitStep
+	);
+
+	void SpawnIndicatorForRuntimeHitStep(
+		TSharedRef<FDGEnemySkillRuntimeHitStepContext> StepContext
+	);
+
+	void ExecuteRuntimeHitStep(
+		TSharedRef<FDGEnemySkillRuntimeHitStepContext> StepContext
+	);
+
 	// --- Montage callbacks ---
 
 	UFUNCTION()
@@ -210,4 +283,13 @@ protected:
 	virtual void OnSkillMontageInterrupted();
 	virtual void OnSkillMontageCancelled();
 	virtual void OnEnemySkillFinished(bool bWasCancelled);
+
+protected:
+	void SpawnEnemySkillIndicatorFromData();
+
+	FTransform MakeEnemySkillIndicatorTransform(
+		const UEnemySkillData* CurrentSkillData
+	) const;
+
+	AActor* ResolveEnemySkillIndicatorTargetActor() const;
 };

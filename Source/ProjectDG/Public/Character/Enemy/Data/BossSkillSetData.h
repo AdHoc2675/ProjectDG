@@ -5,6 +5,7 @@
 #include "BossSkillSetData.generated.h"
 
 class UBossSkillData;
+class UEnemySkillData;
 
 /**
  * 보스 페이즈/패턴 단위 스킬 묶음 DA.
@@ -20,5 +21,5 @@ class PROJECTDG_API UBossSkillSetData : public UPrimaryDataAsset
 
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BossSkillSet")
-	TArray<TObjectPtr<UBossSkillData>> Skills;
+	TArray<TObjectPtr<UEnemySkillData>> Skills;
 };

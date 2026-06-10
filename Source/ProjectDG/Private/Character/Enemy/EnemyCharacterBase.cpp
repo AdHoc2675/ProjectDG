@@ -8,7 +8,9 @@
 
 #include "AttributeSet.h"
 #include "Data/Attribute/DT_Attribute.h"
+
 #include "Engine/DataTable.h"
+#include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -21,6 +23,8 @@
 
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
+#include "Character/Enemy/Data/EnemySkillData.h"
+#include "Character/Enemy/Indicator/EnemySkillIndicatorActor.h"
 #include "Components/UI/DGMinimapMarkerComponent.h"
 #include "Core/DG_Debug.h"
 
@@ -28,6 +32,8 @@
 #include "UI/Widget/Damage/DGDamageNumberActor.h"
 
 #include "UObject/ConstructorHelpers.h"
+
+
 
 AEnemyCharacterBase::AEnemyCharacterBase()
 {
@@ -78,19 +84,63 @@ void AEnemyCharacterBase::PossessedBy(AController* NewController)
 		ApplyAttributeRowFromDataTable();
 		ApplyDefaultEffects();
 		
-		if (AttributeSet)
-		{
-			Debug::Print(FString::Printf(
-				TEXT("[EnemyAttribute] After GE. Health=%.1f MaxHealth=%.1f AttackPower=%.1f Defense=%.1f"),
-				AttributeSet->GetHealth(),
-				AttributeSet->GetMaxHealth(),
-				AttributeSet->GetAttackPower(),
-				AttributeSet->GetDefense()
-			));
-		}
+		
 		
 		BindEnemyAttributeDelegatesOnce();
 	}
+}
+
+void AEnemyCharacterBase::Multicast_SpawnEnemySkillIndicator_Implementation(
+	UEnemySkillData* InSkillData,
+	const FTransform& SpawnTransform
+)
+{
+	if (!InSkillData)
+	{
+		return;
+	}
+
+	if (!InSkillData->bUseIndicator)
+	{
+		return;
+	}
+
+	if (!InSkillData->IndicatorActorClass)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = this;
+	SpawnParams.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	AEnemySkillIndicatorActor* IndicatorActor =
+		World->SpawnActor<AEnemySkillIndicatorActor>(
+			InSkillData->IndicatorActorClass,
+			SpawnTransform,
+			SpawnParams
+		);
+
+	if (!IndicatorActor)
+	{
+		return;
+	}
+
+	IndicatorActor->ConfigureFromSkillData(InSkillData);
+	IndicatorActor->StartIndicator(InSkillData->IndicatorTelegraphTime);
+
+	const float LifeSpan =
+		FMath::Max(InSkillData->IndicatorTelegraphTime + 0.1f, 0.2f);
+
+	IndicatorActor->SetLifeSpan(LifeSpan);
 }
 
 void AEnemyCharacterBase::InitializeEnemyAbilitySystem()
@@ -201,34 +251,26 @@ void AEnemyCharacterBase::ApplyAttributeRowFromDataTable()
 {
 	if (!HasAuthority() || !AbilitySystemComponent || !AttributeSet)
 	{
-		Debug::Print(TEXT("[EnemyAttribute] Skip: Authority/ASC/AttributeSet invalid"));
 		return;
 	}
 
 	if (bAttributeRowApplied)
 	{
-		Debug::Print(TEXT("[EnemyAttribute] Skip: already applied"));
 		return;
 	}
 
 	if (!AttributeDataTable)
 	{
-		Debug::Print(TEXT("[EnemyAttribute] Skip: AttributeDataTable is null"));
 		return;
 	}
 
 	const FGameplayTag SourceTag = GetAttributeSourceTag();
 	const FName RowName = ResolveAttributeRowNameFromTag(SourceTag);
 
-	Debug::Print(FString::Printf(
-		TEXT("[EnemyAttribute] SourceTag=%s RowName=%s"),
-		*SourceTag.ToString(),
-		*RowName.ToString()
-	));
+	
 
 	if (RowName.IsNone())
 	{
-		Debug::Print(TEXT("[EnemyAttribute] Skip: RowName is none"));
 		return;
 	}
 
@@ -239,28 +281,15 @@ void AEnemyCharacterBase::ApplyAttributeRowFromDataTable()
 
 	if (!AttributeRow)
 	{
-		Debug::Print(FString::Printf(
-			TEXT("[EnemyAttribute] Row not found. RowName=%s"),
-			*RowName.ToString()
-		));
+		
 		return;
 	}
 
-	Debug::Print(FString::Printf(
-		TEXT("[EnemyAttribute] Row found. Health=%.1f MaxHealth=%.1f AttackPower=%.1f Defense=%.1f"),
-		AttributeRow->Health,
-		AttributeRow->MaxHealth,
-		AttributeRow->AttackPower,
-		AttributeRow->Defense
-	));
+	
 
 	ApplyAttributeRowToAttributeSet(*AttributeRow);
 
-	Debug::Print(FString::Printf(
-		TEXT("[EnemyAttribute] Applied. ASC Health=%.1f MaxHealth=%.1f"),
-		AttributeSet->GetHealth(),
-		AttributeSet->GetMaxHealth()
-	));
+	
 
 	bAttributeRowApplied = true;
 }

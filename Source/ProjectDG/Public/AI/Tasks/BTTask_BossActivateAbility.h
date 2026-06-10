@@ -7,6 +7,7 @@
 #include "BTTask_BossActivateAbility.generated.h"
 
 class UBossSkillData;
+class UEnemySkillData;
 
 /**
  * UBTTask_BossActivateAbility
@@ -29,8 +30,9 @@ public:
 
 protected:
 	// 특정 보스 스킬을 고정 실행하고 싶을 때 사용. 비워두면 BossClassData.AttackSkills에서 랜덤 선택.
-	UPROPERTY(EditAnywhere, Category = "Skill")
-	TObjectPtr<UBossSkillData> SkillData;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly,Category="Boss")
+	TObjectPtr<UEnemySkillData> SkillData;
 
 	// 타겟 액터를 가리키는 블랙보드 키. 설정되어 있으면 거리 조건 필터에 사용합니다.
 	UPROPERTY(EditAnywhere, Category = "Blackboard")

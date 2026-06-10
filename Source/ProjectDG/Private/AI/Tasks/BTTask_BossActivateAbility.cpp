@@ -2,15 +2,14 @@
 
 #include "AI/Tasks/BTTask_BossActivateAbility.h"
 
-#include "AIController.h"
 #include "AbilitySystemComponent.h"
+#include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Character/BaseCharacter.h"
 #include "Character/Enemy/Boss/BossCharacterBase.h"
-#include "Character/Enemy/Boss/Data/BossCharacterClassData.h"
-#include "Character/Enemy/Data/BossSkillData.h"
-#include "GAS/Attributes/DG_BossAttributeSet.h"
+#include "Character/Enemy/Data/EnemySkillData.h"
 #include "GameplayAbilitySpec.h"
+#include "Core/DG_Debug.h"
 
 struct FBTBossActivateAbilityMemory
 {
@@ -20,8 +19,10 @@ struct FBTBossActivateAbilityMemory
 
 namespace
 {
-	FGameplayAbilitySpecHandle FindAbilitySpecHandleBySourceObject(UAbilitySystemComponent* ASC,
-	                                                               const UObject* SourceObject)
+	FGameplayAbilitySpecHandle FindAbilitySpecHandleBySourceObject(
+		UAbilitySystemComponent* ASC,
+		const UObject* SourceObject
+	)
 	{
 		if (!ASC || !SourceObject)
 		{
@@ -39,43 +40,20 @@ namespace
 		return FGameplayAbilitySpecHandle();
 	}
 
-	bool DoesBossSkillPassPhaseCondition(const ABossCharacterBase* Boss, const UBossSkillData* BossSkillData)
-	{
-		if (!Boss || !BossSkillData)
-		{
-			return false;
-		}
-
-		if (BossSkillData->RequiredPhase <= 0)
-		{
-			return true;
-		}
-
-		const UDG_BossAttributeSet* BossAttributeSet = Boss->GetBossAttributeSet();
-		if (!BossAttributeSet)
-		{
-			return false;
-		}
-
-		const int32 CurrentPhase = FMath::RoundToInt(BossAttributeSet->GetCurrentPhase());
-		return CurrentPhase >= BossSkillData->RequiredPhase;
-	}
-
-	UBossSkillData* SelectWeightedBossSkill(
-		const ABossCharacterBase* Boss,
-		const TArray<TObjectPtr<UBossSkillData>>& Skills,
+	UEnemySkillData* SelectWeightedEnemySkill(
+		const TArray<TObjectPtr<UEnemySkillData>>& Skills,
 		float DistanceToTarget,
 		bool bUseDistanceFilter,
-		const UBossSkillData* LastUsedSkill,
+		const UEnemySkillData* LastUsedSkill,
 		bool bExcludeLastSkill
 	)
 	{
-		TArray<UBossSkillData*> ValidSkills;
+		TArray<UEnemySkillData*> ValidSkills;
 		float TotalWeight = 0.f;
 
-		for (const TObjectPtr<UBossSkillData>& SkillDataPtr : Skills)
+		for (const TObjectPtr<UEnemySkillData>& SkillDataPtr : Skills)
 		{
-			UBossSkillData* CandidateSkillData = SkillDataPtr.Get();
+			UEnemySkillData* CandidateSkillData = SkillDataPtr.Get();
 			if (!CandidateSkillData || !CandidateSkillData->AbilityClass)
 			{
 				continue;
@@ -86,20 +64,16 @@ namespace
 				continue;
 			}
 
-			if (!DoesBossSkillPassPhaseCondition(Boss, CandidateSkillData))
-			{
-				continue;
-			}
-
 			if (bUseDistanceFilter)
 			{
-				if (DistanceToTarget < CandidateSkillData->MinRange || DistanceToTarget > CandidateSkillData->MaxRange)
+				if (DistanceToTarget < CandidateSkillData->MinRange ||
+					DistanceToTarget > CandidateSkillData->MaxRange)
 				{
 					continue;
 				}
 			}
 
-			const float Weight = FMath::Max(CandidateSkillData->SelectionWeight, CandidateSkillData->PatternPriority);
+			const float Weight = FMath::Max(CandidateSkillData->SelectionWeight, 0.f);
 			if (Weight <= 0.f)
 			{
 				continue;
@@ -117,9 +91,9 @@ namespace
 		const float RandomValue = FMath::FRandRange(0.f, TotalWeight);
 		float CurrentWeightSum = 0.f;
 
-		for (UBossSkillData* CandidateSkillData : ValidSkills)
+		for (UEnemySkillData* CandidateSkillData : ValidSkills)
 		{
-			const float Weight = FMath::Max(CandidateSkillData->SelectionWeight, CandidateSkillData->PatternPriority);
+			const float Weight = FMath::Max(CandidateSkillData->SelectionWeight, 0.f);
 			CurrentWeightSum += Weight;
 
 			if (RandomValue <= CurrentWeightSum)
@@ -143,7 +117,10 @@ uint16 UBTTask_BossActivateAbility::GetInstanceMemorySize() const
 	return sizeof(FBTBossActivateAbilityMemory);
 }
 
-EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
+EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(
+	UBehaviorTreeComponent& OwnerComp,
+	uint8* NodeMemory
+)
 {
 	AAIController* AIController = OwnerComp.GetAIOwner();
 	if (!AIController)
@@ -169,37 +146,49 @@ EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(UBehaviorTreeCompon
 		return EBTNodeResult::Failed;
 	}
 
-	UBossSkillData* SelectedSkillData = SkillData.Get();
+	UBlackboardComponent* BlackboardComp = OwnerComp.GetBlackboardComponent();
+
+	AActor* TargetActor = nullptr;
+	if (BlackboardComp && TargetKey.SelectedKeyName != NAME_None)
+	{
+		TargetActor = Cast<AActor>(
+			BlackboardComp->GetValueAsObject(TargetKey.SelectedKeyName)
+		);
+	}
+
+	// TargetKey 설정이 빠져 있거나 꼬였을 때를 대비해서 TargetActor 키도 직접 한 번 확인
+	if (!TargetActor && BlackboardComp)
+	{
+		static const FName TargetActorKeyName(TEXT("TargetActor"));
+		TargetActor = Cast<AActor>(
+			BlackboardComp->GetValueAsObject(TargetActorKeyName)
+		);
+	}
+
+	UEnemySkillData* SelectedSkillData = SkillData.Get();
 
 	if (!SelectedSkillData)
 	{
-		const TArray<TObjectPtr<UBossSkillData>>& AttackSkills = Boss->GetAttackSkillDataList();
+		const TArray<TObjectPtr<UEnemySkillData>>& AttackSkills = Boss->GetAttackSkillDataList();
 		if (AttackSkills.Num() == 0)
 		{
 			return EBTNodeResult::Failed;
 		}
 
-		UBlackboardComponent* BlackboardComp = OwnerComp.GetBlackboardComponent();
-
-		AActor* TargetActor = nullptr;
-		if (BlackboardComp && TargetKey.SelectedKeyName != NAME_None)
-		{
-			TargetActor = Cast<AActor>(BlackboardComp->GetValueAsObject(TargetKey.SelectedKeyName));
-		}
-
 		const bool bUseDistanceFilter = TargetActor != nullptr;
-		const float DistanceToTarget = TargetActor ? Character->GetDistanceTo(TargetActor) : 0.f;
+		const float DistanceToTarget = TargetActor
+			? Character->GetDistanceTo(TargetActor)
+			: 0.f;
 
-		UBossSkillData* LastUsedSkill = nullptr;
+		UEnemySkillData* LastUsedSkill = nullptr;
 		if (BlackboardComp && LastUsedSkillKey.SelectedKeyName != NAME_None)
 		{
-			LastUsedSkill = Cast<UBossSkillData>(
+			LastUsedSkill = Cast<UEnemySkillData>(
 				BlackboardComp->GetValueAsObject(LastUsedSkillKey.SelectedKeyName)
 			);
 		}
 
-		SelectedSkillData = SelectWeightedBossSkill(
-			Boss,
+		SelectedSkillData = SelectWeightedEnemySkill(
 			AttackSkills,
 			DistanceToTarget,
 			bUseDistanceFilter,
@@ -207,11 +196,11 @@ EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(UBehaviorTreeCompon
 			true
 		);
 
-		// 스킬이 하나뿐인 경우 등 LastUsed 제외 때문에 실패하면, LastUsed 제외 없이 한 번 더 찾습니다.
+		// 스킬이 하나뿐인 경우 LastUsed 제외 때문에 실패할 수 있으므로,
+		// LastUsed 제외 없이 한 번 더 선택한다.
 		if (!SelectedSkillData)
 		{
-			SelectedSkillData = SelectWeightedBossSkill(
-				Boss,
+			SelectedSkillData = SelectWeightedEnemySkill(
 				AttackSkills,
 				DistanceToTarget,
 				bUseDistanceFilter,
@@ -227,7 +216,10 @@ EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(UBehaviorTreeCompon
 
 		if (BlackboardComp && LastUsedSkillKey.SelectedKeyName != NAME_None)
 		{
-			BlackboardComp->SetValueAsObject(LastUsedSkillKey.SelectedKeyName, SelectedSkillData);
+			BlackboardComp->SetValueAsObject(
+				LastUsedSkillKey.SelectedKeyName,
+				SelectedSkillData
+			);
 		}
 	}
 
@@ -236,20 +228,25 @@ EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(UBehaviorTreeCompon
 		return EBTNodeResult::Failed;
 	}
 
-	if (!DoesBossSkillPassPhaseCondition(Boss, SelectedSkillData))
-	{
-		return EBTNodeResult::Failed;
-	}
+	const FGameplayAbilitySpecHandle AbilityHandle =
+		FindAbilitySpecHandleBySourceObject(ASC, SelectedSkillData);
 
-	const FGameplayAbilitySpecHandle AbilityHandle = FindAbilitySpecHandleBySourceObject(ASC, SelectedSkillData);
 	if (!AbilityHandle.IsValid())
 	{
 		return EBTNodeResult::Failed;
 	}
 
+	// GA_EnemySkillBase에서 FocusActor를 먼저 읽을 수 있게 공격 직전에 명시
+	if (TargetActor)
+	{
+		AIController->SetFocus(TargetActor);
+	}
+
 	if (ASC->TryActivateAbility(AbilityHandle))
 	{
-		FBTBossActivateAbilityMemory* MyMemory = reinterpret_cast<FBTBossActivateAbilityMemory*>(NodeMemory);
+		FBTBossActivateAbilityMemory* MyMemory =
+			reinterpret_cast<FBTBossActivateAbilityMemory*>(NodeMemory);
+
 		MyMemory->ASC = ASC;
 		MyMemory->ActiveAbilityHandle = AbilityHandle;
 
@@ -259,9 +256,14 @@ EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(UBehaviorTreeCompon
 	return EBTNodeResult::Failed;
 }
 
-void UBTTask_BossActivateAbility::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
+void UBTTask_BossActivateAbility::TickTask(
+	UBehaviorTreeComponent& OwnerComp,
+	uint8* NodeMemory,
+	float DeltaSeconds
+)
 {
-	FBTBossActivateAbilityMemory* MyMemory = reinterpret_cast<FBTBossActivateAbilityMemory*>(NodeMemory);
+	FBTBossActivateAbilityMemory* MyMemory =
+		reinterpret_cast<FBTBossActivateAbilityMemory*>(NodeMemory);
 
 	if (!MyMemory || !MyMemory->ASC || !MyMemory->ActiveAbilityHandle.IsValid())
 	{
@@ -269,7 +271,9 @@ void UBTTask_BossActivateAbility::TickTask(UBehaviorTreeComponent& OwnerComp, ui
 		return;
 	}
 
-	const FGameplayAbilitySpec* Spec = MyMemory->ASC->FindAbilitySpecFromHandle(MyMemory->ActiveAbilityHandle);
+	const FGameplayAbilitySpec* Spec =
+		MyMemory->ASC->FindAbilitySpecFromHandle(MyMemory->ActiveAbilityHandle);
+
 	if (!Spec)
 	{
 		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);

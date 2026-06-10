@@ -7,10 +7,10 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Team_Object, "Team.Object")
 	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy, "Team.Enemy")
 	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Boss, "Team.Enemy.Boss")
-	
+
 	//보스들 태그
 	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Boss_Kashapa, "Team.Enemy.Boss.Kashapa")
-	
+
 	//필드 몬스터들 태그
 
 	// Character Class
@@ -65,13 +65,13 @@ namespace DGGameplayTags
 
 	// MeleeAttack Combo Miss 완화
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_InputRequest, "Event.Combo.InputRequest")
-	
+
 	// Player 기본 이동 중 Jump GA Ending시 호출될 EventTag
 	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Jump_Landed, "Event.Movement.Jump.Landed")
-	
+
 	// 특정 스킬들을 사용하는 데에 있어 스킬 몽타주에서 이동이 가능한 시점을 알리는 EventTag 
 	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Skill_Unlock, "Event.Movement.Skill.Unlock")
-	
+
 	// 몽타주의 핵심 동작이 끝나고 이후부터는 이동 시 스킬이 끝나게끔
 	UE_DEFINE_GAMEPLAY_TAG(Event_Movement_Skill_CancelByMove, "Event.Movement.Skill.CancelByMove")
 
@@ -163,8 +163,16 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Assassin_Infiltration, "Cooldown.Skill.Assassin.Infiltration")
 
 
-	// Skill.Boss
-	UE_DEFINE_GAMEPLAY_TAG(Skill_Boss_Kashapa_Attack, "Skill.Boss.Kashapa.Attack")
+	// Skill.Boss.Kashapa
+	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase1_Attack1, "Boss.Kashapa.Phase1.Attack1")
+	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase1_Attack2, "Boss.Kashapa.Phase1.Attack2")
+	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase1_Skill1, "Boss.Kashapa.Phase1.SKill1")
+	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase1_Skill2, "Boss.Kashapa.Phase1.SKill2")
+	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase1_Skill3, "Boss.Kashapa.Phase1.SKill3")
+	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase1_Skill4, "Boss.Kashapa.Phase1.SKill4")
+	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase1_Skill5, "Boss.Kashapa.Phase1.SKill5")
+	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase1_Skill6, "Boss.Kashapa.Phase1.SKill6")
+
 
 	// State
 	UE_DEFINE_GAMEPLAY_TAG(State_Movement_Dodge, "State.Movement.Dodge")
