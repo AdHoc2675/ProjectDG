@@ -2,26 +2,29 @@
 
 #include "Character/Enemy/Indicator/EnemySkillIndicatorActor.h"
 
-#include "Character/Enemy/Data/EnemySkillData.h"
 #include "Components/DecalComponent.h"
+#include "Components/SceneComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
-#include "Materials/MaterialInterface.h"
 
 AEnemySkillIndicatorActor::AEnemySkillIndicatorActor()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
 
-	bReplicates = false;
+	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
+	SetRootComponent(SceneRoot);
 
-	DecalComponent = CreateDefaultSubobject<UDecalComponent>(TEXT("DecalComponent"));
-	SetRootComponent(DecalComponent);
+	PreviewDecalComponent = CreateDefaultSubobject<UDecalComponent>(TEXT("PreviewDecalComponent"));
+	PreviewDecalComponent->SetupAttachment(SceneRoot);
+	PreviewDecalComponent->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
+	PreviewDecalComponent->SortOrder = 0;
 
-	if (DecalComponent)
-	{
-		// 데칼은 바닥을 향해 투영하기 위해 -90도 회전해서 사용한다.
-		DecalComponent->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f));
-		DecalComponent->DecalSize = FVector(512.f, 512.f, 512.f);
-	}
+	FillDecalComponent = CreateDefaultSubobject<UDecalComponent>(TEXT("FillDecalComponent"));
+	FillDecalComponent->SetupAttachment(SceneRoot);
+	FillDecalComponent->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
+	FillDecalComponent->SortOrder = 1;
+
+	SetDecalComponentsVisible(false);
 }
 
 void AEnemySkillIndicatorActor::BeginPlay()
@@ -29,127 +32,177 @@ void AEnemySkillIndicatorActor::BeginPlay()
 	Super::BeginPlay();
 }
 
-void AEnemySkillIndicatorActor::Tick(float DeltaTime)
+void AEnemySkillIndicatorActor::Tick(float DeltaSeconds)
 {
-	Super::Tick(DeltaTime);
+	Super::Tick(DeltaSeconds);
 
-	if (!bIsPlayingIndicator)
+	if (!bIsRunning)
 	{
 		return;
 	}
 
-	IndicatorElapsedTime += DeltaTime;
+	if (TelegraphTime <= 0.0f)
+	{
+		SetFillAmount(1.0f);
+		bIsRunning = false;
+		SetActorTickEnabled(false);
+		return;
+	}
 
-	const float Alpha = IndicatorDuration > 0.f
-		? FMath::Clamp(IndicatorElapsedTime / IndicatorDuration, 0.f, 1.f)
-		: 1.f;
+	ElapsedTime += DeltaSeconds;
+
+	const float Alpha = FMath::Clamp(
+		ElapsedTime / TelegraphTime,
+		0.0f,
+		1.0f
+	);
 
 	SetFillAmount(Alpha);
 
-	if (Alpha >= 1.f)
+	if (Alpha >= 1.0f)
 	{
-		bIsPlayingIndicator = false;
-
-		if (bAutoDestroyOnFillComplete)
-		{
-			Destroy();
-		}
+		bIsRunning = false;
+		SetActorTickEnabled(false);
 	}
 }
 
-void AEnemySkillIndicatorActor::ConfigureFromSkillData(const UEnemySkillData* SkillData)
+void AEnemySkillIndicatorActor::ConfigureFromSkillData(const UEnemySkillData* InSkillData)
 {
-	if (!SkillData || !DecalComponent)
+	ResetRuntimeState();
+
+	if (!InSkillData)
+	{
+		SetDecalComponentsVisible(false);
+		return;
+	}
+
+	if (!InSkillData->bUseIndicator)
+	{
+		SetDecalComponentsVisible(false);
+		return;
+	}
+
+	if (!InSkillData->IndicatorMaterialOverride)
+	{
+		SetDecalComponentsVisible(false);
+		return;
+	}
+
+	CachedIndicatorShape = InSkillData->IndicatorShape;
+	CachedRadius = InSkillData->Radius;
+	CachedInnerRadius = InSkillData->InnerRadius;
+	CachedSectorAngleDegrees = InSkillData->SectorAngleDegrees;
+	TelegraphTime = InSkillData->IndicatorTelegraphTime;
+
+	ConfigureDecalSizeFromSkillData(InSkillData);
+	ConfigureMaterialFromSkillData(InSkillData);
+
+	SetDecalComponentsVisible(true);
+	SetFillAmount(0.0f);
+}
+
+void AEnemySkillIndicatorActor::StartIndicator()
+{
+	ElapsedTime = 0.0f;
+
+	if (!PreviewMID || !FillMID)
+	{
+		SetActorTickEnabled(false);
+		return;
+	}
+
+	if (TelegraphTime <= 0.0f)
+	{
+		SetFillAmount(1.0f);
+		bIsRunning = false;
+		SetActorTickEnabled(false);
+		return;
+	}
+
+	bIsRunning = true;
+	SetActorTickEnabled(true);
+}
+
+void AEnemySkillIndicatorActor::StopIndicator()
+{
+	bIsRunning = false;
+	SetActorTickEnabled(false);
+}
+
+void AEnemySkillIndicatorActor::SetFillAmount(float InFillAmount)
+{
+	const float ClampedFillAmount = FMath::Clamp(InFillAmount, 0.0f, 1.0f);
+	const float VisualFillAmount = MakeVisualFillAmount(ClampedFillAmount);
+
+	if (FillMID)
+	{
+		FillMID->SetScalarParameterValue(TEXT("FillAmount"), VisualFillAmount);
+	}
+
+	// Preview는 항상 전체 범위를 보여줘야 하므로 FillAmount 1 고정.
+	if (PreviewMID)
+	{
+		PreviewMID->SetScalarParameterValue(TEXT("FillAmount"), 1.0f);
+	}
+}
+
+void AEnemySkillIndicatorActor::ResetRuntimeState()
+{
+	bIsRunning = false;
+	ElapsedTime = 0.0f;
+	TelegraphTime = 0.0f;
+
+	CachedIndicatorShape = EDGEnemySkillIndicatorShape::None;
+	CachedRadius = 0.0f;
+	CachedInnerRadius = 0.0f;
+	CachedSectorAngleDegrees = 360.0f;
+
+	PreviewMID = nullptr;
+	FillMID = nullptr;
+
+	SetActorTickEnabled(false);
+}
+
+void AEnemySkillIndicatorActor::ConfigureDecalSizeFromSkillData(const UEnemySkillData* InSkillData)
+{
+	if (!InSkillData || !PreviewDecalComponent || !FillDecalComponent)
 	{
 		return;
 	}
 
-	// SpawnTransform 쪽에서 이미 IndicatorZOffset을 적용하고 있으므로,
-	// 여기서는 추가 위치 보정을 하지 않는다.
-	// 중복 적용하면 인디케이터가 바닥에서 떠 보일 수 있다.
+	FVector DecalSize = FVector(
+		InSkillData->IndicatorProjectionDepth,
+		100.0f,
+		100.0f
+	);
 
-	IndicatorDuration = FMath::Max(SkillData->IndicatorTelegraphTime, 0.01f);
-
-	ApplyMaterialFromSkillData(SkillData);
-	ApplyDecalSizeFromSkillData(SkillData);
-	ApplyMaterialParametersFromSkillData(SkillData);
-
-	SetFillAmount(0.f);
-}
-
-void AEnemySkillIndicatorActor::StartIndicator(float OverrideDuration)
-{
-	IndicatorDuration = OverrideDuration > 0.f
-		? OverrideDuration
-		: FMath::Max(IndicatorDuration, 0.01f);
-
-	IndicatorElapsedTime = 0.f;
-	bIsPlayingIndicator = true;
-
-	SetFillAmount(0.f);
-}
-
-void AEnemySkillIndicatorActor::StopIndicator(bool bDestroyActor)
-{
-	bIsPlayingIndicator = false;
-
-	if (bDestroyActor)
-	{
-		Destroy();
-	}
-}
-
-void AEnemySkillIndicatorActor::SetFillAmount(float NewFillAmount)
-{
-	CurrentFillAmount = FMath::Clamp(NewFillAmount, 0.f, 1.f);
-
-	if (DynamicIndicatorMaterial)
-	{
-		DynamicIndicatorMaterial->SetScalarParameterValue(
-			FillAmountParameterName,
-			CurrentFillAmount
-		);
-	}
-}
-
-void AEnemySkillIndicatorActor::ApplyDecalSizeFromSkillData(const UEnemySkillData* SkillData)
-{
-	if (!SkillData || !DecalComponent)
-	{
-		return;
-	}
-
-	const float ProjectionDepth = FMath::Max(SkillData->IndicatorProjectionDepth, 1.f);
-
-	switch (SkillData->IndicatorShape)
+	switch (InSkillData->IndicatorShape)
 	{
 	case EDGEnemySkillIndicatorShape::Circle:
 	case EDGEnemySkillIndicatorShape::Sector:
 	case EDGEnemySkillIndicatorShape::SectorRing:
 	case EDGEnemySkillIndicatorShape::Donut:
-		{
-			const float RadiusSize = FMath::Max(SkillData->Radius, 1.f);
+	{
+		const float Radius = FMath::Max(InSkillData->Radius, 1.0f);
 
-			DecalComponent->DecalSize = FVector(
-				ProjectionDepth,
-				RadiusSize,
-				RadiusSize
-			);
-
-			break;
-		}
+		DecalSize = FVector(
+			InSkillData->IndicatorProjectionDepth,
+			Radius,
+			Radius
+		);
+		break;
+	}
 
 	case EDGEnemySkillIndicatorShape::Box:
 	{
-		const float Length = FMath::Max(SkillData->BoxExtent.X * 2.f, 1.f);
-		const float Width = FMath::Max(SkillData->BoxExtent.Y * 2.f, 1.f);
+		const float Length = FMath::Max(InSkillData->BoxExtent.X * 2.0f, 1.0f);
+		const float Width = FMath::Max(InSkillData->BoxExtent.Y * 2.0f, 1.0f);
 
-		DecalComponent->DecalSize = FVector(
-			ProjectionDepth,
-			Width,
-			Length
+		DecalSize = FVector(
+			InSkillData->IndicatorProjectionDepth,
+			Length,
+			Width
 		);
-
 		break;
 	}
 
@@ -157,57 +210,116 @@ void AEnemySkillIndicatorActor::ApplyDecalSizeFromSkillData(const UEnemySkillDat
 	default:
 		break;
 	}
+
+	PreviewDecalComponent->DecalSize = DecalSize;
+	FillDecalComponent->DecalSize = DecalSize;
 }
 
-void AEnemySkillIndicatorActor::ApplyMaterialFromSkillData(const UEnemySkillData* SkillData)
+void AEnemySkillIndicatorActor::ConfigureMaterialFromSkillData(const UEnemySkillData* InSkillData)
 {
-	if (!SkillData || !DecalComponent)
+	if (!InSkillData || !InSkillData->IndicatorMaterialOverride)
 	{
 		return;
 	}
 
-	UMaterialInterface* SourceMaterial = SkillData->IndicatorMaterialOverride.Get();
+	PreviewMID = UMaterialInstanceDynamic::Create(
+		InSkillData->IndicatorMaterialOverride,
+		this
+	);
 
-	if (!SourceMaterial)
-	{
-		SourceMaterial = DecalComponent->GetDecalMaterial();
-	}
+	FillMID = UMaterialInstanceDynamic::Create(
+		InSkillData->IndicatorMaterialOverride,
+		this
+	);
 
-	if (!SourceMaterial)
+	if (!PreviewMID || !FillMID)
 	{
 		return;
 	}
 
-	DynamicIndicatorMaterial = UMaterialInstanceDynamic::Create(SourceMaterial, this);
-	if (DynamicIndicatorMaterial)
-	{
-		DecalComponent->SetDecalMaterial(DynamicIndicatorMaterial);
-	}
+	PreviewDecalComponent->SetDecalMaterial(PreviewMID);
+	FillDecalComponent->SetDecalMaterial(FillMID);
+
+	ApplyCommonMaterialParameters(
+		PreviewMID,
+		InSkillData,
+		InSkillData->IndicatorPreviewOpacity,
+		1.0f
+	);
+
+	ApplyCommonMaterialParameters(
+		FillMID,
+		InSkillData,
+		InSkillData->IndicatorFillOpacity,
+		0.0f
+	);
 }
 
-void AEnemySkillIndicatorActor::ApplyMaterialParametersFromSkillData(const UEnemySkillData* SkillData)
+void AEnemySkillIndicatorActor::ApplyCommonMaterialParameters(
+	UMaterialInstanceDynamic* InMID,
+	const UEnemySkillData* InSkillData,
+	float InOpacity,
+	float InFillAmount
+) const
 {
-	if (!SkillData || !DynamicIndicatorMaterial)
+	if (!InMID || !InSkillData)
 	{
 		return;
 	}
 
-	DynamicIndicatorMaterial->SetScalarParameterValue(
-		OpacityParameterName,
-		FMath::Clamp(SkillData->IndicatorOpacity, 0.f, 1.f)
-	);
+	const float InnerRadiusRatio = CalculateInnerRadiusRatio();
 
-	DynamicIndicatorMaterial->SetScalarParameterValue(
-		AngleDegreesParameterName,
-		FMath::Clamp(SkillData->SectorAngleDegrees, 1.f, 360.f)
-	);
+	InMID->SetScalarParameterValue(TEXT("Opacity"), InOpacity);
+	InMID->SetScalarParameterValue(TEXT("FillAmount"), InFillAmount);
+	InMID->SetScalarParameterValue(TEXT("AngleDegrees"), InSkillData->SectorAngleDegrees);
+	InMID->SetScalarParameterValue(TEXT("InnerRadiusRatio"), InnerRadiusRatio);
+}
 
-	const float InnerRadiusRatio = SkillData->Radius > 0.f
-		? FMath::Clamp(SkillData->InnerRadius / SkillData->Radius, 0.f, 1.f)
-		: 0.f;
+float AEnemySkillIndicatorActor::MakeVisualFillAmount(float InFillAmount) const
+{
+	const float ClampedFillAmount = FMath::Clamp(InFillAmount, 0.0f, 1.0f);
 
-	DynamicIndicatorMaterial->SetScalarParameterValue(
-		InnerRadiusRatioParameterName,
-		InnerRadiusRatio
+	const bool bIsRingShape =
+		CachedIndicatorShape == EDGEnemySkillIndicatorShape::Donut ||
+		CachedIndicatorShape == EDGEnemySkillIndicatorShape::SectorRing;
+
+	if (!bIsRingShape)
+	{
+		return ClampedFillAmount;
+	}
+
+	const float InnerRadiusRatio = CalculateInnerRadiusRatio();
+
+	return FMath::Lerp(
+		InnerRadiusRatio,
+		1.0f,
+		ClampedFillAmount
 	);
+}
+
+float AEnemySkillIndicatorActor::CalculateInnerRadiusRatio() const
+{
+	if (CachedRadius <= 0.0f)
+	{
+		return 0.0f;
+	}
+
+	return FMath::Clamp(
+		CachedInnerRadius / CachedRadius,
+		0.0f,
+		1.0f
+	);
+}
+
+void AEnemySkillIndicatorActor::SetDecalComponentsVisible(bool bVisible)
+{
+	if (PreviewDecalComponent)
+	{
+		PreviewDecalComponent->SetVisibility(bVisible);
+	}
+
+	if (FillDecalComponent)
+	{
+		FillDecalComponent->SetVisibility(bVisible);
+	}
 }

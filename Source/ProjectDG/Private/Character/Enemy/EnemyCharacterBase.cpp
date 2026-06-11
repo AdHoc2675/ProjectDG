@@ -135,8 +135,8 @@ void AEnemyCharacterBase::Multicast_SpawnEnemySkillIndicator_Implementation(
 	}
 
 	IndicatorActor->ConfigureFromSkillData(InSkillData);
-	IndicatorActor->StartIndicator(InSkillData->IndicatorTelegraphTime);
-
+	IndicatorActor->StartIndicator();
+	
 	const float LifeSpan =
 		FMath::Max(InSkillData->IndicatorTelegraphTime + 0.1f, 0.2f);
 

@@ -237,4 +237,8 @@ namespace DGGameplayTags
 
 	// Boss Event
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Boss_Groggy)
+	
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Boss_Indicator)
+	
+
 }

@@ -22,12 +22,12 @@ struct FDGEnemySkillHitStep;
  * 역할:
  * - EnemySkillData 접근
  * - 공통 몽타주 재생
+ * - AN_SkillIndicator → Event.Attack.Indicator 수신
  * - AN_EnemySkillHit → Event.Attack.HitCheck 수신
  * - SkillData 기반 공통 판정
+ * - HitStep 기반 다단 인디케이터/판정
  * - TargetRequiredTags 기반 대상 필터
  * - CombatComponent ApplyDamageRequest 연결
- * - 인디케이터 기준 고정 판정
- * - HitStep 기반 다단 판정
  */
 UCLASS()
 class PROJECTDG_API UGA_EnemySkillBase : public UGameplayAbilityBase
@@ -57,6 +57,9 @@ protected:
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillHitCheckEventTask = nullptr;
 
 	UPROPERTY(Transient)
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillIndicatorEventTask = nullptr;
+
+	UPROPERTY(Transient)
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillVFXEventTask = nullptr;
 
 	UPROPERTY(Transient)
@@ -81,17 +84,30 @@ protected:
 
 	struct FDGEnemySkillRuntimeHitStepContext
 	{
+		int32 StepIndex = INDEX_NONE;
+
 		TWeakObjectPtr<UEnemySkillData> RuntimeSkillData;
 
-		FGameplayEventData Payload;
+		FGameplayEventData IndicatorPayload;
+		FGameplayEventData HitPayload;
+		
+		bool bHasSpawnedIndicator = false;
 
 		bool bHasCachedHitCenter = false;
 		FVector CachedHitCenter = FVector::ZeroVector;
 		FRotator CachedHitRotation = FRotator::ZeroRotator;
 	};
 
+	// DuplicateObject로 만든 Runtime SkillData GC 방지용
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UEnemySkillData>> RuntimeStepSkillDataList;
+
+	// StepIndex별 Runtime Context
+	TArray<TSharedPtr<FDGEnemySkillRuntimeHitStepContext>> RuntimeHitStepContextList;
+
+	// AN의 StepIndex가 INDEX_NONE일 때 순서대로 진행하기 위한 카운터
+	int32 NextIndicatorStepIndex = 0;
+	int32 NextHitStepIndex = 0;
 
 protected:
 	UEnemySkillData* GetEnemySkillData() const;
@@ -128,13 +144,22 @@ protected:
 
 	void FinishEnemySkill(bool bWasCancelled);
 
+	// --- GameplayEvent 등록 ---
+
 	void RegisterEnemySkillHitCheckEvent();
 	void UnregisterEnemySkillHitCheckEvent();
+
+	void RegisterEnemySkillIndicatorEvent();
+	void UnregisterEnemySkillIndicatorEvent();
 
 	UFUNCTION()
 	void OnEnemySkillHitCheckEvent(FGameplayEventData Payload);
 
+	UFUNCTION()
+	void OnEnemySkillIndicatorEvent(FGameplayEventData Payload);
+
 	virtual void HandleEnemySkillHitCheckEvent(const FGameplayEventData& Payload);
+	virtual void HandleEnemySkillIndicatorEvent(const FGameplayEventData& Payload);
 
 	void RegisterEnemySkillCueEvents();
 	void UnregisterEnemySkillCueEvents();
@@ -243,11 +268,23 @@ protected:
 		const TArray<AActor*>& HitActors
 	) const;
 
-	// --- HitStep ---
+	// --- HitStep Notify Driven ---
 
-	void TryStartEnemySkillHitSteps(
+	bool ShouldUseHitSteps(const UEnemySkillData* CurrentSkillData) const;
+
+	int32 ResolveStepIndexFromPayload(
 		const FGameplayEventData& Payload,
-		const UEnemySkillData* CurrentSkillData
+		int32& InOutNextStepIndex
+	) const;
+
+	bool IsValidHitStepIndex(
+		const UEnemySkillData* CurrentSkillData,
+		int32 StepIndex
+	) const;
+
+	TSharedRef<FDGEnemySkillRuntimeHitStepContext> GetOrCreateRuntimeHitStepContext(
+		const UEnemySkillData* SourceSkillData,
+		int32 StepIndex
 	);
 
 	UEnemySkillData* CreateRuntimeSkillDataFromHitStep(
@@ -255,13 +292,33 @@ protected:
 		const FDGEnemySkillHitStep& HitStep
 	);
 
-	void SpawnIndicatorForRuntimeHitStep(
-		TSharedRef<FDGEnemySkillRuntimeHitStepContext> StepContext
+	void ApplyHitStepToRuntimeSkillData(
+		UEnemySkillData* RuntimeSkillData,
+		const UEnemySkillData* SourceSkillData,
+		const FDGEnemySkillHitStep& HitStep
+	) const;
+
+	void SpawnEnemySkillHitStepIndicatorByNotify(
+		const FGameplayEventData& Payload,
+		const UEnemySkillData* CurrentSkillData
 	);
 
-	void ExecuteRuntimeHitStep(
-		TSharedRef<FDGEnemySkillRuntimeHitStepContext> StepContext
+	void ExecuteEnemySkillHitStepByNotify(
+		const FGameplayEventData& Payload,
+		const UEnemySkillData* CurrentSkillData
 	);
+	
+	virtual void OnEnemySkillHitStepExecuted(
+	int32 StepIndex,
+	const UEnemySkillData* RuntimeSkillData,
+	const TArray<AActor*>& HitActors
+);
+	
+	virtual void ModifyEnemySkillHitStepIndicatorTransform(
+	int32 StepIndex,
+	UEnemySkillData* RuntimeSkillData,
+	FTransform& InOutSpawnTransform
+);
 
 	// --- Montage callbacks ---
 

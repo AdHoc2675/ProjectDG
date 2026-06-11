@@ -11,6 +11,7 @@ class AActor;
 class UNiagaraSystem;
 class AEnemySkillIndicatorActor;
 class UMaterialInterface;
+class USoundBase;
 
 UENUM(BlueprintType)
 enum class EDGEnemySkillHitShape : uint8
@@ -29,8 +30,8 @@ enum class EDGEnemySkillHitShape : uint8
 	// 범위형 스킬 판정. (낫베기 같은 반원 공격)
 	Sector UMETA(DisplayName = "Sector"),
 
-	// 확산,충격파 스킬용
-	SectorRing UMETA(DisplayName="Sector Ring"),
+	// 확산, 충격파 스킬용
+	SectorRing UMETA(DisplayName = "Sector Ring"),
 
 	// 바깥 위험 / 안쪽 안전 링 범위
 	Donut UMETA(DisplayName = "Donut"),
@@ -81,30 +82,106 @@ struct FDGEnemySkillHitStep
 	GENERATED_BODY()
 
 public:
+	// Notify 순서 기반으로 쓸 때는 사용하지 않는다.
+	// 나중에 자동 Delay 기반 Step 패턴을 다시 열 때 사용할 수 있도록 유지.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep")
 	float Delay = 0.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep")
+	// =========================
+	// Hit
+	// =========================
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Hit")
 	EDGEnemySkillHitShape HitShape = EDGEnemySkillHitShape::Radius;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep")
-	EDGEnemySkillIndicatorShape IndicatorShape = EDGEnemySkillIndicatorShape::Circle;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Hit")
+	EDGEnemySkillHitOrigin HitOrigin = EDGEnemySkillHitOrigin::Self;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep")
-	float Radius = 300.0f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Hit")
+	TArray<FName> TraceSocketNames;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep")
-	float InnerRadius = 0.0f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Hit", meta = (ClampMin = "0.0"))
+	float TraceRadius = 20.f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep")
-	float SectorAngleDegrees = 180.0f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Hit")
+	FVector BoxExtent = FVector(100.f, 100.f, 100.f);
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Hit")
 	float ForwardOffset = 0.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Hit", meta = (ClampMin = "0.0"))
+	float Radius = 300.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Hit", meta = (ClampMin = "0.0"))
+	float InnerRadius = 0.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Hit",
+		meta = (ClampMin = "1.0", ClampMax = "360.0"))
+	float SectorAngleDegrees = 180.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Hit")
+	int32 MaxHitTargets = 0;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Hit",
+		meta = (ClampMin = "-360.0", ClampMax = "360.0"))
+	float HitYawOffsetDegrees = 0.f;
+
+	// =========================
+	// Indicator
+	// =========================
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Indicator")
+	bool bUseIndicator = true;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Indicator",
+		meta = (EditCondition = "bUseIndicator"))
+	EDGEnemySkillIndicatorShape IndicatorShape = EDGEnemySkillIndicatorShape::Circle;
+
+	// 비워두면 원본 SkillData의 IndicatorActorClass 사용.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Indicator",
+		meta = (EditCondition = "bUseIndicator"))
+	TSubclassOf<AEnemySkillIndicatorActor> IndicatorActorClass;
+
+	// 비워두면 원본 SkillData의 IndicatorMaterialOverride 사용.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Indicator",
+		meta = (EditCondition = "bUseIndicator"))
+	TObjectPtr<UMaterialInterface> IndicatorMaterialOverride = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Indicator",
+		meta = (EditCondition = "bUseIndicator", ClampMin = "0.0"))
 	float IndicatorTelegraphTime = 0.5f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Indicator",
+		meta = (EditCondition = "bUseIndicator", ClampMin = "1.0"))
+	float IndicatorProjectionDepth = 512.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Indicator",
+		meta = (EditCondition = "bUseIndicator"))
+	float IndicatorZOffset = 5.f;
+
+	// 1번: 전체 위험 범위를 미리 보여주는 연한 인디케이터 Opacity
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Indicator",
+		meta = (EditCondition = "bUseIndicator", ClampMin = "0.0", ClampMax = "1.0", DisplayName = "1. Preview Opacity"))
+	float IndicatorPreviewOpacity = 0.2f;
+
+	// 2번: 시간이 지나며 차오르는 진한 인디케이터 Opacity
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Indicator",
+		meta = (EditCondition = "bUseIndicator", ClampMin = "0.0", ClampMax = "1.0", DisplayName = "2. Fill Opacity"))
+	float IndicatorFillOpacity = 0.75f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Indicator",
+		meta = (EditCondition = "bUseIndicator", ClampMin = "-360.0", ClampMax = "360.0"))
+	float IndicatorYawOffsetDegrees = 0.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Indicator",
+		meta = (EditCondition = "bUseIndicator"))
+	bool bIndicatorFollowTargetDuringTelegraph = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Indicator",
+		meta = (EditCondition = "bUseIndicator"))
+	bool bIndicatorRotateToTargetDuringTelegraph = false;
 };
+
 
 /**
  * UEnemySkillData
@@ -192,17 +269,27 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|Hit", meta = (ClampMin = "0.0"))
 	float Radius = 300.f;
 
+	// Donut / SectorRing 판정의 안쪽 안전 반경.
+	// Radius가 바깥 반경이고, InnerRadius가 안쪽 빈 공간.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|Hit", meta = (ClampMin = "0.0"))
+	float InnerRadius = 0.f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|Hit",
 		meta = (ClampMin = "1.0", ClampMax = "360.0"))
 	float SectorAngleDegrees = 180.f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|Hit")
 	int32 MaxHitTargets = 0;
-	
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|Hit",
+		meta = (ClampMin = "-360.0", ClampMax = "360.0"))
+	float HitYawOffsetDegrees = 0.f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep")
 	bool bUseHitSteps = false;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep", meta = (EditCondition = "bUseHitSteps"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep",
+		meta = (EditCondition = "bUseHitSteps"))
 	TArray<FDGEnemySkillHitStep> HitStepList;
 
 	// =========================
@@ -242,10 +329,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Indicator", meta = (EditCondition = "bUseIndicator"))
 	float IndicatorZOffset = 5.f;
 
-	// 인디케이터 기본 투명도
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Indicator",
-		meta = (EditCondition = "bUseIndicator", ClampMin = "0.0", ClampMax = "1.0"))
-	float IndicatorOpacity = 0.75f;
+	// 1번: 전체 위험 범위를 미리 보여주는 연한 인디케이터 Opacity
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Indicator|Appearance",
+		meta = (EditCondition = "bUseIndicator", ClampMin = "0.0", ClampMax = "1.0", DisplayName = "1. Preview Opacity"))
+	float IndicatorPreviewOpacity = 0.2f;
+
+	// 2번: 시간이 지나며 차오르는 진한 인디케이터 Opacity
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Indicator|Appearance",
+		meta = (EditCondition = "bUseIndicator", ClampMin = "0.0", ClampMax = "1.0", DisplayName = "2. Fill Opacity"))
+	float IndicatorFillOpacity = 0.75f;
 
 	// 인디케이터 방향 보정값.
 	// 머티리얼 UV 기준 방향과 실제 스킬 판정 방향이 다를 때 사용.
@@ -253,12 +345,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Indicator|Transform",
 		meta = (EditCondition = "bUseIndicator", ClampMin = "-360.0", ClampMax = "360.0"))
 	float IndicatorYawOffsetDegrees = 0.f;
-
-	// Donut 인디케이터 안쪽 안전 반경.
-	// Radius가 바깥 반경이고, InnerRadius가 안쪽 빈 공간.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Indicator|Donut",
-		meta = (EditCondition = "bUseIndicator", ClampMin = "0.0"))
-	float InnerRadius = 0.f;
 
 	// Telegraph 중 대상 위치를 따라갈지 여부.
 	// false면 생성 시점 위치에 고정.
@@ -290,7 +376,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|VFX")
 	TObjectPtr<UNiagaraSystem> HitVFX = nullptr;
 
-	//--- SFX---
+	// --- SFX ---
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|SFX")
 	TObjectPtr<USoundBase> TelegraphSFX = nullptr;

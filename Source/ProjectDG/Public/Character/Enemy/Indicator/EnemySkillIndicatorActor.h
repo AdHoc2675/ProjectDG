@@ -4,19 +4,26 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Character/Enemy/Data/EnemySkillData.h"
 #include "EnemySkillIndicatorActor.generated.h"
 
+class USceneComponent;
 class UDecalComponent;
-class UEnemySkillData;
 class UMaterialInstanceDynamic;
+class UEnemySkillData;
 
 /**
- * 적/보스 스킬 범위 표시용 데칼 인디케이터 Actor.
+ * 적/보스 스킬 바닥 인디케이터 Actor.
  *
- * 역할:
- * - UEnemySkillData의 Indicator 설정을 읽어 Decal 크기/머티리얼 파라미터 적용
- * - TelegraphTime 동안 FillAmount 0 -> 1 처리
- * - 실제 데미지 판정은 하지 않음
+ * 구조:
+ * - PreviewDecalComponent: 전체 위험 범위를 연하게 표시
+ * - FillDecalComponent: 시간이 지나며 진하게 차오르는 표시
+ *
+ * 머티리얼 파라미터 전제:
+ * - FillAmount
+ * - Opacity
+ * - AngleDegrees
+ * - InnerRadiusRatio
  */
 UCLASS()
 class PROJECTDG_API AEnemySkillIndicatorActor : public AActor
@@ -26,54 +33,62 @@ class PROJECTDG_API AEnemySkillIndicatorActor : public AActor
 public:
 	AEnemySkillIndicatorActor();
 
-	virtual void Tick(float DeltaTime) override;
+	virtual void Tick(float DeltaSeconds) override;
 
-	UFUNCTION(BlueprintCallable, Category = "Enemy Skill Indicator")
-	void ConfigureFromSkillData(const UEnemySkillData* SkillData);
-
-	UFUNCTION(BlueprintCallable, Category = "Enemy Skill Indicator")
-	void StartIndicator(float OverrideDuration = -1.f);
-
-	UFUNCTION(BlueprintCallable, Category = "Enemy Skill Indicator")
-	void StopIndicator(bool bDestroyActor = true);
-
-	UFUNCTION(BlueprintCallable, Category = "Enemy Skill Indicator")
-	void SetFillAmount(float NewFillAmount);
-
-	UFUNCTION(BlueprintCallable, Category = "Enemy Skill Indicator")
-	UDecalComponent* GetDecalComponent() const { return DecalComponent; }
+public:
+	void ConfigureFromSkillData(const UEnemySkillData* InSkillData);
+	void StartIndicator();
+	void StopIndicator();
+	void SetFillAmount(float InFillAmount);
 
 protected:
 	virtual void BeginPlay() override;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy Skill Indicator")
-	TObjectPtr<UDecalComponent> DecalComponent = nullptr;
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Indicator")
+	TObjectPtr<USceneComponent> SceneRoot = nullptr;
+
+	// 전체 위험 범위를 미리 보여주는 연한 데칼
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Indicator")
+	TObjectPtr<UDecalComponent> PreviewDecalComponent = nullptr;
+
+	// 시간이 지나며 차오르는 진한 데칼
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Indicator")
+	TObjectPtr<UDecalComponent> FillDecalComponent = nullptr;
 
 	UPROPERTY(Transient)
-	TObjectPtr<UMaterialInstanceDynamic> DynamicIndicatorMaterial = nullptr;
+	TObjectPtr<UMaterialInstanceDynamic> PreviewMID = nullptr;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy Skill Indicator")
-	bool bAutoDestroyOnFillComplete = false;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy Skill Indicator|Material Parameter")
-	FName FillAmountParameterName = TEXT("FillAmount");
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy Skill Indicator|Material Parameter")
-	FName OpacityParameterName = TEXT("Opacity");
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy Skill Indicator|Material Parameter")
-	FName AngleDegreesParameterName = TEXT("AngleDegrees");
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy Skill Indicator|Material Parameter")
-	FName InnerRadiusRatioParameterName = TEXT("InnerRadiusRatio");
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> FillMID = nullptr;
 
 private:
-	float IndicatorDuration = 1.f;
-	float IndicatorElapsedTime = 0.f;
-	float CurrentFillAmount = 0.f;
-	bool bIsPlayingIndicator = false;
+	bool bIsRunning = false;
 
-	void ApplyDecalSizeFromSkillData(const UEnemySkillData* SkillData);
-	void ApplyMaterialFromSkillData(const UEnemySkillData* SkillData);
-	void ApplyMaterialParametersFromSkillData(const UEnemySkillData* SkillData);
+	float ElapsedTime = 0.0f;
+	float TelegraphTime = 0.0f;
+
+	EDGEnemySkillIndicatorShape CachedIndicatorShape = EDGEnemySkillIndicatorShape::None;
+
+	float CachedRadius = 0.0f;
+	float CachedInnerRadius = 0.0f;
+	float CachedSectorAngleDegrees = 360.0f;
+
+private:
+	void ResetRuntimeState();
+
+	void ConfigureDecalSizeFromSkillData(const UEnemySkillData* InSkillData);
+	void ConfigureMaterialFromSkillData(const UEnemySkillData* InSkillData);
+
+	void ApplyCommonMaterialParameters(
+		UMaterialInstanceDynamic* InMID,
+		const UEnemySkillData* InSkillData,
+		float InOpacity,
+		float InFillAmount
+	) const;
+
+	float MakeVisualFillAmount(float InFillAmount) const;
+	float CalculateInnerRadiusRatio() const;
+
+	void SetDecalComponentsVisible(bool bVisible);
 };
