@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "GAS/Attributes/DG_AttributeSet.h"
@@ -7,6 +7,8 @@
 #include "GameplayEffectExtension.h"
 #include "Character/Enemy/EnemyCharacterBase.h"
 #include "Character/Player/PlayerCharacterBase.h"
+#include "Components/Item/DGLootDropComponent.h"
+#include "GameFramework/DG_PlayerState.h"
 
 UDG_AttributeSet::UDG_AttributeSet()
 {
@@ -187,10 +189,11 @@ void UDG_AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbac
 		// 메타 어트리뷰트는 사용 후 무조건 0으로 초기화
 		SetDamage(0.f);
 
+		// 데미지 적용 전 체력 기록
+		const float OldHealth = GetHealth();
+
 		if (LocalDamageDone > 0.0f)
 		{
-			const float OldHealth = GetHealth();
-
 			// 현재 체력에서 데미지 차감
 			const float NewHealth = OldHealth - LocalDamageDone;
 			SetHealth(FMath::Clamp(NewHealth, 0.0f, GetMaxHealth()));
@@ -249,6 +252,36 @@ void UDG_AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbac
 
 			// 데미지를 띄우라고 전송하면서 공격자 정보도 넘겨줍니다.
 			TargetEnemy->Multicast_ShowDamageNumber(LocalDamageDone, bIsCritical, InstigatorActor);
+
+			// 체력이 0이 되어 사망하는 순간 보상(경험치, 골드) 즉시 지급 처리
+			// SetHealth 이후 델리게이트를 통해 bIsDead가 true로 이미 변경되었을 수 있으므로 OldHealth를 이용해 판별
+			if (OldHealth > 0.f && GetHealth() <= 0.f)
+			{
+				ADG_PlayerState* PS = nullptr;
+				if (APawn* InstigatorPawn = Cast<APawn>(InstigatorActor))
+				{
+					PS = InstigatorPawn->GetPlayerState<ADG_PlayerState>();
+				}
+				else if (AController* InstigatorController = Cast<AController>(InstigatorActor))
+				{
+					PS = InstigatorController->GetPlayerState<ADG_PlayerState>();
+				}
+				else if (ADG_PlayerState* InstigatorPS = Cast<ADG_PlayerState>(InstigatorActor))
+				{
+					PS = InstigatorPS;
+				}
+
+				if (PS)
+				{
+					if (UDGLootDropComponent* LootComp = TargetEnemy->FindComponentByClass<UDGLootDropComponent>())
+					{
+						int32 EarnedGold = FMath::RandRange(LootComp->GetMinRewardGold(), LootComp->GetMaxRewardGold());
+						PS->AddExpAndGold(LootComp->GetRewardExp(), EarnedGold);
+
+						UE_LOG(LogTemp, Log, TEXT("[DG_AttributeSet] Player earned %d EXP and %d Gold"), LootComp->GetRewardExp(), EarnedGold);
+					}
+				}
+			}
 		}
 	}
 	else if (Data.EvaluatedData.Attribute == GetHealthAttribute())

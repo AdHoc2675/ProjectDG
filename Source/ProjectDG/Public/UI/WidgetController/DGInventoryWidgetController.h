@@ -10,6 +10,9 @@ class UDGItemInstance;
 // UI로 아이템 배열을 전달할 델리게이트 선언
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInventoryUpdatedSignature, const TArray<UDGItemInstance*>&, InventoryItems);
 
+// UI로 골드 수치를 전달할 델리게이트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGoldChangedSignature, int32, NewGold);
+
 // 두 개의 값(현재, 최대)을 전송할 델리게이트 (HP, MP용)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnStatChangedSignature, float, CurrentValue, float, MaxValue);
 // 한 개의 값만 전송할 델리게이트 (공격력, 방어력 등)
@@ -44,7 +47,16 @@ public:
 	// 블루프린트 UI에서 바인딩할 이벤트
 	UPROPERTY(BlueprintAssignable, Category = "DG|Inventory")
 	FOnInventoryUpdatedSignature OnInventoryUpdated;
-	// 추후 델리게이트들 선언 (예: OnInventoryUpdated 등)
+
+	// 골드 획득시 호출되는 델리게이트
+	UPROPERTY(BlueprintAssignable, Category = "DG|Inventory")
+	FOnGoldChangedSignature OnGoldChanged;
+
+protected:
+	UFUNCTION()
+	void OnGoldChangedCallback(int32 NewGold);
+
+public:
 
 
 	// --- 장비/상세 스탯 델리게이트 ---

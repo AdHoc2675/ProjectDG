@@ -3,6 +3,7 @@
 
 #include "UI/Widget/DGSkillSlotWidget.h"
 #include "Components/ProgressBar.h"
+#include "Components/TextBlock.h"
 
 #include "Core/DG_GameplayTags.h"
 #include "Core/DG_Debug.h"
@@ -48,6 +49,7 @@ void UDGPlayerStatWidget::BindToController(UDGOverlayWidgetController* Controlle
 	Controller->OnMaxStaminaChanged.AddDynamic(this, &UDGPlayerStatWidget::MaxStaminaChanged);
 	Controller->OnMentalChanged.AddDynamic(this, &UDGPlayerStatWidget::MentalChanged);
 	Controller->OnMaxMentalChanged.AddDynamic(this, &UDGPlayerStatWidget::MaxMentalChanged);
+	Controller->OnPlayerLevelChanged.AddDynamic(this, &UDGPlayerStatWidget::LevelChanged);
 
 	// 스킬 관련 이벤트 바인딩
 	Controller->OnSkillInfoSet.AddDynamic(this, &UDGPlayerStatWidget::OnSkillInfoSet);
@@ -105,6 +107,14 @@ void UDGPlayerStatWidget::MaxMentalChanged(float NewMaxMental)
 {
 	CurrentMaxMental = NewMaxMental;
 	UpdateMentalBar();
+}
+
+void UDGPlayerStatWidget::LevelChanged(int32 NewLevel)
+{
+	if (Text_Level)
+	{
+		Text_Level->SetText(FText::FromString(FString::FromInt(NewLevel)));
+	}
 }
 
 void UDGPlayerStatWidget::UpdateHealthBar()

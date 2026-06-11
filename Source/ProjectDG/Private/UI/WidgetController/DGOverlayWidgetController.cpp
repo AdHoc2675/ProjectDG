@@ -30,6 +30,11 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 		OnMaxMentalChanged.Broadcast(DGAS->GetMaxMental());
 	}
 
+	if (ADG_PlayerState* PS = Cast<ADG_PlayerState>(PlayerState))
+	{
+		OnPlayerLevelChanged.Broadcast(PS->GetCharacterLevel());
+	}
+
 	// 미니맵 초기 마커 
 	if (PlayerController)
 	{
@@ -173,10 +178,11 @@ void UDGOverlayWidgetController::BindCallbacksToDependencies()
 		}
 	}
 
-	// PlayerState 콤보 갱신 델리게이트 바인딩
+	// PlayerState 콤보 갱신 및 레벨 갱신 델리게이트 바인딩
 	if (ADG_PlayerState* PS = Cast<ADG_PlayerState>(PlayerState))
 	{
 		PS->OnSkillComboStepChanged.AddDynamic(this, &UDGOverlayWidgetController::OnSkillComboStepChanged);
+		PS->OnLevelChangedDelegate.AddDynamic(this, &UDGOverlayWidgetController::OnPlayerLevelChangedCallback);
 	}
 
 	// 플레이어 스킬의 쿨타임 태그들을 리스닝
@@ -521,4 +527,9 @@ void UDGOverlayWidgetController::OnSkillComboStepChanged(FGameplayTag SkillTag, 
 			break;
 		}
 	}
+}
+
+void UDGOverlayWidgetController::OnPlayerLevelChangedCallback(int32 NewLevel)
+{
+	OnPlayerLevelChanged.Broadcast(NewLevel);
 }

@@ -507,7 +507,7 @@ void AEnemyCharacterBase::Multicast_ShowDamageNumber_Implementation(
 	bool bIsCritical,
 	AActor* DamageInstigator)
 {
-	UE_LOG(LogTemp, Warning, TEXT("[DamageNumber] Multicast called! Damage: %.1f"), DamageAmount);
+	//UE_LOG(LogTemp, Warning, TEXT("[DamageNumber] Multicast called! Damage: %.1f"), DamageAmount);
 
 	if (!DamageNumberClass)
 	{
@@ -544,7 +544,7 @@ void AEnemyCharacterBase::Multicast_ShowDamageNumber_Implementation(
 
 		if (ADGDamageNumberActor* DmgActor = PoolSubsystem->AcquireDamageNumber(DamageNumberClass, SpawnLoc))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[DamageNumber] Actor Acquired! Calling ShowDamage."));
+			//UE_LOG(LogTemp, Warning, TEXT("[DamageNumber] Actor Acquired! Calling ShowDamage."));
 			DmgActor->ShowDamage(DamageAmount, bIsCritical);
 		}
 	}
