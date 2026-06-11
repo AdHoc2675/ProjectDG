@@ -104,6 +104,16 @@ bool AGCN_WeaponTrail::OnActive_Implementation(
       return !ActiveTrailComponents.IsEmpty();
 }
 
+bool AGCN_WeaponTrail::WhileActive_Implementation(AActor* MyTarget, const FGameplayCueParameters& Parameters)
+{
+        if (!ActiveTrailComponents.IsEmpty())
+        {
+                return true;
+        }
+
+        return OnActive_Implementation(MyTarget, Parameters);
+}
+
 bool AGCN_WeaponTrail::OnRemove_Implementation(
       AActor* MyTarget,
       const FGameplayCueParameters& Parameters
