@@ -360,6 +360,7 @@ void ADG_PlayerState::OnRep_CharacterClassTag()
 void ADG_PlayerState::OnRep_Level()
 {
 	// 클라이언트에서 레벨 UI 갱신
+	OnLevelChangedDelegate.Broadcast(Level);
 }
 
 void ADG_PlayerState::OnRep_CurrentExp()

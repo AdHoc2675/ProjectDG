@@ -14,6 +14,7 @@ class UDataTable;
 class UPlayerCharacterClassData;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSkillComboStepChangedSignature, FGameplayTag, SkillTag, int32, NewStepIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStateLevelChangedSignature, int32, NewLevel);
 
 /*
 ADG_PlayerState
@@ -72,6 +73,9 @@ public:
 	// Getter 함수 추가
 	UPROPERTY(BlueprintAssignable, Category = "Player|Skill")
 	FOnSkillComboStepChangedSignature OnSkillComboStepChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Player|Growth")
+	FOnPlayerStateLevelChangedSignature OnLevelChangedDelegate;
 	UFUNCTION(BlueprintCallable, Category = "Player|Growth")
 	int32 GetCharacterLevel() const { return Level; }
 
