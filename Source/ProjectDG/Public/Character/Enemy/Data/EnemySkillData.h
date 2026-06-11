@@ -106,8 +106,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Hit")
 	FVector BoxExtent = FVector(100.f, 100.f, 100.f);
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Hit")
+	// Step 판정 기준 전방 오프셋.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep")
 	float ForwardOffset = 0.0f;
+
+	// Step 판정 기준 좌우 오프셋.
+	// + 값은 오른쪽, - 값은 왼쪽.
+	// 예: Skill05 1타 오른쪽 / 2타 왼쪽 박스 판정에 사용.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep")
+	float RightOffset = 0.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Hit", meta = (ClampMin = "0.0"))
 	float Radius = 300.0f;
@@ -225,6 +232,13 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|Cooldown")
 	float Cooldown = 0.f;
+	
+	// --- FollowUp ---
+
+	// 이 스킬의 조건부 연계로 실행할 다음 스킬 데이터.
+	// 예: Skill04 돌진 피격 성공 시 연계 Atk01 DA 지정.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|FollowUp")
+	TObjectPtr<UEnemySkillData> FollowUpSkillData = nullptr;
 
 	// --- Target ---
 
@@ -263,8 +277,16 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|Hit")
 	FVector BoxExtent = FVector(100.f, 100.f, 100.f);
 
+	// 보스/몬스터 기준 전방 오프셋.
+	// ForwardBox, Sector 등에서 중심 위치를 전방으로 이동시킬 때 사용.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|Hit")
-	float ForwardOffset = 100.f;
+	float ForwardOffset = 0.0f;
+
+	// 보스/몬스터 기준 좌우 오프셋.
+	// + 값은 오른쪽, - 값은 왼쪽.
+	// 예: Skill05 좌/우 반 박스 판정에 사용.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|Hit")
+	float RightOffset = 0.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|Hit", meta = (ClampMin = "0.0"))
 	float Radius = 300.f;

@@ -100,6 +100,34 @@ namespace
 		FallbackLocation.Z -= 80.0f;
 		return FallbackLocation;
 	}
+	
+	FVector GetEnemySkillFlatForwardFromRotation(const FRotator& Rotation)
+	{
+		FVector Forward = Rotation.Vector();
+		Forward.Z = 0.0f;
+
+		if (!Forward.Normalize())
+		{
+			return FVector::ForwardVector;
+		}
+
+		return Forward;
+	}
+
+	FVector GetEnemySkillFlatRightFromRotation(const FRotator& Rotation)
+	{
+		const FRotator FlatRotation(0.0f, Rotation.Yaw, 0.0f);
+
+		FVector Right = FRotationMatrix(FlatRotation).GetScaledAxis(EAxis::Y);
+		Right.Z = 0.0f;
+
+		if (!Right.Normalize())
+		{
+			return FVector::RightVector;
+		}
+
+		return Right;
+	}
 }
 
 UGA_EnemySkillBase::UGA_EnemySkillBase()
@@ -819,11 +847,20 @@ void UGA_EnemySkillBase::CollectForwardBoxTargetsFromSkillData(
 		return;
 	}
 
-	const FVector Center =
-		AvatarActor->GetActorLocation()
-		+ AvatarActor->GetActorForwardVector() * CurrentSkillData->ForwardOffset;
+	FVector Center = ApplySkillLocationOffset(
+		AvatarActor->GetActorLocation(),
+		AvatarActor->GetActorRotation(),
+		CurrentSkillData
+	);
 
-	const FQuat BoxQuat = AvatarActor->GetActorQuat();
+	FQuat BoxQuat = AvatarActor->GetActorQuat();
+
+	if (CurrentSkillData->bUseIndicator && bHasCachedSkillHitCenter)
+	{
+		Center = CachedSkillHitCenter;
+		BoxQuat = CachedSkillHitRotation.Quaternion();
+	}
+
 	const FCollisionShape BoxShape = FCollisionShape::MakeBox(CurrentSkillData->BoxExtent);
 
 	FCollisionObjectQueryParams ObjectQueryParams;
@@ -1439,12 +1476,14 @@ bool UGA_EnemySkillBase::ResolveSkillHitCenter(
 	switch (CurrentSkillData->HitOrigin)
 	{
 	case EDGEnemySkillHitOrigin::Self:
-		OutCenter = ApplyEnemySkillForwardOffset(
-			AvatarActor,
-			AvatarActor->GetActorLocation(),
-			CurrentSkillData->ForwardOffset
-		);
-		return true;
+		{
+			OutCenter = ApplySkillLocationOffset(
+				AvatarActor->GetActorLocation(),
+				AvatarActor->GetActorRotation(),
+				CurrentSkillData
+			);
+			return true;
+		}
 
 	case EDGEnemySkillHitOrigin::Target:
 		{
@@ -1474,10 +1513,10 @@ bool UGA_EnemySkillBase::ResolveSkillHitCenter(
 				return false;
 			}
 
-			OutCenter = ApplyEnemySkillForwardOffset(
-				AvatarActor,
+			OutCenter = ApplySkillLocationOffset(
 				TargetActor->GetActorLocation(),
-				CurrentSkillData->ForwardOffset
+				AvatarActor->GetActorRotation(),
+				CurrentSkillData
 			);
 			return true;
 		}
@@ -1492,10 +1531,10 @@ bool UGA_EnemySkillBase::ResolveSkillHitCenter(
 				return false;
 			}
 
-			OutCenter = ApplyEnemySkillForwardOffset(
-				AvatarActor,
+			OutCenter = ApplySkillLocationOffset(
 				MeshComp->GetSocketLocation(CurrentSkillData->TraceSocketNames[0]),
-				CurrentSkillData->ForwardOffset
+				AvatarActor->GetActorRotation(),
+				CurrentSkillData
 			);
 			return true;
 		}
@@ -1517,12 +1556,52 @@ bool UGA_EnemySkillBase::ResolvePathBoxSweepCenter(
 		return false;
 	}
 
-	OutCenter =
-		AvatarActor->GetActorLocation()
-		+ AvatarActor->GetActorForwardVector() * CurrentSkillData->ForwardOffset;
+	OutCenter = ApplySkillLocationOffset(
+		AvatarActor->GetActorLocation(),
+		AvatarActor->GetActorRotation(),
+		CurrentSkillData
+	);
 
 	return true;
 }
+
+FVector UGA_EnemySkillBase::ApplySkillLocationOffset(
+	const FVector& BaseLocation,
+	const FRotator& BaseRotation,
+	const UEnemySkillData* InSkillData
+) const
+{
+	if (!InSkillData)
+	{
+		return BaseLocation;
+	}
+
+	const FVector Forward = GetEnemySkillFlatForwardFromRotation(BaseRotation);
+	const FVector Right = GetEnemySkillFlatRightFromRotation(BaseRotation);
+
+	return BaseLocation
+		+ Forward * InSkillData->ForwardOffset
+		+ Right * InSkillData->RightOffset;
+}
+
+FQuat UGA_EnemySkillBase::ResolveSkillBoxRotation(
+	const UEnemySkillData* InSkillData
+) const
+{
+	AActor* AvatarActor = GetAvatarActorFromActorInfo();
+	if (!AvatarActor)
+	{
+		return FQuat::Identity;
+	}
+
+	if (InSkillData && InSkillData->bUseIndicator && bHasCachedSkillHitCenter)
+	{
+		return CachedSkillHitRotation.Quaternion();
+	}
+
+	return AvatarActor->GetActorQuat();
+}
+
 
 void UGA_EnemySkillBase::DrawEnemySkillHitDebug(
 	const FGameplayEventData& Payload,
@@ -1555,15 +1634,25 @@ void UGA_EnemySkillBase::DrawEnemySkillHitDebug(
 	{
 	case EDGEnemySkillHitShape::ForwardBox:
 		{
-			const FVector Center =
-				AvatarActor->GetActorLocation()
-				+ AvatarActor->GetActorForwardVector() * CurrentSkillData->ForwardOffset;
+			FVector Center = ApplySkillLocationOffset(
+				AvatarActor->GetActorLocation(),
+				AvatarActor->GetActorRotation(),
+				CurrentSkillData
+			);
+
+			FQuat BoxQuat = AvatarActor->GetActorQuat();
+
+			if (CurrentSkillData->bUseIndicator && bHasCachedSkillHitCenter)
+			{
+				Center = CachedSkillHitCenter;
+				BoxQuat = CachedSkillHitRotation.Quaternion();
+			}
 
 			DrawDebugBox(
 				World,
 				Center,
 				CurrentSkillData->BoxExtent,
-				AvatarActor->GetActorQuat(),
+				BoxQuat,
 				DebugColor,
 				false,
 				DebugDuration
@@ -1787,11 +1876,13 @@ void UGA_EnemySkillBase::DrawEnemySkillHitDebug(
 		{
 			if (bHasLastPathSweepDebugSegment)
 			{
+				const FQuat BoxQuat = ResolveSkillBoxRotation(CurrentSkillData);
+
 				DrawDebugBox(
 					World,
 					LastPathSweepDebugStart,
 					CurrentSkillData->BoxExtent,
-					AvatarActor->GetActorQuat(),
+					BoxQuat,
 					DebugColor,
 					false,
 					DebugDuration
@@ -1801,7 +1892,7 @@ void UGA_EnemySkillBase::DrawEnemySkillHitDebug(
 					World,
 					LastPathSweepDebugEnd,
 					CurrentSkillData->BoxExtent,
-					AvatarActor->GetActorQuat(),
+					BoxQuat,
 					DebugColor,
 					false,
 					DebugDuration
@@ -1980,6 +2071,8 @@ void UGA_EnemySkillBase::ApplyHitStepToRuntimeSkillData(
 	RuntimeSkillData->TraceRadius = HitStep.TraceRadius;
 	RuntimeSkillData->BoxExtent = HitStep.BoxExtent;
 	RuntimeSkillData->ForwardOffset = HitStep.ForwardOffset;
+	RuntimeSkillData->RightOffset = HitStep.RightOffset;
+	
 	RuntimeSkillData->Radius = HitStep.Radius;
 	RuntimeSkillData->InnerRadius = HitStep.InnerRadius;
 	RuntimeSkillData->SectorAngleDegrees = HitStep.SectorAngleDegrees;
@@ -2178,15 +2271,19 @@ void UGA_EnemySkillBase::ExecuteEnemySkillHitStepByNotify(
 	const FVector PrevCachedSkillHitCenter = CachedSkillHitCenter;
 	const FRotator PrevCachedSkillHitRotation = CachedSkillHitRotation;
 
-	bHasCachedSkillHitCenter = true;
-	CachedSkillHitCenter = StepContext->CachedHitCenter;
-	CachedSkillHitRotation = StepContext->CachedHitRotation;
+	if (StepContext->bHasCachedHitCenter)
+	{
+		bHasCachedSkillHitCenter = true;
+		CachedSkillHitCenter = StepContext->CachedHitCenter;
+		CachedSkillHitRotation = StepContext->CachedHitRotation;
+	}
 
 	// Step 기반 스킬은 각 Step이 독립 판정이다.
 	// 같은 Ability 안에서도 Step이 다르면 같은 대상이 다시 맞을 수 있어야 한다.
 	HitActorsThisAbility.Reset();
 
 	TArray<AActor*> TargetActors;
+	
 	CollectEnemySkillTargetsFromData(
 		Payload,
 		RuntimeSkillData,
@@ -2351,10 +2448,10 @@ FTransform UGA_EnemySkillBase::MakeEnemySkillIndicatorTransform(
 		IndicatorLocation = TargetActor->GetActorLocation();
 	}
 
-	IndicatorLocation = ApplyEnemySkillForwardOffset(
-		EnemyCharacter,
+	IndicatorLocation = ApplySkillLocationOffset(
 		IndicatorLocation,
-		CurrentSkillData->ForwardOffset
+		IndicatorRotation,
+		CurrentSkillData
 	);
 
 	if (!FMath::IsNearlyZero(CurrentSkillData->IndicatorYawOffsetDegrees))
@@ -2465,3 +2562,4 @@ AActor* UGA_EnemySkillBase::ResolveEnemySkillIndicatorTargetActor() const
 
 	return TargetActor;
 }
+

@@ -17,11 +17,13 @@ AEnemySkillIndicatorActor::AEnemySkillIndicatorActor()
 	PreviewDecalComponent = CreateDefaultSubobject<UDecalComponent>(TEXT("PreviewDecalComponent"));
 	PreviewDecalComponent->SetupAttachment(SceneRoot);
 	PreviewDecalComponent->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
+	PreviewDecalComponent->SetRelativeScale3D(FVector::OneVector);
 	PreviewDecalComponent->SortOrder = 0;
 
 	FillDecalComponent = CreateDefaultSubobject<UDecalComponent>(TEXT("FillDecalComponent"));
 	FillDecalComponent->SetupAttachment(SceneRoot);
 	FillDecalComponent->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
+	FillDecalComponent->SetRelativeScale3D(FVector::OneVector);
 	FillDecalComponent->SortOrder = 1;
 
 	SetDecalComponentsVisible(false);
@@ -170,7 +172,10 @@ void AEnemySkillIndicatorActor::ConfigureDecalSizeFromSkillData(const UEnemySkil
 		return;
 	}
 
-	FVector DecalSize = FVector(
+	PreviewDecalComponent->SetRelativeScale3D(FVector::OneVector);
+	FillDecalComponent->SetRelativeScale3D(FVector::OneVector);
+
+	FVector DecalSize(
 		InSkillData->IndicatorProjectionDepth,
 		100.0f,
 		100.0f
@@ -182,29 +187,35 @@ void AEnemySkillIndicatorActor::ConfigureDecalSizeFromSkillData(const UEnemySkil
 	case EDGEnemySkillIndicatorShape::Sector:
 	case EDGEnemySkillIndicatorShape::SectorRing:
 	case EDGEnemySkillIndicatorShape::Donut:
-	{
-		const float Radius = FMath::Max(InSkillData->Radius, 1.0f);
+		{
+			const float Radius = FMath::Max(InSkillData->Radius, 1.0f);
 
-		DecalSize = FVector(
-			InSkillData->IndicatorProjectionDepth,
-			Radius,
-			Radius
-		);
-		break;
-	}
+			// 기존 원형 계열은 이 값으로 이미 Debug와 동기화 확인됨.
+			DecalSize = FVector(
+				InSkillData->IndicatorProjectionDepth,
+				Radius,
+				Radius
+			);
+
+			break;
+		}
 
 	case EDGEnemySkillIndicatorShape::Box:
-	{
-		const float Length = FMath::Max(InSkillData->BoxExtent.X * 2.0f, 1.0f);
-		const float Width = FMath::Max(InSkillData->BoxExtent.Y * 2.0f, 1.0f);
+		{
+			const FVector BoxExtent = InSkillData->BoxExtent;
 
-		DecalSize = FVector(
-			InSkillData->IndicatorProjectionDepth,
-			Length,
-			Width
-		);
-		break;
-	}
+			// 중요:
+			// 이 프로젝트의 Decal/M_Indicator 기준에서는 BoxExtent를 그대로 넣어야
+			// DrawDebugBox의 BoxExtent와 크기가 맞는다.
+			// BoxExtent * 2 금지.
+			DecalSize = FVector(
+				InSkillData->IndicatorProjectionDepth,
+				BoxExtent.Y,
+				BoxExtent.X
+			);
+
+			break;
+		}
 
 	case EDGEnemySkillIndicatorShape::None:
 	default:

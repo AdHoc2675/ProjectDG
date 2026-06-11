@@ -261,6 +261,22 @@ protected:
 		const UEnemySkillData* CurrentSkillData,
 		FVector& OutCenter
 	) const;
+	
+	// ForwardOffset + RightOffset을 같이 적용한 스킬 기준 위치 계산.
+	// ForwardOffset: Actor 기준 전방
+	// RightOffset: Actor 기준 우측(+), 좌측(-)
+	FVector ApplySkillLocationOffset(
+		const FVector& BaseLocation,
+		const FRotator& BaseRotation,
+		const UEnemySkillData* InSkillData
+	) const;
+
+	// SkillData 기준 박스 회전 계산.
+	// 인디케이터 캐시가 있으면 CachedSkillHitRotation을 사용하고,
+	// 없으면 AvatarActor 회전을 사용한다.
+	FQuat ResolveSkillBoxRotation(
+		const UEnemySkillData* InSkillData
+	) const;
 
 	void DrawEnemySkillHitDebug(
 		const FGameplayEventData& Payload,
@@ -349,4 +365,6 @@ protected:
 	) const;
 
 	AActor* ResolveEnemySkillIndicatorTargetActor() const;
+	
+	
 };
