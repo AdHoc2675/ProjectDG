@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "Abilities/GameplayAbility.h"
 #include "Camera/CameraComponent.h"
+#include "Camera/PlayerCameraManager.h"
 #include "Core/DG_Debug.h"
 #include "Core/DG_GameplayTags.h"
 #include "Core/DG_Struct.h"
@@ -258,6 +259,7 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 	// 이미 ActorInfo가 설정되어 있다면 불필요한 재설정 방지
 	if (ASC->GetAvatarActor() == this)
 	{
+		BindHealthChangeCameraShakeDelegate();
 		return;
 	}
 
@@ -273,6 +275,63 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 	 * - 실제 월드에서 움직이고 스킬을 사용하는 존재는 Character
 	 */
 	ASC->InitAbilityActorInfo(PS, this);
+
+	BindHealthChangeCameraShakeDelegate();
+}
+
+void APlayerCharacterBase::BindHealthChangeCameraShakeDelegate()
+{
+	if (!HasAuthority() || bHealthChangeCameraShakeDelegateBound)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC)
+	{
+		return;
+	}
+
+	ASC->GetGameplayAttributeValueChangeDelegate(UDG_AttributeSet::GetHealthAttribute())
+		.AddUObject(this, &APlayerCharacterBase::OnHealthChanged);
+
+	bHealthChangeCameraShakeDelegateBound = true;
+}
+
+void APlayerCharacterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (Data.NewValue >= Data.OldValue || bPlayerDead || IsDead())
+	{
+		return;
+	}
+
+	const UDG_AttributeSet* AttributeSet = GetPlayerDGAttributeSet();
+	const float MaxHealth = AttributeSet ? AttributeSet->GetMaxHealth() : 0.0f;
+	const float DamageRatio = MaxHealth > 0.0f ? (Data.OldValue - Data.NewValue) / MaxHealth : 0.0f;
+	const float ShakeScale = FMath::Clamp(DamageRatio * DamageCameraShakeScale, 0.2f, 1.0f);
+
+	ClientPlayDamageCameraShake(ShakeScale);
+}
+
+void APlayerCharacterBase::ClientPlayDamageCameraShake_Implementation(float ShakeScale)
+{
+	if (!DamageCameraShakeClass)
+	{
+		return;
+	}
+
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (!PlayerController || !PlayerController->PlayerCameraManager)
+	{
+		return;
+	}
+
+	PlayerController->PlayerCameraManager->StartCameraShake(DamageCameraShakeClass, ShakeScale);
 }
 
 void APlayerCharacterBase::InitializePlayerUI()
