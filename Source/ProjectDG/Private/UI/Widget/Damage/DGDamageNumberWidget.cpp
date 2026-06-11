@@ -42,7 +42,7 @@ void UDGDamageNumberWidget::NativeTick(const FGeometry& MyGeometry, float InDelt
 
 void UDGDamageNumberWidget::PlayDamageAnimation(float DamageAmount, bool bIsCritical, ADGDamageNumberActor* InOwnerActor)
 {
-	UE_LOG(LogTemp, Warning, TEXT("[DamageWidget] PlayDamageAnimation called."));
+	//UE_LOG(LogTemp, Warning, TEXT("[DamageWidget] PlayDamageAnimation called."));
 
 	if (!DamageText)
 	{
@@ -73,6 +73,6 @@ void UDGDamageNumberWidget::PlayDamageAnimation(float DamageAmount, bool bIsCrit
 	CurrentAnimTime = 0.0f;
 	bIsPlayingAnim = true;
 
-	UE_LOG(LogTemp, Warning, TEXT("[DamageWidget] Animation Started successfully!"));
+	//UE_LOG(LogTemp, Warning, TEXT("[DamageWidget] Animation Started successfully!"));
 
 }
