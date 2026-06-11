@@ -68,6 +68,14 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> SkillSFXEventTask = nullptr;
 	
+	/** ANS_WeaponTrail Begin,End Task */
+	UPROPERTY()
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> WeaponTrailBeginEventTask = nullptr;
+
+	UPROPERTY()
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> WeaponTrailEndEventTask = nullptr;
+
+	
 	// 쿨타임 관련 스킬 공통 로직
 public:
 	virtual const FGameplayTagContainer* GetCooldownTags() const override;
@@ -151,6 +159,21 @@ protected:
 		FGameplayTag GameplayCueTag,
 		const FGameplayEventData& Payload
 	) const;
+	
+	// ANS 관련 함수
+	bool bWeaponTrailCueActive = false;
+
+	void RegisterWeaponTrailEvents();
+	void UnregisterWeaponTrailEvents();
+	
+	UFUNCTION()
+	void OnWeaponTrailBeginEvent(FGameplayEventData Payload);
+
+	UFUNCTION()
+	void OnWeaponTrailEndEvent(FGameplayEventData Payload);
+
+	void StartWeaponTrailCue();
+	void StopWeaponTrailCue();
 
 	ADG_PlayerState* GetDGPlayerState() const;
 

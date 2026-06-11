@@ -385,10 +385,13 @@ void UGA_PlayerSkillBase::RegisterSkillCueEvents()
 {
 	RegisterSkillVFXEvent();
 	RegisterSkillSFXEvent();
+	RegisterWeaponTrailEvents();
 }
 
 void UGA_PlayerSkillBase::UnregisterSkillCueEvents()
 {
+	StopWeaponTrailCue();
+	UnregisterWeaponTrailEvents();
 	UnregisterSkillVFXEvent();
 	UnregisterSkillSFXEvent();
 }
@@ -570,6 +573,151 @@ void UGA_PlayerSkillBase::ExecuteSkillGameplayCue(
 	CueParameters.RawMagnitude = Payload.EventMagnitude;
 
 	ASC->ExecuteGameplayCue(GameplayCueTag, CueParameters);
+}
+
+void UGA_PlayerSkillBase::RegisterWeaponTrailEvents()
+{
+	if (!WeaponTrailBeginEventTask)
+	{
+		WeaponTrailBeginEventTask =
+				UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+						this,
+						DGGameplayTags::Event_Weapon_Blade_BasicTrail_Begin,
+						nullptr,
+						true,
+						true
+				);
+
+		if (WeaponTrailBeginEventTask)
+		{
+			WeaponTrailBeginEventTask->EventReceived.AddDynamic(
+					this,
+					&UGA_PlayerSkillBase::OnWeaponTrailBeginEvent
+			);
+
+			WeaponTrailBeginEventTask->ReadyForActivation();
+		}
+	}
+
+	if (!WeaponTrailEndEventTask)
+	{
+		WeaponTrailEndEventTask =
+				UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+						this,
+						DGGameplayTags::Event_Weapon_Blade_BasicTrail_End,
+						nullptr,
+						true,
+						true
+				);
+
+		if (WeaponTrailEndEventTask)
+		{
+			WeaponTrailEndEventTask->EventReceived.AddDynamic(
+					this,
+					&UGA_PlayerSkillBase::OnWeaponTrailEndEvent
+			);
+
+			WeaponTrailEndEventTask->ReadyForActivation();
+		}
+	}
+}
+
+void UGA_PlayerSkillBase::UnregisterWeaponTrailEvents()
+{
+	if (WeaponTrailBeginEventTask)
+	{
+		WeaponTrailBeginEventTask->EndTask();
+		WeaponTrailBeginEventTask = nullptr;
+	}
+
+	if (WeaponTrailEndEventTask)
+	{
+		WeaponTrailEndEventTask->EndTask();
+		WeaponTrailEndEventTask = nullptr;
+	}
+}
+
+void UGA_PlayerSkillBase::OnWeaponTrailBeginEvent(FGameplayEventData Payload)
+{
+	StartWeaponTrailCue();
+}
+
+void UGA_PlayerSkillBase::StartWeaponTrailCue()
+{
+	if (bWeaponTrailCueActive)
+	{
+	      UE_LOG(LogTemp, Warning,
+	              TEXT("[WeaponTrail][GA] Already active"));
+	      return;
+	}
+
+	UAbilitySystemComponent* ASC =
+	      GetAbilitySystemComponentFromActorInfo();
+
+	AActor* AvatarActor = GetAvatarActorFromActorInfo();
+
+	const int32 ComboStepIndex = GetCurrentComboStepIndex();
+	const UPlayerSkillData* CurrentSkillData =
+	      GetCurrentComboSkillData();
+
+	if (!ASC)
+	{
+	      UE_LOG(LogTemp, Error,TEXT("[WeaponTrail][GA] ASC is null"));
+	      return;
+	}
+
+	if (!AvatarActor)
+	{
+	      UE_LOG(LogTemp, Error,TEXT("[WeaponTrail][GA] Avatar is null"));
+	      return;
+	}
+
+	if (!CurrentSkillData)
+	{
+	      UE_LOG(LogTemp, Error,TEXT("[WeaponTrail][GA] CurrentSkillData is null"));
+	      return;
+	}
+
+	if (CurrentSkillData->WeaponTrails.IsEmpty())
+	{
+	      UE_LOG(LogTemp, Error,TEXT("[WeaponTrail][GA] WeaponTrails is empty: %s"),*GetNameSafe(CurrentSkillData));
+	      return;
+	}
+
+	FGameplayCueParameters CueParameters;
+	CueParameters.Instigator = AvatarActor;
+	CueParameters.EffectCauser = AvatarActor;
+	CueParameters.SourceObject = CurrentSkillData;
+
+	ASC->AddGameplayCue(
+	      DGGameplayTags::GameplayCue_Weapon_Blade_BasicTrail,
+	      CueParameters
+	);
+
+	bWeaponTrailCueActive = true;
+}
+
+void UGA_PlayerSkillBase::StopWeaponTrailCue()
+{
+	if (!bWeaponTrailCueActive)
+	{
+		return;
+	}
+
+	if (UAbilitySystemComponent* ASC =
+			GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->RemoveGameplayCue(
+				DGGameplayTags::GameplayCue_Weapon_Blade_BasicTrail
+		);
+	}
+
+	bWeaponTrailCueActive = false;
+}
+
+void UGA_PlayerSkillBase::OnWeaponTrailEndEvent(FGameplayEventData Payload)
+{
+	StopWeaponTrailCue();
 }
 
 ADG_PlayerState* UGA_PlayerSkillBase::GetDGPlayerState() const
