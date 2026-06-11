@@ -99,6 +99,16 @@ void AFieldEnemyBase::InitializeFieldTagFromClassData()
 	}
 }
 
+FGameplayTag AFieldEnemyBase::GetAttributeSourceTag() const
+{
+	if (FieldClassData && FieldClassData->FieldTag.IsValid())
+	{
+		return FieldClassData->FieldTag;
+	}
+
+	return DGGameplayTags::Team_Enemy_Field;
+}
+
 void AFieldEnemyBase::GrantDefaultAbilities()
 {
 	// 부모 클래스의 DefaultAbilities 배열 부여
