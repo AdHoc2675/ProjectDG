@@ -40,6 +40,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DG|Inventory")
 	void AddItem(UDGItemDefinition* NewItemDef, int32 Quantity, EDGItemGrade Grade = EDGItemGrade::Hero);
 
+	// 미리 세팅된 아이템 인스턴스를 직접 습득할 때 호출할 함수
+	UFUNCTION(BlueprintCallable, Category = "DG|Inventory")
+	void AddItemByInstance(UDGItemInstance* NewItemInstance);
+
 protected:
 	// 플레이어가 소유한 장비 인스턴스들의 리스트
 	UPROPERTY(EditAnywhere, Instanced, Category = "DG|Inventory")
@@ -57,6 +61,10 @@ protected:
 	// 서버가 클라이언트에게 "로컬 인벤토리에 아이템 추가"를 지시하는 RPC
 	UFUNCTION(Client, Reliable)
 	void ClientAddItem(UDGItemDefinition* NewItemDef, int32 Quantity, EDGItemGrade Grade);
+
+	// 커스텀 스탯이 있는 인스턴스를 클라이언트에게 추가하라고 지시하는 RPC
+	UFUNCTION(Client, Reliable)
+	void ClientAddItemByInstance(UDGItemDefinition* ItemDef, int32 Quantity, EDGItemGrade Grade, float HP, float Atk, float Def, float Main, const TArray<FDGSubOptionInstanceData>& SubOptions);
 
 	// 실제로 UObject를 생성하고 배열에 넣는 공통 내부 로직
 	void InternalAddItemConfig(UDGItemDefinition* NewItemDef, int32 Quantity, EDGItemGrade Grade);

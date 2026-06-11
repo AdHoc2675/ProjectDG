@@ -47,6 +47,13 @@ public:
 	void HideEnemyStatus();
 
 protected:
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+
+private:
+	void UpdateHealthUI();
+	void UpdateGroggyUI();
+
+protected:
 	// 적 이름 표시 텍스트
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> EnemyNameText;
@@ -76,4 +83,19 @@ private:
 
 	// 해당 몬스터의 최대 체력줄 수
 	int32 MaxHealthBars = 1;
+
+	// 애니메이션용 데이터
+	float CurrentHealth = 0.f;
+	float TargetHealth = 0.f;
+	float CurrentMaxHealth = 1.f;
+
+	float CurrentGroggy = 0.f;
+	float TargetGroggy = 0.f;
+	float CurrentMaxGroggy = 1.f;
+	
+	// 새로 타겟팅 되었을 때 즉시 값을 반영하기 위한 플래그
+	bool bJustTargeted = false;
+
+	UPROPERTY(EditAnywhere, Category = "Settings")
+	float InterpSpeed = 10.0f;
 };

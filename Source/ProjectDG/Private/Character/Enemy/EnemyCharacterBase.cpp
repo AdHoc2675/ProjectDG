@@ -38,7 +38,7 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 	EnemyAttributeSet = CreateDefaultSubobject<UDG_EnemyAttributeSet>(TEXT("EnemyAttributeSet"));
 
 	// 드롭 컴포넌트 생성
-	LootDropComponent = CreateDefaultSubobject<UDGLootDropComponent>(TEXT("LootDropComponent"));
+	LootDropComponent2 = CreateDefaultSubobject<UDGLootDropComponent>(TEXT("LootDropComponent"));
 
 	// 미니맵 마커 생성 및 기본 타입 설정
 	MinimapMarkerComponent = CreateDefaultSubobject<UDGMinimapMarkerComponent>(TEXT("MinimapMarkerComponent"));
@@ -378,9 +378,9 @@ void AEnemyCharacterBase::HandleDeath()
 		MulticastPlayDeathMontage();
 	}
 
-	if (HasAuthority() && LootDropComponent)
+	if (HasAuthority() && LootDropComponent2)
 	{
-		LootDropComponent->ProcessDrop(GetActorLocation());
+		LootDropComponent2->ProcessDrop(GetActorLocation());
 	}
 
 	Super::HandleDeath();
