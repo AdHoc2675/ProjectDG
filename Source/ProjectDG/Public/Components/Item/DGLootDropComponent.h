@@ -37,7 +37,24 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DG|Loot")
 	void ProcessDrop(const FVector& DropLocation);
 
+	// 즉시 획득 보상 반환용 Getter
+	int32 GetRewardExp() const { return RewardExp; }
+	int32 GetMinRewardGold() const { return MinRewardGold; }
+	int32 GetMaxRewardGold() const { return MaxRewardGold; }
+
 protected:
+	/** 사망 시 지급할 경험치 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DG|Loot")
+	int32 RewardExp = 50;
+
+	/** 사망 시 지급할 최소 골드 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DG|Loot")
+	int32 MinRewardGold = 10;
+
+	/** 사망 시 지급할 최대 골드 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DG|Loot")
+	int32 MaxRewardGold = 30;
+
 	UPROPERTY(EditDefaultsOnly, Category = "DG|Loot")
 	TSubclassOf<ADGLootItemActor> LootItemClass;
 
