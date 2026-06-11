@@ -133,7 +133,7 @@ protected:
 	
 	// 아이템 드롭 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|Loot")
-	TObjectPtr<UDGLootDropComponent> LootDropComponent = nullptr;
+	TObjectPtr<UDGLootDropComponent> LootDropComponent2 = nullptr;
 
 	// 미니맵 마커 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|Minimap")

@@ -9,6 +9,7 @@
 #include "Character/Player/PlayerCharacterBase.h"
 #include "Components/Inventory/DGInventoryComponent.h"
 #include "Item/DGItemDefinition.h"
+#include "Item/DGItemInstance.h"
 
 
 // Sets default values
@@ -35,11 +36,17 @@ ADGLootItemActor::ADGLootItemActor()
 }
 
 // InitializeLoot 구현부 내에서 데이터 테이블을 읽고 이펙트 결정
-void ADGLootItemActor::InitializeLoot(UDGItemDefinition* InItemDef, int32 InQuantity, EDGItemGrade InGrade)
+void ADGLootItemActor::InitializeLoot(UDGItemInstance* InItemInstance)
 {
-    ItemDef = InItemDef;
-    Quantity = InQuantity;
-    ReplicatedGrade = InGrade;
+    ItemInstance = InItemInstance;
+    if (ItemInstance)
+    {
+        ReplicatedGrade = ItemInstance->Grade;
+    }
+    else
+    {
+        ReplicatedGrade = EDGItemGrade::Normal;
+    }
 
     // 서버 측에서 즉시 VFX 활성화
     OnRep_Grade();
@@ -90,7 +97,7 @@ void ADGLootItemActor::OnRep_Grade()
 
 void ADGLootItemActor::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-    if (!HasAuthority() || !ItemDef) return;
+    if (!HasAuthority() || !ItemInstance) return;
 
     // 습득 주체가 플레이어인지 확인
     if (APlayerCharacterBase* Player = Cast<APlayerCharacterBase>(OtherActor))
@@ -99,10 +106,18 @@ void ADGLootItemActor::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent,
         UDGInventoryComponent* Inventory = Player->FindComponentByClass<UDGInventoryComponent>();
         if (Inventory)
         {
-            // 인벤토리에 아이템을 지급
-            Inventory->AddItem(ItemDef, Quantity, ReplicatedGrade);
+            if (!ItemInstance->ItemDef)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("[DGLootItemActor] ItemDef가 비어있는 아이템(이름 없음)을 습득하려고 함"));
+                Destroy();
+                return;
+            }
 
-            UE_LOG(LogTemp, Log, TEXT("[DGLootItemActor] [%s]가 %s (x%d) 를 획득"), *Player->GetName(), *ItemDef->ItemName.ToString(), Quantity);
+            // 인벤토리에 아이템을 지급
+            Inventory->AddItemByInstance(ItemInstance);
+
+            FString ItemName = ItemInstance->ItemDef->ItemName.ToString();
+            UE_LOG(LogTemp, Log, TEXT("[DGLootItemActor] [%s]가 %s (x%d) 를 획득"), *Player->GetName(), *ItemName, ItemInstance->Quantity);
 
             // 획득 성공 후 필드 액터 삭제
             Destroy();

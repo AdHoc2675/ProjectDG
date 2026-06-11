@@ -1,5 +1,6 @@
 #include "Components/Item/DGLootDropComponent.h"
 #include "Item/DGLootItemActor.h"
+#include "Item/DGItemInstance.h"
 #include "Item/DGItemDefinition.h"
 
 UDGLootDropComponent::UDGLootDropComponent()
@@ -24,15 +25,25 @@ void UDGLootDropComponent::ProcessDrop(const FVector& DropLocation)
 	// 테이블을 순회하며 드롭 생성
 	for (const FDGLootDropInfo& DropInfo : DropTable)
 	{
-		if (!DropInfo.ItemDef) continue;
+		if (!DropInfo.DropItemInstance)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[DGLootDropComponent] DropItemInstance가 None으로 설정된 항목이 있음"));
+			continue;
+		}
+
+		if (!DropInfo.DropItemInstance->ItemDef)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[DGLootDropComponent] DropItemInstance 내부의 ItemDef(원본 아이템 데이터)가 비어있음"));
+			// 원본 데이터가 없으면 인벤토리에 넣을 수 없으므로 스킵하거나 에러 로그를 남김
+		}
 
 		float RandomVal = FMath::RandRange(0.f, 100.f);
 
 		// 확률 당첨 시
 		if (RandomVal <= DropInfo.DropChance)
 		{
-			// 수량 결정
-			int32 FinalQuantity = FMath::RandRange(DropInfo.MinQuantity, DropInfo.MaxQuantity);
+			// 수량은 인스턴스에 세팅된 수량을 따름
+			int32 FinalQuantity = DropInfo.DropItemInstance->Quantity;
 
 			if (FinalQuantity <= 0) continue;
 
@@ -50,7 +61,20 @@ void UDGLootDropComponent::ProcessDrop(const FVector& DropLocation)
 
 			if (LootActor)
 			{
-				LootActor->InitializeLoot(DropInfo.ItemDef, FinalQuantity, DropInfo.Grade);
+				// 여러 마리가 동일한 인스턴스를 공유하지 못하게 깊은 복사 진행
+				UDGItemInstance* NewItemInstance = DuplicateObject<UDGItemInstance>(DropInfo.DropItemInstance, GetTransientPackage());
+				if (!NewItemInstance)
+				{
+					UE_LOG(LogTemp, Error, TEXT("[DGLootDropComponent] DuplicateObject 실패, 인스턴스 복제를 할 수 없습니다."));
+					continue;
+				}
+
+				LootActor->InitializeLoot(NewItemInstance);
+				UE_LOG(LogTemp, Log, TEXT("[DGLootDropComponent] 아이템 드롭 성공: %s (등급: %d)"), *NewItemInstance->ItemDef->ItemName.ToString(), (int32)NewItemInstance->Grade);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("[DGLootDropComponent] SpawnActor 실패, 액터를 생성할 수 없습니다."));
 			}
 		}
 	}

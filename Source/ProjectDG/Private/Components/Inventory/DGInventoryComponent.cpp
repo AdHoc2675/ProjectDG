@@ -53,6 +53,62 @@ void UDGInventoryComponent::ClientAddItem_Implementation(UDGItemDefinition* NewI
 	InternalAddItemConfig(NewItemDef, Quantity, Grade);
 }
 
+void UDGInventoryComponent::AddItemByInstance(UDGItemInstance* NewItemInstance)
+{
+	if (!NewItemInstance || !NewItemInstance->ItemDef || !GetOwner()->HasAuthority()) return;
+
+	EDGItemType Type = NewItemInstance->ItemDef->ItemType;
+	switch (Type)
+	{
+	case EDGItemType::Equipment:
+		InventoryEquipmentItems.Add(NewItemInstance);
+		UE_LOG(LogTemp, Log, TEXT("[DGInventoryComponent][%s] 장비 추가(인스턴스): %s"), *GetOwner()->GetName(), *NewItemInstance->ItemDef->ItemName.ToString());
+		break;
+	case EDGItemType::Consumable:
+		InventoryConsumableItems.Add(NewItemInstance);
+		break;
+	case EDGItemType::Material:
+		InventoryCraftingMaterialItems.Add(NewItemInstance);
+		break;
+	}
+
+	APawn* OwningPawn = Cast<APawn>(GetOwner());
+	if (OwningPawn && !OwningPawn->IsLocallyControlled())
+	{
+		ClientAddItemByInstance(NewItemInstance->ItemDef, NewItemInstance->Quantity, NewItemInstance->Grade, 
+			NewItemInstance->HPValue, NewItemInstance->AttackValue, NewItemInstance->DefenseValue, NewItemInstance->MainStatValue, NewItemInstance->SubOptions);
+	}
+}
+
+void UDGInventoryComponent::ClientAddItemByInstance_Implementation(UDGItemDefinition* ItemDef, int32 Quantity, EDGItemGrade Grade, float HP, float Atk, float Def, float Main, const TArray<FDGSubOptionInstanceData>& SubOptions)
+{
+	if (!ItemDef) return;
+
+	UDGItemInstance* NewItemInstance = NewObject<UDGItemInstance>(this);
+	NewItemInstance->ItemDef = ItemDef;
+	NewItemInstance->Quantity = Quantity;
+	NewItemInstance->Grade = Grade;
+	NewItemInstance->HPValue = HP;
+	NewItemInstance->AttackValue = Atk;
+	NewItemInstance->DefenseValue = Def;
+	NewItemInstance->MainStatValue = Main;
+	NewItemInstance->SubOptions = SubOptions;
+
+	EDGItemType Type = ItemDef->ItemType;
+	switch (Type)
+	{
+	case EDGItemType::Equipment:
+		InventoryEquipmentItems.Add(NewItemInstance);
+		break;
+	case EDGItemType::Consumable:
+		InventoryConsumableItems.Add(NewItemInstance);
+		break;
+	case EDGItemType::Material:
+		InventoryCraftingMaterialItems.Add(NewItemInstance);
+		break;
+	}
+}
+
 // 실제 UObject를 구워서 배열에 밀어넣는 핵심 로직 (서버, 클라 모두 각각 실행하게 됨)
 void UDGInventoryComponent::InternalAddItemConfig(UDGItemDefinition* NewItemDef, int32 Quantity, EDGItemGrade Grade)
 {
