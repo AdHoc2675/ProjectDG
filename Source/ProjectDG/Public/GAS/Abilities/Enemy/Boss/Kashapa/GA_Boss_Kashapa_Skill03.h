@@ -4,9 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "GAS/Abilities/Enemy/Base/GA_EnemySkillBase.h"
+#include "Abilities/GameplayAbilityTypes.h"
+#include "GameplayTagContainer.h"
 #include "GA_Boss_Kashapa_Skill03.generated.h"
 
 class UEnemySkillData;
+class UAbilityTask_WaitGameplayEvent;
 
 /**
  * 카샤파 Skill03.
@@ -69,10 +72,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Kashapa|Skill03|Timing", meta = (ClampMin = "0.0"))
 	float MainSkillSectionDelay = 2.0f;
 
-	// Skill_1 이후 Skill_2까지 사용할 확률.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Kashapa|Skill03|FollowUp", meta = (ClampMin = "0.0", ClampMax = "1.0"))
-	float SecondFollowUpChance = 0.5f;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Kashapa|Skill03|Step")
 	int32 MainWaveFirstStepIndex = 0;
 
@@ -84,14 +83,28 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Kashapa|Skill03|Step")
 	int32 SecondFollowUpStepIndex = 4;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Kashapa|Skill03|Branch")
+	FGameplayTag BossSkillBranchEventTag;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Kashapa|Skill03|Branch")
+	int32 MainToFirstFollowUpBranchStepIndex = 0;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Kashapa|Skill03|Branch")
+	int32 FirstToSecondFollowUpBranchStepIndex = 1;
 
 private:
 	FTimerHandle MainSkillSectionTimerHandle;
 
 	bool bHasAnyMainWaveHit = false;
 	bool bHasTriggeredFirstFollowUp = false;
-	bool bShouldUseSecondFollowUp = false;
+	
 	bool bHasTriggeredSecondFollowUp = false;
+	
+	bool bHasFirstFollowUpHit = false;
+
+	UPROPERTY()
+	TObjectPtr<UAbilityTask_WaitGameplayEvent> BossSkillBranchEventTask = nullptr;
 
 	void ResetSkill03RuntimeState();
 
@@ -103,4 +116,9 @@ private:
 	void TryJumpToSecondFollowUpSection();
 
 	bool JumpToMontageSection(FName SectionName);
+	
+	void RegisterBossSkillBranchEvent();
+
+	UFUNCTION()
+	void OnBossSkillBranchEvent(FGameplayEventData Payload);
 };

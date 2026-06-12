@@ -6,11 +6,14 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Core/DG_Debug.h"
 #include "EngineUtils.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Pawn.h"
 
 UBTService_KashapaUpdateTargetDistance::UBTService_KashapaUpdateTargetDistance()
 {
 	NodeName = TEXT("Kashapa Update Target Distance");
+
 	Interval = 0.2f;
 	RandomDeviation = 0.05f;
 	bNotifyTick = true;
@@ -22,7 +25,11 @@ void UBTService_KashapaUpdateTargetDistance::TickNode(
 	float DeltaSeconds
 )
 {
-	Super::TickNode(OwnerComp, NodeMemory, DeltaSeconds);
+	Super::TickNode(
+		OwnerComp,
+		NodeMemory,
+		DeltaSeconds
+	);
 
 	AAIController* AIController = OwnerComp.GetAIOwner();
 	UBlackboardComponent* BlackboardComp = OwnerComp.GetBlackboardComponent();
@@ -36,6 +43,7 @@ void UBTService_KashapaUpdateTargetDistance::TickNode(
 	if (!OwnerPawn)
 	{
 		ClearTargetBlackboard(BlackboardComp);
+		AIController->ClearFocus(EAIFocusPriority::Gameplay);
 		return;
 	}
 
@@ -48,18 +56,41 @@ void UBTService_KashapaUpdateTargetDistance::TickNode(
 		);
 	}
 
+	const bool bAbilityActive = IsAnyAbilityActive(OwnerPawn);
+
 	const float EffectiveForgetRadius = FMath::Max(
 		ForgetRadius,
 		DetectRadius
 	);
 
 	// 1. 기존 타겟이 유효하고 ForgetRadius 안이면 유지.
-	if (IsValidTarget(OwnerPawn, CurrentTarget, EffectiveForgetRadius))
+	if (IsValidTarget(
+		OwnerPawn,
+		CurrentTarget,
+		EffectiveForgetRadius
+	))
 	{
+		const float Distance = CalculateTargetDistance(
+			OwnerPawn,
+			CurrentTarget
+		);
+
 		UpdateTargetBlackboard(
 			BlackboardComp,
 			OwnerPawn,
 			CurrentTarget
+		);
+
+		ApplyMoveSpeedByCombatState(
+			OwnerPawn,
+			true,
+			Distance,
+			bAbilityActive
+		);
+
+		AIController->SetFocus(
+			CurrentTarget,
+			EAIFocusPriority::Gameplay
 		);
 
 		return;
@@ -68,20 +99,43 @@ void UBTService_KashapaUpdateTargetDistance::TickNode(
 	// 2. 기존 타겟이 있었지만 유효하지 않으면 해제.
 	if (CurrentTarget)
 	{
-		
+		Debug::Print(
+			FString::Printf(
+				TEXT("[BTService_KashapaUpdateTargetDistance] Clear invalid target. Target=%s"),
+				*GetNameSafe(CurrentTarget)
+			),
+			FColor::Silver
+		);
 
 		ClearTargetBlackboard(BlackboardComp);
+		ApplyMoveSpeedByCombatState(
+			OwnerPawn,
+			false,
+			0.0f,
+			bAbilityActive
+		);
+
+		AIController->ClearFocus(EAIFocusPriority::Gameplay);
 	}
 
-	// 3. Ability 실행 중에는 타겟을 새로 갈아타지 않는다.
-	//    Skill06처럼 Notify 시점에 타겟 위치를 쓰는 스킬이 흔들리는 걸 막기 위함.
-	if (bKeepCurrentTargetWhileAbilityActive && IsAnyAbilityActive(OwnerPawn))
+	// 3. Ability 실행 중에는 새 타겟을 잡거나 갈아타지 않는다.
+	//    스킬 중 TargetActor가 바뀌면 장판/회전/FollowUp 기준이 흔들릴 수 있음.
+	if (bKeepCurrentTargetWhileAbilityActive && bAbilityActive)
 	{
 		return;
 	}
 
 	if (!bAutoAcquireTarget)
 	{
+		ClearTargetBlackboard(BlackboardComp);
+		ApplyMoveSpeedByCombatState(
+			OwnerPawn,
+			false,
+			0.0f,
+			bAbilityActive
+		);
+
+		AIController->ClearFocus(EAIFocusPriority::Gameplay);
 		return;
 	}
 
@@ -90,8 +144,21 @@ void UBTService_KashapaUpdateTargetDistance::TickNode(
 	if (!NewTarget)
 	{
 		ClearTargetBlackboard(BlackboardComp);
+		ApplyMoveSpeedByCombatState(
+			OwnerPawn,
+			false,
+			0.0f,
+			bAbilityActive
+		);
+
+		AIController->ClearFocus(EAIFocusPriority::Gameplay);
 		return;
 	}
+
+	const float NewTargetDistance = CalculateTargetDistance(
+		OwnerPawn,
+		NewTarget
+	);
 
 	UpdateTargetBlackboard(
 		BlackboardComp,
@@ -99,7 +166,26 @@ void UBTService_KashapaUpdateTargetDistance::TickNode(
 		NewTarget
 	);
 
-	
+	ApplyMoveSpeedByCombatState(
+		OwnerPawn,
+		true,
+		NewTargetDistance,
+		bAbilityActive
+	);
+
+	AIController->SetFocus(
+		NewTarget,
+		EAIFocusPriority::Gameplay
+	);
+
+	Debug::Print(
+		FString::Printf(
+			TEXT("[BTService_KashapaUpdateTargetDistance] Acquire target. Target=%s Distance=%.1f"),
+			*GetNameSafe(NewTarget),
+			NewTargetDistance
+		),
+		FColor::Green
+	);
 }
 
 AActor* UBTService_KashapaUpdateTargetDistance::FindNearestPlayerTarget(
@@ -208,7 +294,7 @@ float UBTService_KashapaUpdateTargetDistance::CalculateTargetDistance(
 		return 0.0f;
 	}
 
-	// 보스 전투는 지상 거리 기준이므로 2D 거리 사용.
+	// 보스 전투는 지상 거리 기준으로 판단.
 	return FVector::Dist2D(
 		OwnerPawn->GetActorLocation(),
 		TargetActor->GetActorLocation()
@@ -341,4 +427,101 @@ void UBTService_KashapaUpdateTargetDistance::ClearTargetBlackboard(
 			false
 		);
 	}
+}
+
+void UBTService_KashapaUpdateTargetDistance::ApplyMoveSpeedByCombatState(
+	APawn* OwnerPawn,
+	bool bHasTarget,
+	float TargetDistance,
+	bool bAbilityActive
+) const
+{
+	if (!bControlMoveSpeed || !OwnerPawn)
+	{
+		return;
+	}
+
+	if (!bHasTarget)
+	{
+		SetOwnerMoveSpeed(
+			OwnerPawn,
+			NormalMoveSpeed
+		);
+
+		return;
+	}
+
+	// 스킬 실행 중에는 접근 속도를 유지하지 않고 전투 속도로 낮춘다.
+	// 이동 자체는 각 GA의 StopMovement / RootMotion / Montage 정책이 담당한다.
+	if (bAbilityActive)
+	{
+		SetOwnerMoveSpeed(
+			OwnerPawn,
+			CombatMoveSpeed
+		);
+
+		return;
+	}
+
+	if (ApproachSpeedDistance > 0.0f &&
+		TargetDistance > ApproachSpeedDistance)
+	{
+		SetOwnerMoveSpeed(
+			OwnerPawn,
+			ApproachMoveSpeed
+		);
+
+		return;
+	}
+
+	SetOwnerMoveSpeed(
+		OwnerPawn,
+		CombatMoveSpeed
+	);
+}
+
+void UBTService_KashapaUpdateTargetDistance::SetOwnerMoveSpeed(
+	APawn* OwnerPawn,
+	float NewMoveSpeed
+) const
+{
+	if (!OwnerPawn)
+	{
+		return;
+	}
+
+	ACharacter* OwnerCharacter = Cast<ACharacter>(OwnerPawn);
+	if (!OwnerCharacter)
+	{
+		return;
+	}
+
+	UCharacterMovementComponent* MovementComponent =
+		OwnerCharacter->GetCharacterMovement();
+
+	if (!MovementComponent)
+	{
+		return;
+	}
+
+	const float ClampedMoveSpeed = FMath::Max(NewMoveSpeed, 0.0f);
+
+	if (FMath::IsNearlyEqual(
+		MovementComponent->MaxWalkSpeed,
+		ClampedMoveSpeed,
+		1.0f
+	))
+	{
+		return;
+	}
+
+	MovementComponent->MaxWalkSpeed = ClampedMoveSpeed;
+
+	Debug::Print(
+		FString::Printf(
+			TEXT("[BTService_KashapaUpdateTargetDistance] MoveSpeed changed: %.1f"),
+			ClampedMoveSpeed
+		),
+		FColor::Cyan
+	);
 }

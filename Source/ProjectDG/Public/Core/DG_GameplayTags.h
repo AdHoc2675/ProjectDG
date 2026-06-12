@@ -240,5 +240,7 @@ namespace DGGameplayTags
 	
 	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Boss_Indicator)
 	
+	PROJECTDG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Boss_SkillBranch)
+	
 
 }

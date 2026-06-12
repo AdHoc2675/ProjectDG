@@ -236,4 +236,7 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Boss_Groggy, "Event.Boss.Groggy")
 	
 	UE_DEFINE_GAMEPLAY_TAG(Event_Boss_Indicator, "Event.Boss.Indicator")
+	
+	UE_DEFINE_GAMEPLAY_TAG(Event_Boss_SkillBranch, "Event.Boss.SkillBranch")
+
 }

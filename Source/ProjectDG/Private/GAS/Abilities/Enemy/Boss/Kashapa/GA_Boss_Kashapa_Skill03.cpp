@@ -2,6 +2,7 @@
 
 #include "GAS/Abilities/Enemy/Boss/Kashapa/GA_Boss_Kashapa_Skill03.h"
 
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Animation/AnimInstance.h"
 #include "Character/Enemy/EnemyCharacterBase.h"
 #include "Character/Enemy/Data/EnemySkillData.h"
@@ -14,6 +15,11 @@ UGA_Boss_Kashapa_Skill03::UGA_Boss_Kashapa_Skill03()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerOnly;
+
+	BossSkillBranchEventTag = FGameplayTag::RequestGameplayTag(
+		FName(TEXT("Event.Boss.SkillBranch")),
+		false
+	);
 }
 
 void UGA_Boss_Kashapa_Skill03::ActivateAbility(
@@ -58,11 +64,10 @@ void UGA_Boss_Kashapa_Skill03::ActivateAbility(
 	}
 
 	RegisterEnemySkillHitCheckEvent();
+	RegisterBossSkillBranchEvent();
 
 	if (!PlaySkillMontageFromData(TEXT("Kashapa_Skill03"), CastingStartSectionName))
 	{
-		
-
 		FinishEnemySkill(true);
 		return;
 	}
@@ -76,18 +81,25 @@ void UGA_Boss_Kashapa_Skill03::OnEnemySkillHitStepExecuted(
 	const TArray<AActor*>& HitActors
 )
 {
+	Debug::Print(
+		FString::Printf(
+			TEXT("[Skill03] HitStep=%d HitActors=%d"),
+			StepIndex,
+			HitActors.Num()
+		),
+		FColor::Red
+	);
+
 	if (StepIndex >= MainWaveFirstStepIndex && StepIndex <= MainWaveLastStepIndex)
 	{
 		if (HitActors.Num() > 0)
 		{
 			bHasAnyMainWaveHit = true;
 
-			
-		}
-
-		if (StepIndex == MainWaveLastStepIndex)
-		{
-			TryJumpToFirstFollowUpSection();
+			Debug::Print(
+				TEXT("[Skill03] MainWave Hit Saved"),
+				FColor::Green
+			);
 		}
 
 		return;
@@ -95,9 +107,14 @@ void UGA_Boss_Kashapa_Skill03::OnEnemySkillHitStepExecuted(
 
 	if (StepIndex == FirstFollowUpStepIndex)
 	{
-		if (bShouldUseSecondFollowUp)
+		if (HitActors.Num() > 0)
 		{
-			TryJumpToSecondFollowUpSection();
+			bHasFirstFollowUpHit = true;
+
+			Debug::Print(
+				TEXT("[Skill03] FirstFollowUp Hit Saved"),
+				FColor::Green
+			);
 		}
 
 		return;
@@ -136,6 +153,7 @@ void UGA_Boss_Kashapa_Skill03::ModifyEnemySkillHitStepIndicatorTransform(
 		InOutSpawnTransform.SetLocation(SpawnLocation);
 	}
 }
+
 void UGA_Boss_Kashapa_Skill03::OnSkillMontageStarted()
 {
 	ResetSkill03RuntimeState();
@@ -150,8 +168,8 @@ void UGA_Boss_Kashapa_Skill03::OnEnemySkillFinished(bool bWasCancelled)
 void UGA_Boss_Kashapa_Skill03::ResetSkill03RuntimeState()
 {
 	bHasAnyMainWaveHit = false;
+	bHasFirstFollowUpHit = false;
 	bHasTriggeredFirstFollowUp = false;
-	bShouldUseSecondFollowUp = false;
 	bHasTriggeredSecondFollowUp = false;
 	bHasCachedWaveCenter = false;
 	CachedWaveCenter = FVector::ZeroVector;
@@ -193,6 +211,79 @@ void UGA_Boss_Kashapa_Skill03::ClearMainSkillSectionTimer()
 	World->GetTimerManager().ClearTimer(MainSkillSectionTimerHandle);
 }
 
+void UGA_Boss_Kashapa_Skill03::RegisterBossSkillBranchEvent()
+{
+	if (!BossSkillBranchEventTag.IsValid())
+	{
+		BossSkillBranchEventTag = FGameplayTag::RequestGameplayTag(
+			FName(TEXT("Event.Boss.SkillBranch")),
+			false
+		);
+	}
+
+	if (!BossSkillBranchEventTag.IsValid())
+	{
+		Debug::Print(TEXT("[Skill03] BossSkillBranchEventTag Invalid"), FColor::Red);
+		return;
+	}
+
+	Debug::Print(
+		FString::Printf(
+			TEXT("[Skill03] Register Branch Event: %s"),
+			*BossSkillBranchEventTag.ToString()
+		),
+		FColor::Cyan
+	);
+
+	BossSkillBranchEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this,
+		BossSkillBranchEventTag,
+		nullptr,
+		false,
+		true
+	);
+
+	if (!BossSkillBranchEventTask)
+	{
+		Debug::Print(TEXT("[Skill03] BossSkillBranchEventTask Invalid"), FColor::Red);
+		return;
+	}
+
+	BossSkillBranchEventTask->EventReceived.AddDynamic(
+		this,
+		&UGA_Boss_Kashapa_Skill03::OnBossSkillBranchEvent
+	);
+
+	BossSkillBranchEventTask->ReadyForActivation();
+}
+
+void UGA_Boss_Kashapa_Skill03::OnBossSkillBranchEvent(FGameplayEventData Payload)
+{
+	const int32 BranchStepIndex = FMath::RoundToInt(Payload.EventMagnitude);
+
+	Debug::Print(
+		FString::Printf(
+			TEXT("[Skill03] BranchEvent=%d MainHit=%s FirstHit=%s"),
+			BranchStepIndex,
+			bHasAnyMainWaveHit ? TEXT("true") : TEXT("false"),
+			bHasFirstFollowUpHit ? TEXT("true") : TEXT("false")
+		),
+		FColor::Cyan
+	);
+
+	if (BranchStepIndex == MainToFirstFollowUpBranchStepIndex)
+	{
+		TryJumpToFirstFollowUpSection();
+		return;
+	}
+
+	if (BranchStepIndex == FirstToSecondFollowUpBranchStepIndex)
+	{
+		TryJumpToSecondFollowUpSection();
+		return;
+	}
+}
+
 void UGA_Boss_Kashapa_Skill03::JumpToMainSkillSection()
 {
 	JumpToMontageSection(MainSkillSectionName);
@@ -207,18 +298,12 @@ void UGA_Boss_Kashapa_Skill03::TryJumpToFirstFollowUpSection()
 
 	if (!bHasAnyMainWaveHit)
 	{
-		
 		return;
 	}
 
 	bHasTriggeredFirstFollowUp = true;
 
-	bShouldUseSecondFollowUp =
-		FMath::FRandRange(0.0f, 1.0f) <= SecondFollowUpChance;
-
 	JumpToMontageSection(FirstFollowUpSectionName);
-
-	
 }
 
 void UGA_Boss_Kashapa_Skill03::TryJumpToSecondFollowUpSection()
@@ -228,7 +313,7 @@ void UGA_Boss_Kashapa_Skill03::TryJumpToSecondFollowUpSection()
 		return;
 	}
 
-	if (!bShouldUseSecondFollowUp)
+	if (!bHasFirstFollowUpHit)
 	{
 		return;
 	}
@@ -236,8 +321,6 @@ void UGA_Boss_Kashapa_Skill03::TryJumpToSecondFollowUpSection()
 	bHasTriggeredSecondFollowUp = true;
 
 	JumpToMontageSection(SecondFollowUpSectionName);
-
-	
 }
 
 bool UGA_Boss_Kashapa_Skill03::JumpToMontageSection(FName SectionName)
@@ -275,8 +358,14 @@ bool UGA_Boss_Kashapa_Skill03::JumpToMontageSection(FName SectionName)
 		SectionName,
 		CurrentSkillData->Montage
 	);
-
 	
+	Debug::Print(
+	FString::Printf(
+		TEXT("[Skill03] JumpToSection: %s"),
+		*SectionName.ToString()
+	),
+	FColor::Yellow
+);
 
 	return true;
 }
