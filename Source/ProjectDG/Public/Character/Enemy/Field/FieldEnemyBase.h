@@ -41,6 +41,9 @@ protected:
 	// 필드 몬스터 태그 초기화 (DataAsset 기반)
 	void InitializeFieldTagFromClassData();
 
+	// FieldClassData->FieldTag 기반 DT_Attribute Row 조회용
+	virtual FGameplayTag GetAttributeSourceTag() const override;
+
 	// Apply startup effects from class data
 	virtual void ApplyDefaultEffects() override;
 
@@ -72,20 +75,6 @@ protected:
 	/** 몬스터 레벨 (GAS Attribute 초기화 및 스케일링에 활용) */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FieldEnemy|Stats")
 	int32 EnemyLevel = 1;
-
-	// --- 4. 드롭 및 보상 (Loot) 시스템 ---
-
-	/** 사망 시 지급할 경험치 */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FieldEnemy|Loot")
-	int32 RewardExp = 50;
-
-	/** 사망 시 지급할 최소 골드 */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FieldEnemy|Loot")
-	int32 MinRewardGold = 10;
-
-	/** 사망 시 지급할 최대 골드 */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FieldEnemy|Loot")
-	int32 MaxRewardGold = 30;
 
 public:
 	// Getters / Setters

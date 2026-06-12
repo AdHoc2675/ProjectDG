@@ -11,6 +11,7 @@ class USphereComponent;
 class UNiagaraComponent;
 class UNiagaraSystem;
 class UDGItemDefinition;
+class UDGItemInstance;
 
 UCLASS()
 class PROJECTDG_API ADGLootItemActor : public AActor
@@ -22,7 +23,7 @@ public:
 
 	// 생성 시 컴포넌트에서 호출하여 아이템 데이터를 세팅
 	UFUNCTION(BlueprintCallable, Category = "DG|Loot")
-	void InitializeLoot(UDGItemDefinition* InItemDef, int32 InQuantity, EDGItemGrade InGrade = EDGItemGrade::Hero);
+	void InitializeLoot(UDGItemInstance* InItemInstance);
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -62,9 +63,7 @@ protected:
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 private:
-	// 습득 시 인벤토리로 넘길 아이템 메타데이터
+	// 습득 시 인벤토리로 넘길 아이템 인스턴스
 	UPROPERTY(Transient)
-	TObjectPtr<UDGItemDefinition> ItemDef;
-
-	int32 Quantity;
+	TObjectPtr<UDGItemInstance> ItemInstance;
 };

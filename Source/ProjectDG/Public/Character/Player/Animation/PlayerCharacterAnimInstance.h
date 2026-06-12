@@ -83,6 +83,29 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Movement")
 	float RunBlendSpacePlayRate = 1.f;
 	
+#pragma region Damage
+
+	/** 이동 또는 공중 상태에서 상체 Damage 포즈를 사용할지 여부 */
+	UPROPERTY(BlueprintReadOnly, Category = "Damage")
+	bool bUseDamageUpperBody = false;
+
+	/**
+	 * 0: 전신 Damage 포즈
+	 * 1: 상체 Damage + 하체 Locomotion 포즈
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "Damage")
+	float DamageUpperBodyAlpha = 0.f;
+
+	/** 상체/전신 Damage 포즈 전환을 시작할 최소 수평 속도 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
+	float DamageUpperBodySpeedThreshold = 10.f;
+
+	/** 상체/전신 Damage 포즈 전환 보간 속도 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
+	float DamageUpperBodyBlendInterpSpeed = 12.f;
+
+#pragma endregion Damage
+	
 private:
 	float SmoothedMeleeTwist = 0.f;
 	

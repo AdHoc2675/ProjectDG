@@ -12,6 +12,8 @@
 #include "Character/Player/PlayerCharacterBase.h"
 #include "Character/Player/Data/PlayerCharacterClassData.h"
 #include "Character/Player/Data/PlayerSkillData.h"
+#include "Character/Enemy/EnemyCharacterBase.h"
+
 
 void UDGOverlayWidgetController::BroadcastInitialValues()
 {
@@ -26,6 +28,11 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 		OnMaxStaminaChanged.Broadcast(DGAS->GetMaxStamina());
 		OnMentalChanged.Broadcast(DGAS->GetMental());
 		OnMaxMentalChanged.Broadcast(DGAS->GetMaxMental());
+	}
+
+	if (ADG_PlayerState* PS = Cast<ADG_PlayerState>(PlayerState))
+	{
+		OnPlayerLevelChanged.Broadcast(PS->GetCharacterLevel());
 	}
 
 	// 미니맵 초기 마커 
@@ -171,10 +178,11 @@ void UDGOverlayWidgetController::BindCallbacksToDependencies()
 		}
 	}
 
-	// PlayerState 콤보 갱신 델리게이트 바인딩
+	// PlayerState 콤보 갱신 및 레벨 갱신 델리게이트 바인딩
 	if (ADG_PlayerState* PS = Cast<ADG_PlayerState>(PlayerState))
 	{
 		PS->OnSkillComboStepChanged.AddDynamic(this, &UDGOverlayWidgetController::OnSkillComboStepChanged);
+		PS->OnLevelChangedDelegate.AddDynamic(this, &UDGOverlayWidgetController::OnPlayerLevelChangedCallback);
 	}
 
 	// 플레이어 스킬의 쿨타임 태그들을 리스닝
@@ -385,6 +393,11 @@ void UDGOverlayWidgetController::RefreshEnemyTargetPriority()
 
 			// 대상의 이름을 알 수 있는 함수(GetName 등)를 가져옵니다. 필요에 따라 형변환 가능 (예: AEnemyCharacterBase)
 			FString UnitName = TargetToShow->GetName();
+			
+			if (AEnemyCharacterBase* EnemyCharacter = Cast<AEnemyCharacterBase>(TargetToShow))
+			{
+				UnitName = EnemyCharacter->EnemyCharacterName;
+			}
 
 			SetEnemyTarget(TargetASC, const_cast<UAttributeSet*>(TargetAS), UnitName);
 		}
@@ -514,4 +527,9 @@ void UDGOverlayWidgetController::OnSkillComboStepChanged(FGameplayTag SkillTag, 
 			break;
 		}
 	}
+}
+
+void UDGOverlayWidgetController::OnPlayerLevelChangedCallback(int32 NewLevel)
+{
+	OnPlayerLevelChanged.Broadcast(NewLevel);
 }

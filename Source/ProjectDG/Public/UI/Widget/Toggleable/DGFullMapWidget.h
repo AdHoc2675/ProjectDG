@@ -11,6 +11,7 @@ class UCanvasPanel;
 class UImage;
 class UDGMinimapMarkerComponent;
 class UDGMinimapMarkerWidget;
+class ADG_PlayerState;
 
 /**
  * 전체 맵 UI View
@@ -87,10 +88,10 @@ protected:
 	float MaxZoom = 4.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "DG|Map Setup")
-	float MinZoom = 0.25f;
+	float MinZoom = 0.2f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "DG|Map Setup")
-	float ZoomStep = 0.25f;
+	float ZoomStep = 0.1f;
 
 private:
 	// 마커 컴포넌트 이벤트 핸들러
@@ -99,6 +100,9 @@ private:
 
 	UFUNCTION()
 	void OnMarkerRemoved(UDGMinimapMarkerComponent* Marker);
+
+	UFUNCTION()
+	void OnPartyMemberLeft(ADG_PlayerState* LeavingMemberPS);
 
 	// Tick마다 마커 위치 업데이트
 	void UpdateMarkers();

@@ -49,6 +49,7 @@ struct FUIPlayerSkillInfo
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSkillInfoSetSignature, const FUIPlayerSkillInfo&, SkillInfo);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSkillIconUpdatedSignature, FGameplayTag, SlotTag, UTexture2D*, NewIcon);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnSkillCooldownChangedSignature, FGameplayTag, CooldownTag, float, TimeRemaining, float, Duration);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStatLevelChangedSignature, int32, NewLevel);
 
 
 UCLASS()
@@ -78,6 +79,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
 	FOnMaxMentalChangedSignature OnMaxMentalChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Player|Growth")
+	FOnPlayerStatLevelChangedSignature OnPlayerLevelChanged;
 
 
 protected:
@@ -203,6 +207,10 @@ protected:
 	// 콤보 갱신 이벤트 처리용
 	UFUNCTION()
 	void OnSkillComboStepChanged(FGameplayTag SkillTag, int32 NewStepIndex);
+
+	// 레벨 갱신 이벤트 처리용
+	UFUNCTION()
+	void OnPlayerLevelChangedCallback(int32 NewLevel);
 
 #pragma region Skill Info
 };

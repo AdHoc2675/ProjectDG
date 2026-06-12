@@ -55,9 +55,6 @@ AFieldEnemyBase::AFieldEnemyBase()
 	LeashDistance = 1500.f;
 	PatrolRadius = 800.f;
 	EnemyLevel = 1;
-	RewardExp = 50;
-	MinRewardGold = 10;
-	MaxRewardGold = 30;
 	bIsReturning = false;
 
 	// 풀링되는 액터는 월드 파티션 그리드에 의해 언로드되지 않도록 공간 로딩을 끕니다.
@@ -97,6 +94,16 @@ void AFieldEnemyBase::InitializeFieldTagFromClassData()
 			EGameplayTagReplicationState::TagOnly
 		);
 	}
+}
+
+FGameplayTag AFieldEnemyBase::GetAttributeSourceTag() const
+{
+	if (FieldClassData && FieldClassData->FieldTag.IsValid())
+	{
+		return FieldClassData->FieldTag;
+	}
+
+	return DGGameplayTags::Team_Enemy_Field;
 }
 
 void AFieldEnemyBase::GrantDefaultAbilities()
@@ -369,9 +376,6 @@ void AFieldEnemyBase::InitFromDataAsset(UFieldCharacterClassData* Data)
 	EnemyLevel = Data->EnemyLevel;
 	PatrolRadius = Data->PatrolRadius;
 	LeashDistance = Data->LeashDistance;
-	RewardExp = Data->RewardExp;
-	MinRewardGold = Data->MinRewardGold;
-	MaxRewardGold = Data->MaxRewardGold;
 	ReturningEffectClass = Data->ReturningEffectClass;
 
 	// Initialize tags and effects if already possessed

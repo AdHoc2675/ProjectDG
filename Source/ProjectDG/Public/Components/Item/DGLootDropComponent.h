@@ -7,6 +7,7 @@
 
 class UDGItemDefinition;
 class ADGLootItemActor;
+class UDGItemInstance;
 
 // 개별 드롭 테이블 행 구조체
 USTRUCT(BlueprintType)
@@ -14,20 +15,9 @@ struct FDGLootDropInfo
 {
 	GENERATED_BODY()
 
-	// 드롭할 아이템 원본 데이터
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TObjectPtr<UDGItemDefinition> ItemDef;
-
-	// 드롭될 아이템의 표시 등급
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EDGItemGrade Grade = EDGItemGrade::Hero;
-
-	// 몇 개가 떨어질 것인지 (최소/최대)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 MinQuantity = 1;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 MaxQuantity = 1;
+	// 드롭할 아이템 인스턴스 (스탯, 수량, 등급 등을 자유롭게 세팅 가능)
+	UPROPERTY(EditAnywhere, Instanced, BlueprintReadWrite)
+	TObjectPtr<UDGItemInstance> DropItemInstance;
 
 	// 드롭 확률 (0.0 ~ 100.0)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", ClampMax = "100.0"))
@@ -47,7 +37,24 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DG|Loot")
 	void ProcessDrop(const FVector& DropLocation);
 
+	// 즉시 획득 보상 반환용 Getter
+	int32 GetRewardExp() const { return RewardExp; }
+	int32 GetMinRewardGold() const { return MinRewardGold; }
+	int32 GetMaxRewardGold() const { return MaxRewardGold; }
+
 protected:
+	/** 사망 시 지급할 경험치 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DG|Loot")
+	int32 RewardExp = 50;
+
+	/** 사망 시 지급할 최소 골드 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DG|Loot")
+	int32 MinRewardGold = 10;
+
+	/** 사망 시 지급할 최대 골드 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DG|Loot")
+	int32 MaxRewardGold = 30;
+
 	UPROPERTY(EditDefaultsOnly, Category = "DG|Loot")
 	TSubclassOf<ADGLootItemActor> LootItemClass;
 

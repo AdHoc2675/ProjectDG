@@ -74,4 +74,18 @@ void UPlayerCharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 			-1.f,
 			1.f
 	);
+	
+	bUseDamageUpperBody =
+		GroundSpeed > DamageUpperBodySpeedThreshold ||
+		bIsFalling;
+
+	const float TargetDamageUpperBodyAlpha =
+			bUseDamageUpperBody ? 1.f : 0.f;
+
+	DamageUpperBodyAlpha = FMath::FInterpTo(
+			DamageUpperBodyAlpha,
+			TargetDamageUpperBodyAlpha,
+			DeltaSeconds,
+			DamageUpperBodyBlendInterpSpeed
+	);
 }

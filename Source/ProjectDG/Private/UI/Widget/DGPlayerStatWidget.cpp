@@ -3,6 +3,7 @@
 
 #include "UI/Widget/DGSkillSlotWidget.h"
 #include "Components/ProgressBar.h"
+#include "Components/TextBlock.h"
 
 #include "Core/DG_GameplayTags.h"
 #include "Core/DG_Debug.h"
@@ -48,6 +49,7 @@ void UDGPlayerStatWidget::BindToController(UDGOverlayWidgetController* Controlle
 	Controller->OnMaxStaminaChanged.AddDynamic(this, &UDGPlayerStatWidget::MaxStaminaChanged);
 	Controller->OnMentalChanged.AddDynamic(this, &UDGPlayerStatWidget::MentalChanged);
 	Controller->OnMaxMentalChanged.AddDynamic(this, &UDGPlayerStatWidget::MaxMentalChanged);
+	Controller->OnPlayerLevelChanged.AddDynamic(this, &UDGPlayerStatWidget::LevelChanged);
 
 	// 스킬 관련 이벤트 바인딩
 	Controller->OnSkillInfoSet.AddDynamic(this, &UDGPlayerStatWidget::OnSkillInfoSet);
@@ -58,8 +60,13 @@ void UDGPlayerStatWidget::BindToController(UDGOverlayWidgetController* Controlle
 
 void UDGPlayerStatWidget::HealthChanged(float NewHealth)
 {
-	CurrentHealth = NewHealth;
-	UpdateHealthBar();
+	TargetHealth = NewHealth;
+	if (!bHealthInitialized)
+	{
+		CurrentHealth = TargetHealth;
+		bHealthInitialized = true;
+		UpdateHealthBar();
+	}
 }
 
 void UDGPlayerStatWidget::MaxHealthChanged(float NewMaxHealth)
@@ -70,8 +77,13 @@ void UDGPlayerStatWidget::MaxHealthChanged(float NewMaxHealth)
 
 void UDGPlayerStatWidget::StaminaChanged(float NewStamina)
 {
-	CurrentStamina = NewStamina;
-	UpdateStaminaBar();
+	TargetStamina = NewStamina;
+	if (!bStaminaInitialized)
+	{
+		CurrentStamina = TargetStamina;
+		bStaminaInitialized = true;
+		UpdateStaminaBar();
+	}
 }
 
 void UDGPlayerStatWidget::MaxStaminaChanged(float NewMaxStamina)
@@ -82,8 +94,13 @@ void UDGPlayerStatWidget::MaxStaminaChanged(float NewMaxStamina)
 
 void UDGPlayerStatWidget::MentalChanged(float NewMental)
 {
-	CurrentMental = NewMental;
-	UpdateMentalBar();
+	TargetMental = NewMental;
+	if (!bMentalInitialized)
+	{
+		CurrentMental = TargetMental;
+		bMentalInitialized = true;
+		UpdateMentalBar();
+	}
 }
 
 void UDGPlayerStatWidget::MaxMentalChanged(float NewMaxMental)
@@ -92,12 +109,20 @@ void UDGPlayerStatWidget::MaxMentalChanged(float NewMaxMental)
 	UpdateMentalBar();
 }
 
+void UDGPlayerStatWidget::LevelChanged(int32 NewLevel)
+{
+	if (Text_Level)
+	{
+		Text_Level->SetText(FText::FromString(FString::FromInt(NewLevel)));
+	}
+}
+
 void UDGPlayerStatWidget::UpdateHealthBar()
 {
 	if (PB_HealthBar && CurrentMaxHealth > 0.f)
 	{
 		float HealthPercent = CurrentHealth / CurrentMaxHealth;
-		UE_LOG(LogTemp, Log, TEXT("[DGPlayerStatWidget] Updating Health Bar: CurrentHealth = %f, CurrentMaxHealth = %f, HealthPercent = %f"), CurrentHealth, CurrentMaxHealth, HealthPercent);
+		//UE_LOG(LogTemp, Log, TEXT("[DGPlayerStatWidget] Updating Health Bar: CurrentHealth = %f, CurrentMaxHealth = %f, HealthPercent = %f"), CurrentHealth, CurrentMaxHealth, HealthPercent);
 		PB_HealthBar->SetPercent(HealthPercent);
 	}
 }
@@ -185,5 +210,28 @@ void UDGPlayerStatWidget::OnSkillIconUpdated(FGameplayTag SlotTag, UTexture2D* N
 			SlotWidget->UpdateSkillIcon(NewIcon);
 			break;
 		}
+	}
+}
+
+void UDGPlayerStatWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+
+	if (!FMath::IsNearlyEqual(CurrentHealth, TargetHealth, 0.1f))
+	{
+		CurrentHealth = FMath::FInterpTo(CurrentHealth, TargetHealth, InDeltaTime, InterpSpeed);
+		UpdateHealthBar();
+	}
+
+	if (!FMath::IsNearlyEqual(CurrentStamina, TargetStamina, 0.1f))
+	{
+		CurrentStamina = FMath::FInterpTo(CurrentStamina, TargetStamina, InDeltaTime, InterpSpeed);
+		UpdateStaminaBar();
+	}
+
+	if (!FMath::IsNearlyEqual(CurrentMental, TargetMental, 0.1f))
+	{
+		CurrentMental = FMath::FInterpTo(CurrentMental, TargetMental, InDeltaTime, InterpSpeed);
+		UpdateMentalBar();
 	}
 }

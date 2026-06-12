@@ -7,6 +7,7 @@
 #include "Item/DGItemInstance.h"
 #include "Item/DGItemDefinition.h"
 #include "Core/DG_Debug.h"
+#include "Components/TextBlock.h"
 
 #include "Components/UniformGridSlot.h" 
 
@@ -25,6 +26,7 @@ void UDGInventoryWidget::BindToController(UDGInventoryWidgetController* Controll
 
 		// 컨트롤러의 델리게이트에 C++ 콜백 함수 바인딩
 		Controller->OnInventoryUpdated.AddDynamic(this, &UDGInventoryWidget::OnInventoryUpdatedCallback);
+		Controller->OnGoldChanged.AddDynamic(this, &UDGInventoryWidget::GoldChanged);
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("[DGInventoryWidget] Bound to Controller successfully."));
@@ -35,13 +37,12 @@ void UDGInventoryWidget::NativeConstruct()
 	Super::NativeConstruct();
 
 	// 10x3 총 30개의 슬롯을 미리 생성하여 배치
-	if (InventoryGrid && SlotWidgetClass)
+	if (InventoryGrid && SlotWidgetClass && SlotWidgets.IsEmpty())
 	{
 		const int32 MaxSlots = 30; // 탭당 30칸 제한
 		const int32 Columns = 10;  // 가로 10칸
 
 		InventoryGrid->ClearChildren();
-		SlotWidgets.Empty();
 
 		for (int32 Index = 0; Index < MaxSlots; ++Index)
 		{
@@ -71,14 +72,17 @@ void UDGInventoryWidget::NativeConstruct()
 	// 탭 버튼 클릭 이벤트 바인딩
 	if (EquipmentItemsButton)
 	{
+		EquipmentItemsButton->OnClicked.RemoveDynamic(this, &UDGInventoryWidget::OnEquipmentTabClicked);
 		EquipmentItemsButton->OnClicked.AddDynamic(this, &UDGInventoryWidget::OnEquipmentTabClicked);
 	}
 	if (ConsumableItemsButton)
 	{
+		ConsumableItemsButton->OnClicked.RemoveDynamic(this, &UDGInventoryWidget::OnConsumableTabClicked);
 		ConsumableItemsButton->OnClicked.AddDynamic(this, &UDGInventoryWidget::OnConsumableTabClicked);
 	}
 	if (CraftingMaterialButton)
 	{
+		CraftingMaterialButton->OnClicked.RemoveDynamic(this, &UDGInventoryWidget::OnMaterialTabClicked);
 		CraftingMaterialButton->OnClicked.AddDynamic(this, &UDGInventoryWidget::OnMaterialTabClicked);
 	}
 }
@@ -135,5 +139,14 @@ void UDGInventoryWidget::OnMaterialTabClicked()
 	if (UDGInventoryWidgetController* C = Cast<UDGInventoryWidgetController>(WidgetController))
 	{
 		C->SwitchTab(EDGItemType::Material);
+	}
+}
+
+void UDGInventoryWidget::GoldChanged(int32 NewGold)
+{
+	if (Text_GoldAmount)
+	{
+		Text_GoldAmount->SetText(FText::AsNumber(NewGold));
+		UE_LOG(LogTemp, Warning, TEXT("[DGInventoryWidget] Gold Changed: %d"), NewGold);
 	}
 }

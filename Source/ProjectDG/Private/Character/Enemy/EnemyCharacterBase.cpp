@@ -44,7 +44,7 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 	EnemyAttributeSet = CreateDefaultSubobject<UDG_EnemyAttributeSet>(TEXT("EnemyAttributeSet"));
 
 	// 드롭 컴포넌트 생성
-	LootDropComponent = CreateDefaultSubobject<UDGLootDropComponent>(TEXT("LootDropComponent"));
+	LootDropComponent2 = CreateDefaultSubobject<UDGLootDropComponent>(TEXT("LootDropComponent"));
 
 	// 미니맵 마커 생성 및 기본 타입 설정
 	MinimapMarkerComponent = CreateDefaultSubobject<UDGMinimapMarkerComponent>(TEXT("MinimapMarkerComponent"));
@@ -407,9 +407,9 @@ void AEnemyCharacterBase::HandleDeath()
 		MulticastPlayDeathMontage();
 	}
 
-	if (HasAuthority() && LootDropComponent)
+	if (HasAuthority() && LootDropComponent2)
 	{
-		LootDropComponent->ProcessDrop(GetActorLocation());
+		LootDropComponent2->ProcessDrop(GetActorLocation());
 	}
 
 	Super::HandleDeath();
@@ -536,7 +536,7 @@ void AEnemyCharacterBase::Multicast_ShowDamageNumber_Implementation(
 	bool bIsCritical,
 	AActor* DamageInstigator)
 {
-	UE_LOG(LogTemp, Warning, TEXT("[DamageNumber] Multicast called! Damage: %.1f"), DamageAmount);
+	//UE_LOG(LogTemp, Warning, TEXT("[DamageNumber] Multicast called! Damage: %.1f"), DamageAmount);
 
 	if (!DamageNumberClass)
 	{
@@ -573,7 +573,7 @@ void AEnemyCharacterBase::Multicast_ShowDamageNumber_Implementation(
 
 		if (ADGDamageNumberActor* DmgActor = PoolSubsystem->AcquireDamageNumber(DamageNumberClass, SpawnLoc))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[DamageNumber] Actor Acquired! Calling ShowDamage."));
+			//UE_LOG(LogTemp, Warning, TEXT("[DamageNumber] Actor Acquired! Calling ShowDamage."));
 			DmgActor->ShowDamage(DamageAmount, bIsCritical);
 		}
 	}

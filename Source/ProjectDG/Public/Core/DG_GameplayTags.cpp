@@ -12,7 +12,19 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Boss_Kashapa, "Team.Enemy.Boss.Kashapa")
 
 	//필드 몬스터들 태그
+	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field, "Team.Enemy.Field")
 
+	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_Beritra, "Team.Enemy.Field.Beritra")
+	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_Coradon, "Team.Enemy.Field.Coradon")
+	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_CorpeSpider, "Team.Enemy.Field.CorpeSpider")
+	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_DracoWar3, "Team.Enemy.Field.DracoWar3")
+	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_DracoWar5, "Team.Enemy.Field.DracoWar5")
+	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_DranaVar, "Team.Enemy.Field.DranaVar")
+	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_Neuth, "Team.Enemy.Field.Neuth")
+	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_Nihogg, "Team.Enemy.Field.Nihogg")
+	UE_DEFINE_GAMEPLAY_TAG(Team_Enemy_Field_Ramfu_04, "Team.Enemy.Field.Ramfu_04")
+	
+	
 	// Character Class
 	UE_DEFINE_GAMEPLAY_TAG(Character_Class_Warrior, "Character.Class.Warrior")
 	UE_DEFINE_GAMEPLAY_TAG(Character_Class_Archer, "Character.Class.Archer")
@@ -26,6 +38,12 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_Key2, "Input.SkillSlot.Key2")
 	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_Key3, "Input.SkillSlot.Key3")
 	UE_DEFINE_GAMEPLAY_TAG(Input_SkillSlot_Key4, "Input.SkillSlot.Key4")
+	
+	// Player Damage Event
+	UE_DEFINE_GAMEPLAY_TAG(Event_Player_Damage, "Event.Player.Damage")
+	
+	// DG_GameplayTags.cpp
+	UE_DEFINE_GAMEPLAY_TAG(Event_Player_Death, "Event.Player.Death")
 
 	// Event
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combo_InputWindow_Open, "Event.Combo.InputWindow.Open")
@@ -202,6 +220,10 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Assassin_FlashSlash_Active, "State.Skill.Assassin.FlashSlash.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Assassin_HeartStab_Active, "State.Skill.Assassin.HeartStab.Active")
 	UE_DEFINE_GAMEPLAY_TAG(State_Skill_Assassin_Infiltration_Active, "State.Skill.Assassin.Infiltration.Active")
+	
+	// Player Damage State
+	UE_DEFINE_GAMEPLAY_TAG(State_Player_Damage, "State.Player.Damage")
+	UE_DEFINE_GAMEPLAY_TAG(State_Player_Dead, "State.Player.Dead")
 
 
 	// Data

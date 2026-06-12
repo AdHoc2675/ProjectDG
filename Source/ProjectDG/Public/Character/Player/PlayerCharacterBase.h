@@ -13,6 +13,8 @@ class UAbilitySystemComponent;
 class UAttributeSet;
 class UDG_AttributeSet;
 class UAnimMontage;
+class UCameraShakeBase;
+struct FOnAttributeChangeData;
 
 
 
@@ -60,6 +62,9 @@ protected:
 	//player state에서 ASC를 확인하는 함수
 	//별도 함수로 처리해서 Beginplay/PossessedBy 등에서 사용할때마다 호출
 	virtual void InitializePlayerAbilitySystem();	
+
+	/** Health 변화 델리게이트 바인딩 */
+	void BindHealthChangeCameraShakeDelegate();
 	
 	// UI 초기화 함수
 	virtual void InitializePlayerUI();
@@ -77,6 +82,13 @@ public:
 	
 	//BaseCharacter 공용 Attribute set getter
 	virtual const UAttributeSet* GetCharacterAttributeSet() const override;
+
+	/** Health 변경 시 카메라 shake를 트리거하는 델리게이트 핸들러 */
+	void OnHealthChanged(const FOnAttributeChangeData& Data);
+
+	/** 피격 시 플레이어 카메라에 shake를 재생한다. */
+	UFUNCTION(Client, Unreliable)
+	void ClientPlayDamageCameraShake(float ShakeScale);
 	
 	//player 전용 Attribute getter
 	UFUNCTION(BlueprintCallable, Category = "PlayerCharacterBase|ASC")
@@ -116,6 +128,12 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|View", meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCam;
+
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|View")
+	TSubclassOf<UCameraShakeBase> DamageCameraShakeClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|View", meta = (ClampMin = "0.0"))
+	float DamageCameraShakeScale = 1.0f;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacterBase|Targeting")
 	TObjectPtr<ULockOnComponent> LockOnComponent;
@@ -320,6 +338,58 @@ public:
 	void ServerTeleportToLocation(FVector TargetLocation);
 	
 #pragma endregion Movement
+	
+#pragma region Death
+
+protected:
+	/** 플레이어 전용 사망 처리 */
+	virtual void HandleDeath() override;
+
+	/** Event.Player.Death를 보내 Death GA를 실행한다. */
+	void SendDeathEvent();
+
+	/** 서버에서 동일 Pawn을 지정된 PlayerStart로 복구한다. */
+	void RespawnPlayer();
+
+	/** 사망 시 비활성화한 이동과 충돌을 복구한다. */
+	void RestorePlayerAfterRespawn();
+
+	/** 클라이언트의 사망 상태 반영 */
+	UFUNCTION()
+	void OnRep_PlayerDead();
+
+	/** 클라이언트에 동기화할 플레이어 사망 상태 */
+	UPROPERTY(
+			VisibleAnywhere,
+			BlueprintReadOnly,
+			ReplicatedUsing = OnRep_PlayerDead,
+			Category = "PlayerCharacterBase|Death"
+	)
+	bool bPlayerDead = false;
+
+	/** 사망 후 리스폰까지 대기 시간 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacterBase|Death")
+	float RespawnDelay = 4.f;
+
+	/** 리스폰에 사용할 PlayerStart의 Player Start Tag */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PlayerCharacterBase|Death")
+	FName RespawnPlayerStartTag = TEXT("Respawn.Main");
+
+	FTimerHandle RespawnTimerHandle;
+
+	/** 사망 전에 사용하던 충돌 설정 */
+	ECollisionEnabled::Type InitialCapsuleCollisionEnabled =
+			ECollisionEnabled::NoCollision;
+
+	ECollisionEnabled::Type InitialMeshCollisionEnabled =
+			ECollisionEnabled::NoCollision;
+
+	bool bHealthChangeCameraShakeDelegateBound = false;
+
+#pragma endregion Death
+	
+public:
+	void SendDamageEvent(FVector DamageSourceLocation,bool bHasDamageSourceLocation);
 	
 protected:
 	UFUNCTION(Server, Reliable)

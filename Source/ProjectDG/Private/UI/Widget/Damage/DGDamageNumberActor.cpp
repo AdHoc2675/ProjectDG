@@ -30,7 +30,7 @@ void ADGDamageNumberActor::ShowDamage(float DamageAmount, bool bIsCritical)
 {
 	SetActorHiddenInGame(false);
 
-	UE_LOG(LogTemp, Warning, TEXT("[DamageActor] ShowDamage called."));
+	//UE_LOG(LogTemp, Warning, TEXT("[DamageActor] ShowDamage called."));
 
 	if (DamageWidgetComponent)
 	{
@@ -43,7 +43,7 @@ void ADGDamageNumberActor::ShowDamage(float DamageAmount, bool bIsCritical)
 
 		if (UDGDamageNumberWidget* DamageWidget = Cast<UDGDamageNumberWidget>(RawWidget))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[DamageActor] Casting Success! Calling PlayDamageAnimation."));
+			//UE_LOG(LogTemp, Warning, TEXT("[DamageActor] Casting Success! Calling PlayDamageAnimation."));
 			DamageWidget->PlayDamageAnimation(DamageAmount, bIsCritical, this);
 		}
 		else

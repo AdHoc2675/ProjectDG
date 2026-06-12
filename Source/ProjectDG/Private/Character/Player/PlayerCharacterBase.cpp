@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "Abilities/GameplayAbility.h"
 #include "Camera/CameraComponent.h"
+#include "Camera/PlayerCameraManager.h"
 #include "Core/DG_Debug.h"
 #include "Core/DG_GameplayTags.h"
 #include "Core/DG_Struct.h"
@@ -26,6 +27,7 @@
 #include "Animation/AnimInstance.h"
 #include "Character/Player/Data/PlayerCharacterMovementData.h"
 #include "Character/Player/Data/PlayerCharacterClassData.h"
+#include "Components/CapsuleComponent.h"
 #include "Perception/AIPerceptionStimuliSourceComponent.h"
 #include "Perception/AISense_Sight.h"
 
@@ -36,6 +38,7 @@
 #include "Components/UI/DGMinimapMarkerComponent.h"
 #include "Components/Targeting/LockOnComponent.h"
 #include "Components/Inventory/DGInventoryComponent.h"
+#include "GameFramework/GameModeBase.h"
 
 
 namespace
@@ -163,6 +166,18 @@ void APlayerCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		InitialCapsuleCollisionEnabled =
+				Capsule->GetCollisionEnabled();
+	}
+
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		InitialMeshCollisionEnabled =
+				MeshComp->GetCollisionEnabled();
+	}
+	
 	// 월드시작시 ASC초기화
 	InitializePlayerAbilitySystem();
 }
@@ -175,6 +190,8 @@ void APlayerCharacterBase::Tick(float DeltaSeconds)
 void APlayerCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(APlayerCharacterBase,bPlayerDead);
 }
 
 void APlayerCharacterBase::Landed(const FHitResult& Hit)
@@ -242,6 +259,7 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 	// 이미 ActorInfo가 설정되어 있다면 불필요한 재설정 방지
 	if (ASC->GetAvatarActor() == this)
 	{
+		BindHealthChangeCameraShakeDelegate();
 		return;
 	}
 
@@ -257,6 +275,63 @@ void APlayerCharacterBase::InitializePlayerAbilitySystem()
 	 * - 실제 월드에서 움직이고 스킬을 사용하는 존재는 Character
 	 */
 	ASC->InitAbilityActorInfo(PS, this);
+
+	BindHealthChangeCameraShakeDelegate();
+}
+
+void APlayerCharacterBase::BindHealthChangeCameraShakeDelegate()
+{
+	if (!HasAuthority() || bHealthChangeCameraShakeDelegateBound)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC)
+	{
+		return;
+	}
+
+	ASC->GetGameplayAttributeValueChangeDelegate(UDG_AttributeSet::GetHealthAttribute())
+		.AddUObject(this, &APlayerCharacterBase::OnHealthChanged);
+
+	bHealthChangeCameraShakeDelegateBound = true;
+}
+
+void APlayerCharacterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (Data.NewValue >= Data.OldValue || bPlayerDead || IsDead())
+	{
+		return;
+	}
+
+	const UDG_AttributeSet* AttributeSet = GetPlayerDGAttributeSet();
+	const float MaxHealth = AttributeSet ? AttributeSet->GetMaxHealth() : 0.0f;
+	const float DamageRatio = MaxHealth > 0.0f ? (Data.OldValue - Data.NewValue) / MaxHealth : 0.0f;
+	const float ShakeScale = FMath::Clamp(DamageRatio * DamageCameraShakeScale, 0.2f, 1.0f);
+
+	ClientPlayDamageCameraShake(ShakeScale);
+}
+
+void APlayerCharacterBase::ClientPlayDamageCameraShake_Implementation(float ShakeScale)
+{
+	if (!DamageCameraShakeClass)
+	{
+		return;
+	}
+
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (!PlayerController || !PlayerController->PlayerCameraManager)
+	{
+		return;
+	}
+
+	PlayerController->PlayerCameraManager->StartCameraShake(DamageCameraShakeClass, ShakeScale);
 }
 
 void APlayerCharacterBase::InitializePlayerUI()
@@ -488,6 +563,177 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	{
 		EnhancedInputComponent->BindAction(IA_ToggleInventory, ETriggerEvent::Started, this,
 			&APlayerCharacterBase::ToggleInventoryAction);
+	}
+}
+
+void APlayerCharacterBase::HandleDeath()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	bPlayerDead = true;
+
+	if (UAbilitySystemComponent* ASC =
+			GetCharacterAbilitySystemComponent())
+	{
+		ASC->CancelAllAbilities();
+
+		ASC->AddLooseGameplayTag(
+				DGGameplayTags::State_Player_Dead,
+				1,
+				EGameplayTagReplicationState::TagOnly
+		);
+
+		ASC->AddLooseGameplayTag(
+				DGGameplayTags::State_Movement_Locked,
+				1,
+				EGameplayTagReplicationState::TagOnly
+		);
+	}
+	
+	Super::HandleDeath();
+	
+	SendDeathEvent();
+
+	GetWorldTimerManager().SetTimer(
+			RespawnTimerHandle,
+			this,
+			&APlayerCharacterBase::RespawnPlayer,
+			RespawnDelay,
+			false
+	);
+
+	ForceNetUpdate();
+}
+
+void APlayerCharacterBase::SendDeathEvent()
+{
+	FGameplayEventData Payload;
+	Payload.EventTag = DGGameplayTags::Event_Player_Death;
+	Payload.Instigator = this;
+	Payload.Target = this;
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+			this,
+			DGGameplayTags::Event_Player_Death,
+			Payload
+	);
+}
+
+void APlayerCharacterBase::RespawnPlayer()
+{
+	if (!HasAuthority() || !bPlayerDead)
+      {
+              return;
+      }
+
+      UAbilitySystemComponent* ASC =
+              GetCharacterAbilitySystemComponent();
+
+      if (ASC)
+      {
+              // Death GA 또는 남아 있는 Ability를 종료한다.
+              ASC->CancelAllAbilities();
+
+              if (const UDG_AttributeSet* Attributes =
+                      GetPlayerDGAttributeSet())
+              {
+                      ASC->SetNumericAttributeBase(
+                              UDG_AttributeSet::GetHealthAttribute(),
+                              Attributes->GetMaxHealth()
+                      );
+
+                      ASC->SetNumericAttributeBase(
+                              UDG_AttributeSet::GetMentalAttribute(),
+                              Attributes->GetMaxMental()
+                      );
+
+                      ASC->SetNumericAttributeBase(
+                              UDG_AttributeSet::GetStaminaAttribute(),
+                              Attributes->GetMaxStamina()
+                      );
+              }
+      }
+
+      AGameModeBase* GameMode =
+              GetWorld() ? GetWorld()->GetAuthGameMode() : nullptr;
+
+      AActor* RespawnPoint = GameMode
+              ? GameMode->FindPlayerStart(
+                      GetController(),
+                      RespawnPlayerStartTag.ToString()
+              )
+              : nullptr;
+
+      if (RespawnPoint)
+      {
+              SetActorLocationAndRotation(
+                      RespawnPoint->GetActorLocation(),
+                      RespawnPoint->GetActorRotation(),
+                      false,
+                      nullptr,
+                      ETeleportType::TeleportPhysics
+              );
+      }
+
+      if (ASC)
+      {
+              ASC->RemoveLooseGameplayTag(
+                      DGGameplayTags::State_Player_Dead,
+                      1
+              );
+
+              ASC->RemoveLooseGameplayTag(
+                      DGGameplayTags::State_Movement_Locked,
+                      1
+              );
+      }
+
+      // BaseCharacter::Die()에서 설정된 서버 사망 상태
+      bIsDead = false;
+
+      // 클라이언트에 복제되는 플레이어 사망 상태
+      bPlayerDead = false;
+
+      RestorePlayerAfterRespawn();
+      ForceNetUpdate();
+}
+
+void APlayerCharacterBase::RestorePlayerAfterRespawn()
+{
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		Capsule->SetCollisionEnabled(
+				InitialCapsuleCollisionEnabled
+		);
+	}
+
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		MeshComp->SetCollisionEnabled(
+				InitialMeshCollisionEnabled
+		);
+	}
+
+	if (UCharacterMovementComponent* Movement =
+			GetCharacterMovement())
+	{
+		Movement->StopMovementImmediately();
+		Movement->SetMovementMode(MOVE_Walking);
+	}
+}
+
+void APlayerCharacterBase::OnRep_PlayerDead()
+{
+	if (bPlayerDead)
+	{
+		DisableCharacterAfterDeath();
+	}
+	else
+	{
+		RestorePlayerAfterRespawn();
 	}
 }
 
@@ -780,6 +1026,11 @@ void APlayerCharacterBase::LookAction(const FInputActionValue& InputActionValue)
 
 void APlayerCharacterBase::MoveAction(const FInputActionValue& InputActionValue)
 {
+	if (bPlayerDead || IsDead())
+	{
+		return;
+	}
+	
 	CurrentMoveInput = InputActionValue.Get<FVector2D>();
 
 	if (IsMovementInputLocked())
@@ -970,6 +1221,11 @@ void APlayerCharacterBase::ToggleInventoryAction()
 
 void APlayerCharacterBase::OnSkillInputStarted(FGameplayTag SlotTag)
 {
+	if (bPlayerDead || IsDead())
+	{
+		return;
+	}
+	
 	HeldSkillSlots.FindOrAdd(SlotTag) = true;
 
 	// if (!HasAuthority())
@@ -1212,6 +1468,38 @@ const FPlayerMovementAnimationSet& APlayerCharacterBase::GetCurrentMovementAnims
 	// }
 
 	return CharacterClassData->StandardAnims;
+}
+
+void APlayerCharacterBase::SendDamageEvent(FVector DamageSourceLocation, bool bHasDamageSourceLocation)
+{
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+	if (!ASC)
+	{
+		return;
+	}
+
+	FGameplayEventData Payload;
+	Payload.EventTag = DGGameplayTags::Event_Player_Damage;
+	Payload.Instigator = this;
+	Payload.Target = this;
+
+	if (bHasDamageSourceLocation)
+	{
+		FHitResult HitResult;
+		HitResult.ImpactPoint = DamageSourceLocation;
+		HitResult.Location = DamageSourceLocation;
+
+		FGameplayEffectContextHandle ContextHandle = ASC->MakeEffectContext();
+		ContextHandle.AddHitResult(HitResult);
+
+		Payload.ContextHandle = ContextHandle;
+	}
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+			this,
+			DGGameplayTags::Event_Player_Damage,
+			Payload
+	);
 }
 
 void APlayerCharacterBase::ServerTeleportToLocation_Implementation(FVector TargetLocation)

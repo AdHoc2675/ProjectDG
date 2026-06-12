@@ -14,6 +14,8 @@ class UDataTable;
 class UPlayerCharacterClassData;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSkillComboStepChangedSignature, FGameplayTag, SkillTag, int32, NewStepIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStateLevelChangedSignature, int32, NewLevel);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStateGoldChangedSignature, int32, NewGold);
 
 /*
 ADG_PlayerState
@@ -72,6 +74,13 @@ public:
 	// Getter 함수 추가
 	UPROPERTY(BlueprintAssignable, Category = "Player|Skill")
 	FOnSkillComboStepChangedSignature OnSkillComboStepChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Player|Growth")
+	FOnPlayerStateLevelChangedSignature OnLevelChangedDelegate;
+
+	UPROPERTY(BlueprintAssignable, Category = "Player|Growth")
+	FOnPlayerStateGoldChangedSignature OnGoldChangedDelegate;
+	
 	UFUNCTION(BlueprintCallable, Category = "Player|Growth")
 	int32 GetCharacterLevel() const { return Level; }
 
@@ -80,6 +89,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Growth")
 	int32 GetCurrentExp() const { return CurrentExp; }
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Growth")
+	int32 GetGold() const { return OwnedGold; }
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Growth")
+	void AddExpAndGold(int32 ExpAmount, int32 GoldAmount);
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Session")
 	FString GetSessionId() const { return SessionId; }
@@ -161,6 +176,9 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentExp, BlueprintReadOnly, Category = "Player|Growth")
 	int32 CurrentExp = 0;
 
+	UPROPERTY(ReplicatedUsing = OnRep_OwnedGold, BlueprintReadOnly, Category = "Player|Growth")
+	int32 OwnedGold = 0;
+
 	UPROPERTY(ReplicatedUsing = OnRep_SkillComboStates, BlueprintReadOnly, Category = "Player|Skill")
 	TArray<FPlayerSkillChainRuntimeState> SkillComboStates;
 
@@ -172,6 +190,9 @@ protected:
 
 	UFUNCTION()
 	void OnRep_CurrentExp();
+
+	UFUNCTION()
+	void OnRep_OwnedGold();
 
 	// AttributeSet 생성
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS")

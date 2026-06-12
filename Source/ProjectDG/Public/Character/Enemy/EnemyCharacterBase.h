@@ -134,11 +134,17 @@ protected:
 	
 	// 아이템 드롭 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|Loot")
-	TObjectPtr<UDGLootDropComponent> LootDropComponent = nullptr;
+	TObjectPtr<UDGLootDropComponent> LootDropComponent2 = nullptr;
 
 	// 미니맵 마커 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|Minimap")
 	TObjectPtr<UDGMinimapMarkerComponent> MinimapMarkerComponent;
+
+public:
+	/** UI 등에 표시될 적의 이름 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "EnemyCharacterBase|UI")
+	FString EnemyCharacterName = TEXT("Enemy");
+
 
 
 public:

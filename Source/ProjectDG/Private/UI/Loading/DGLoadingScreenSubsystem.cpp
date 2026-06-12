@@ -59,7 +59,7 @@ void UDGLoadingScreenSubsystem::ShowLoadingScreen() {
   }
 
   if (!LoadingWidgetClass) {
-    // Fallback to loading BP if not set directly via C++
+    // Fallback: DefaultGame.ini의 DirectoriesToAlwaysCook에 의해 쿠킹이 보장됨
     FSoftClassPath LoadingWidgetPath(
         TEXT("/Game/__ProjectDG/__BP/UI/Loading_Screens/"
              "WBP_LoadingScreen.WBP_LoadingScreen_C"));
@@ -71,7 +71,7 @@ void UDGLoadingScreenSubsystem::ShowLoadingScreen() {
   }
 
   if (!TipsDataTable) {
-    // Fallback to loading Data Table if not set directly via C++
+    // Fallback: DefaultGame.ini의 DirectoriesToAlwaysCook에 의해 쿠킹이 보장됨
     FSoftObjectPath DataTablePath(
         TEXT("/Game/__ProjectDG/__BP/UI/Loading_Screens/"
              "DT_LoadingTips.DT_LoadingTips"));

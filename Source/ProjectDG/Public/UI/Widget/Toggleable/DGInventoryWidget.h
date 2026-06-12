@@ -4,6 +4,7 @@
 #include "UI/Widget/DGUserWidget.h"
 #include "Components/UniformGridPanel.h"
 #include "Components/Button.h"
+#include "Components/TextBlock.h"
 #include "UI/Widget/Toggleable/DGInventorySlotWidget.h"
 #include "DGInventoryWidget.generated.h"
 
@@ -44,6 +45,12 @@ protected:
 
 	UFUNCTION()
 	void OnMaterialTabClicked();
+
+	UFUNCTION()
+	void GoldChanged(int32 NewGold);
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> Text_GoldAmount;
 
 	// UMG의 UniformGridPanel (10x3 격자 용도)
 	UPROPERTY(meta = (BindWidget))
