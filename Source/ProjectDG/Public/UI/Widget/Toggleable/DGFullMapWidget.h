@@ -11,6 +11,7 @@ class UCanvasPanel;
 class UImage;
 class UDGMinimapMarkerComponent;
 class UDGMinimapMarkerWidget;
+class ADG_PlayerState;
 
 /**
  * 전체 맵 UI View
@@ -99,6 +100,9 @@ private:
 
 	UFUNCTION()
 	void OnMarkerRemoved(UDGMinimapMarkerComponent* Marker);
+
+	UFUNCTION()
+	void OnPartyMemberLeft(ADG_PlayerState* LeavingMemberPS);
 
 	// Tick마다 마커 위치 업데이트
 	void UpdateMarkers();
