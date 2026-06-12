@@ -8,6 +8,7 @@
 
 class UProgressBar;
 class UHorizontalBox;
+class UTextBlock;
 class UDGSkillSlotWidget;
 
 UCLASS()
@@ -29,9 +30,12 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UProgressBar> PB_StaminaBar;
 
-	// 정신력(Mental) 바 추가
+	// 정신력(Mental) 바
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UProgressBar> PB_MentalBar;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> Text_Level;
 
 private:
 	/* --- 위젯 컨트롤러 이벤트와 연결될 UFUNCTION들 --- */
@@ -52,6 +56,9 @@ private:
 
 	UFUNCTION()
 	void MaxMentalChanged(float NewMaxMental);
+
+	UFUNCTION()
+	void LevelChanged(int32 NewLevel);
 
 	/* 실제 프로그레스 바를 업데이트 하는 함수 */
 	void UpdateHealthBar();

@@ -7,6 +7,7 @@
 #include "Item/DGItemInstance.h"
 #include "Item/DGItemDefinition.h"
 #include "Core/DG_Debug.h"
+#include "Components/TextBlock.h"
 
 #include "Components/UniformGridSlot.h" 
 
@@ -25,6 +26,7 @@ void UDGInventoryWidget::BindToController(UDGInventoryWidgetController* Controll
 
 		// 컨트롤러의 델리게이트에 C++ 콜백 함수 바인딩
 		Controller->OnInventoryUpdated.AddDynamic(this, &UDGInventoryWidget::OnInventoryUpdatedCallback);
+		Controller->OnGoldChanged.AddDynamic(this, &UDGInventoryWidget::GoldChanged);
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("[DGInventoryWidget] Bound to Controller successfully."));
@@ -137,5 +139,14 @@ void UDGInventoryWidget::OnMaterialTabClicked()
 	if (UDGInventoryWidgetController* C = Cast<UDGInventoryWidgetController>(WidgetController))
 	{
 		C->SwitchTab(EDGItemType::Material);
+	}
+}
+
+void UDGInventoryWidget::GoldChanged(int32 NewGold)
+{
+	if (Text_GoldAmount)
+	{
+		Text_GoldAmount->SetText(FText::AsNumber(NewGold));
+		UE_LOG(LogTemp, Warning, TEXT("[DGInventoryWidget] Gold Changed: %d"), NewGold);
 	}
 }

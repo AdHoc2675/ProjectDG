@@ -50,20 +50,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "FieldEnemy|AI")
 	float LeashDistance = 1500.f;
 
-	// --- 보상 (Loot) 시스템 ---
-
-	/** 사망 시 지급할 경험치 */
-	UPROPERTY(EditDefaultsOnly, Category = "FieldEnemy|Loot")
-	int32 RewardExp = 50;
-
-	/** 사망 시 지급할 최소 골드 */
-	UPROPERTY(EditDefaultsOnly, Category = "FieldEnemy|Loot")
-	int32 MinRewardGold = 10;
-
-	/** 사망 시 지급할 최대 골드 */
-	UPROPERTY(EditDefaultsOnly, Category = "FieldEnemy|Loot")
-	int32 MaxRewardGold = 30;
-
 	// --- 팀 및 상태 ---
 
 	// 필드 식별용 태그

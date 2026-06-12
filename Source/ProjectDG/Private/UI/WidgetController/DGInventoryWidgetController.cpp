@@ -10,6 +10,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "GAS/Attributes/DG_AttributeSet.h" 
+#include "GameFramework/DG_PlayerState.h"
 
 void UDGInventoryWidgetController::BroadcastInitialValues()
 {
@@ -29,6 +30,11 @@ void UDGInventoryWidgetController::BroadcastInitialValues()
 			{
 				OnInventoryUpdated.Broadcast(InventoryComp->GetInventoryEquipmentItems());
 			}
+
+			if (ADG_PlayerState* PS = PlayerPawn->GetPlayerState<ADG_PlayerState>())
+			{
+				OnGoldChanged.Broadcast(PS->GetGold());
+			}
 		}
 	}
 
@@ -47,7 +53,14 @@ void UDGInventoryWidgetController::BroadcastInitialValues()
 void UDGInventoryWidgetController::BindCallbacksToDependencies()
 {
 	Super::BindCallbacksToDependencies();
-	// 인벤토리 컴포넌트의 델리게이트와 바인딩
+
+	if (PlayerController)
+	{
+		if (ADG_PlayerState* PS = PlayerController->GetPlayerState<ADG_PlayerState>())
+		{
+			PS->OnGoldChangedDelegate.AddDynamic(this, &UDGInventoryWidgetController::OnGoldChangedCallback);
+		}
+	}
 
 
 	UDG_AttributeSet* DGAS = Cast<UDG_AttributeSet>(AttributeSet);
@@ -160,4 +173,9 @@ void UDGInventoryWidgetController::SwitchTab(EDGItemType TabType)
 
 	// UI 갱신을 위해 델리게이트 방송
 	OnInventoryUpdated.Broadcast(ItemsToDisplay);
+}
+
+void UDGInventoryWidgetController::OnGoldChangedCallback(int32 NewGold)
+{
+	OnGoldChanged.Broadcast(NewGold);
 }

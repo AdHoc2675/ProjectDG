@@ -9,9 +9,11 @@ AAssassinCharacter::AAssassinCharacter()
 {
 	LeftWeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("LeftWeaponMesh"));
 	LeftWeaponMesh->SetupAttachment(GetMesh(), TEXT("EquipDagger_Sub"));
+	LeftWeaponMesh->ComponentTags.Add(TEXT("Weapon.Left"));
 
 	RightWeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("RightWeaponMesh"));
 	RightWeaponMesh->SetupAttachment(GetMesh(), TEXT("EquipDagger"));
+	RightWeaponMesh->ComponentTags.Add(TEXT("Weapon.Right"));
 }
 
 

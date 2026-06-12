@@ -10,4 +10,5 @@ AWarriorCharacter::AWarriorCharacter()
 {
 	MainWeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MainWeaponMesh"));
 	MainWeaponMesh->SetupAttachment(GetMesh(), TEXT("DaggerWeapon"));
+	MainWeaponMesh->ComponentTags.Add(TEXT("Weapon.Main"));
 }

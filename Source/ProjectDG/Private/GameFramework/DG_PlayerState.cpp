@@ -349,6 +349,7 @@ void ADG_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(ADG_PlayerState, CharacterClassTag);
 	DOREPLIFETIME(ADG_PlayerState, Level);
 	DOREPLIFETIME(ADG_PlayerState, CurrentExp);
+	DOREPLIFETIME(ADG_PlayerState, OwnedGold);
 	DOREPLIFETIME(ADG_PlayerState, SkillComboStates);
 }
 
@@ -360,6 +361,7 @@ void ADG_PlayerState::OnRep_CharacterClassTag()
 void ADG_PlayerState::OnRep_Level()
 {
 	// 클라이언트에서 레벨 UI 갱신
+	OnLevelChangedDelegate.Broadcast(Level);
 }
 
 void ADG_PlayerState::OnRep_CurrentExp()
@@ -373,4 +375,29 @@ void ADG_PlayerState::OnRep_SkillComboStates()
 	{
 		OnSkillComboStepChanged.Broadcast(State.SkillTag, State.CurrentStepIndex);
 	}
+}
+
+void ADG_PlayerState::AddExpAndGold(int32 ExpAmount, int32 GoldAmount)
+{
+	if (!HasAuthority()) return;
+
+	if (ExpAmount > 0)
+	{
+		CurrentExp += ExpAmount;
+	}
+
+	if (GoldAmount > 0)
+	{
+		OwnedGold += GoldAmount;
+		OnGoldChangedDelegate.Broadcast(OwnedGold);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[DG_PlayerState] AddExpAndGold called. Exp: %d, Gold: %d, TotalExp: %d, TotalGold: %d"), ExpAmount, GoldAmount, CurrentExp, OwnedGold);
+
+	ForceNetUpdate();
+}
+
+void ADG_PlayerState::OnRep_OwnedGold()
+{
+	OnGoldChangedDelegate.Broadcast(OwnedGold);
 }
