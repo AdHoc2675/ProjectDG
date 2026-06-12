@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Character/BaseCharacter.h"
+#include "TimerManager.h"
 #include "PlayerCharacterBase.generated.h"
 
 struct FPlayerMovementAnimationSet;
@@ -68,6 +69,15 @@ protected:
 	
 	// UI 초기화 함수
 	virtual void InitializePlayerUI();
+
+	void ScheduleInitializePlayerUIRetry();
+	void ClearInitializePlayerUIRetry();
+
+	FTimerHandle InitializePlayerUITimerHandle;
+	bool bPlayerUIInitialized = false;
+	int32 InitializePlayerUIRetryCount = 0;
+	int32 MaxInitializePlayerUIRetryCount = 20;
+	float InitializePlayerUIRetryInterval = 0.1f;
 
 	//클라이언트 재시작시 호출되는 함수 오버라이드
 	//Enhanced Input Mapping 재등록에 사용

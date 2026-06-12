@@ -336,49 +336,119 @@ void APlayerCharacterBase::ClientPlayDamageCameraShake_Implementation(float Shak
 
 void APlayerCharacterBase::InitializePlayerUI()
 {
+	if (bPlayerUIInitialized)
+	{
+		return;
+	}
+
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC || !PC->IsLocalPlayerController())
+	{
+		return;
+	}
+
+	if (!CharacterClassData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PlayerCharacterBase] InitializePlayerUI retry. CharacterClassData is null. Pawn=%s"), *GetNameSafe(this));
+		ScheduleInitializePlayerUIRetry();
+		return;
+	}
+
 	ADG_PlayerState* PS = GetPlayerState<ADG_PlayerState>();
 	if (!PS)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PlayerCharacterBase] InitializePlayerUI retry. PlayerState is null. Pawn=%s"), *GetNameSafe(this));
+		ScheduleInitializePlayerUIRetry();
 		return;
 	}
 
 	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
 	if (!ASC)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[PlayerCharacterBase] InitializePlayerUI retry. ASC is null. Pawn=%s"), *GetNameSafe(this));
+		ScheduleInitializePlayerUIRetry();
 		return;
 	}
 
-	// 로컬 플레이어 컨트롤러인지 확인 (화면에 UI를 띄워야 하는 유저만)
-	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	ADG_HUD* HUD = Cast<ADG_HUD>(PC->GetHUD());
+	if (!HUD)
 	{
-		if (PC->IsLocalPlayerController())
-		{
-			if (ADG_HUD* HUD = Cast<ADG_HUD>(PC->GetHUD()))
-			{
-				// HUD의 InitOverlay 함수 호출 (컨트롤러, State, ASC, 속성 데이터 전달)
-				HUD->InitOverlay(PC, PS, ASC, PS->GetDGAttributeSet());
-				UE_LOG(LogTemp, Log, TEXT("[PlayerCharacterBase] Player UI initialized on local player."));
-
-				// 락온 기능과 타겟 상태창 연동
-				if (LockOnComponent)
-				{
-					LockOnComponent->OnLockOnTargetChanged.AddLambda([HUD](const FLockOnTargetResult& Result) {
-						if (UDGOverlayWidgetController* Controller = HUD->GetOverlayWidgetController(FWidgetControllerParams()))
-						{
-							Controller->NotifyTargetChanged(Result.TargetActor);
-						}
-						});
-
-					LockOnComponent->OnLockOnReleased.AddLambda([HUD](const FLockOnTargetResult& Result) {
-						if (UDGOverlayWidgetController* Controller = HUD->GetOverlayWidgetController(FWidgetControllerParams()))
-						{
-							Controller->NotifyTargetChanged(nullptr);
-						}
-						});
-				}
-			}
-		}
+		UE_LOG(LogTemp, Warning, TEXT("[PlayerCharacterBase] InitializePlayerUI retry. HUD is null. Pawn=%s"), *GetNameSafe(this));
+		ScheduleInitializePlayerUIRetry();
+		return;
 	}
+
+	HUD->InitOverlay(PC, PS, ASC, PS->GetDGAttributeSet());
+
+	ClearInitializePlayerUIRetry();
+	bPlayerUIInitialized = true;
+
+	UE_LOG(LogTemp, Log, TEXT("[PlayerCharacterBase] Player UI initialized on local player. ClassData=%s"), *GetNameSafe(CharacterClassData));
+
+	// 락온 기능과 타겟 상태창 연동
+	if (LockOnComponent)
+	{
+		LockOnComponent->OnLockOnTargetChanged.AddLambda([HUD](const FLockOnTargetResult& Result)
+		{
+			if (UDGOverlayWidgetController* Controller = HUD->GetOverlayWidgetController(FWidgetControllerParams()))
+			{
+				Controller->NotifyTargetChanged(Result.TargetActor);
+			}
+		});
+
+		LockOnComponent->OnLockOnReleased.AddLambda([HUD](const FLockOnTargetResult& Result)
+		{
+			if (UDGOverlayWidgetController* Controller = HUD->GetOverlayWidgetController(FWidgetControllerParams()))
+			{
+				Controller->NotifyTargetChanged(nullptr);
+			}
+		});
+	}
+}
+
+void APlayerCharacterBase::ScheduleInitializePlayerUIRetry()
+{
+	if (bPlayerUIInitialized)
+	{
+		return;
+	}
+
+	if (InitializePlayerUIRetryCount >= MaxInitializePlayerUIRetryCount)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[PlayerCharacterBase] InitializePlayerUI retry stopped. Max retry reached. Pawn=%s"), *GetNameSafe(this));
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	if (World->GetTimerManager().IsTimerActive(InitializePlayerUITimerHandle))
+	{
+		return;
+	}
+
+	InitializePlayerUIRetryCount++;
+
+	World->GetTimerManager().SetTimer(
+		InitializePlayerUITimerHandle,
+		this,
+		&APlayerCharacterBase::InitializePlayerUI,
+		InitializePlayerUIRetryInterval,
+		false
+	);
+}
+
+void APlayerCharacterBase::ClearInitializePlayerUIRetry()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(InitializePlayerUITimerHandle);
+	}
+
+	InitializePlayerUIRetryCount = 0;
 }
 
 void APlayerCharacterBase::PawnClientRestart()
@@ -394,6 +464,9 @@ void APlayerCharacterBase::PawnClientRestart()
 			ASC->InitAbilityActorInfo(PS, this);
 		}
 	}
+	
+	// 로컬 Controller / HUD / PlayerState가 늦게 준비되는 경우 UI 초기화 재시도
+	InitializePlayerUI();
 
 	/**
 	 * 로컬 플레이어 컨트롤러 가져오기
