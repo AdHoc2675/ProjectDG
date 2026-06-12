@@ -4,7 +4,8 @@
 
 #include "AbilitySystemComponent.h"
 #include "Character/Enemy/Boss/Data/BossCharacterClassData.h"
-#include "Character/Enemy/Data/BossSkillData.h"
+#include "Character/Enemy/Data/EnemySkillData.h"
+#include "Character/Enemy/Data/BossSkillSetData.h"
 #include "Components/UI/DGMinimapMarkerComponent.h"
 #include "Core/DG_GameplayTags.h"
 #include "GAS/Attributes/DG_AttributeSet.h"
@@ -14,32 +15,35 @@
 
 namespace
 {
-	bool HasGrantedBossSkillDataAbility(const UAbilitySystemComponent* ASC, const UBossSkillData* SkillData)
+	namespace
 	{
-		if (!ASC || !SkillData || !SkillData->AbilityClass)
+		bool HasGrantedEnemySkillDataAbility(const UAbilitySystemComponent* ASC, const UEnemySkillData* SkillData)
 		{
+			if (!ASC || !SkillData || !SkillData->AbilityClass)
+			{
+				return false;
+			}
+
+			for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+			{
+				if (!Spec.Ability)
+				{
+					continue;
+				}
+
+				if (Spec.Ability->GetClass() != SkillData->AbilityClass)
+				{
+					continue;
+				}
+
+				if (Spec.SourceObject.Get() == SkillData)
+				{
+					return true;
+				}
+			}
+
 			return false;
 		}
-
-		for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
-		{
-			if (!Spec.Ability)
-			{
-				continue;
-			}
-
-			if (Spec.Ability->GetClass() != SkillData->AbilityClass)
-			{
-				continue;
-			}
-
-			if (Spec.SourceObject.Get() == SkillData)
-			{
-				return true;
-			}
-		}
-
-		return false;
 	}
 }
 
@@ -346,45 +350,69 @@ void ABossCharacterBase::GrantDefaultAbilities()
 		return;
 	}
 
-	for (const TObjectPtr<UBossSkillData>& SkillDataPtr : BossClassData->AttackSkills)
+	for (const FBossPhaseData& PhaseData : BossClassData->PhaseDataList)
 	{
-		UBossSkillData* SkillData = SkillDataPtr.Get();
-		if (!SkillData || !SkillData->AbilityClass)
+		UBossSkillSetData* SkillSetData = PhaseData.SkillSetData;
+		if (!SkillSetData)
 		{
 			continue;
 		}
 
-		if (HasGrantedBossSkillDataAbility(AbilitySystemComponent, SkillData))
+		for (const TObjectPtr<UEnemySkillData>& SkillDataPtr : SkillSetData->Skills)
 		{
-			continue;
-		}
+			UEnemySkillData* SkillData = SkillDataPtr.Get();
+			if (!SkillData || !SkillData->AbilityClass)
+			{
+				continue;
+			}
 
-		FGameplayAbilitySpec AbilitySpec(SkillData->AbilityClass, 1, INDEX_NONE, SkillData);
-		AbilitySystemComponent->GiveAbility(AbilitySpec);
+			if (HasGrantedEnemySkillDataAbility(AbilitySystemComponent, SkillData))
+			{
+				continue;
+			}
+
+			FGameplayAbilitySpec AbilitySpec(
+				SkillData->AbilityClass,
+				1,
+				INDEX_NONE,
+				SkillData
+			);
+
+			AbilitySystemComponent->GiveAbility(AbilitySpec);
+		}
 	}
 }
 
-const TArray<TObjectPtr<UBossSkillData>>& ABossCharacterBase::GetAttackSkillDataList() const
+const TArray<TObjectPtr<UEnemySkillData>>& ABossCharacterBase::GetAttackSkillDataList() const
 {
-	
-	static const TArray<TObjectPtr<UBossSkillData>> EmptySkills;
+	static const TArray<TObjectPtr<UEnemySkillData>> EmptySkills;
 
 	if (!BossClassData)
 	{
 		return EmptySkills;
 	}
 
-	return BossClassData->AttackSkills;
-}
-
-UBossSkillData* ABossCharacterBase::GetRandomAttackSkillData() const
-{
-	if (!BossClassData)
+	for (const FBossPhaseData& PhaseData : BossClassData->PhaseDataList)
 	{
-		return nullptr;
+		if (PhaseData.PhaseIndex != 1)
+		{
+			continue;
+		}
+
+		if (!PhaseData.SkillSetData)
+		{
+			return EmptySkills;
+		}
+
+		return PhaseData.SkillSetData->Skills;
 	}
 
-	const TArray<TObjectPtr<UBossSkillData>>& Skills = GetAttackSkillDataList();
+	return EmptySkills;
+}
+
+UEnemySkillData* ABossCharacterBase::GetRandomAttackSkillData() const
+{
+	const TArray<TObjectPtr<UEnemySkillData>>& Skills = GetAttackSkillDataList();
 	if (Skills.Num() == 0)
 	{
 		return nullptr;

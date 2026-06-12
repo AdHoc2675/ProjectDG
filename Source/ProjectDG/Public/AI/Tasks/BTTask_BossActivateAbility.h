@@ -1,20 +1,16 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "BehaviorTree/BTTaskNode.h"
+#include "GameplayAbilitySpec.h"
+#include "GameplayTagContainer.h"
 #include "BTTask_BossActivateAbility.generated.h"
 
-class UBossSkillData;
+class ABossCharacterBase;
+class UAbilitySystemComponent;
+class UEnemySkillData;
+struct FGameplayAbilitySpec;
 
-/**
- * UBTTask_BossActivateAbility
- *
- * 보스 몬스터가 공격 능력을 사용할 때 호출하는 태스크입니다.
- * 지정된 SkillData가 있으면 해당 스킬을 실행하고,
- * 없으면 BossCharacterClassData.AttackSkills 중 하나를 조건에 맞게 선택해 실행합니다.
- */
 UCLASS()
 class PROJECTDG_API UBTTask_BossActivateAbility : public UBTTaskNode
 {
@@ -23,20 +19,118 @@ class PROJECTDG_API UBTTask_BossActivateAbility : public UBTTaskNode
 public:
 	UBTTask_BossActivateAbility();
 
-	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
-	virtual void TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
-	virtual uint16 GetInstanceMemorySize() const override;
+protected:
+	virtual EBTNodeResult::Type ExecuteTask(
+		UBehaviorTreeComponent& OwnerComp,
+		uint8* NodeMemory
+	) override;
+
+	virtual void TickTask(
+		UBehaviorTreeComponent& OwnerComp,
+		uint8* NodeMemory,
+		float DeltaSeconds
+	) override;
+
+	virtual void OnTaskFinished(
+		UBehaviorTreeComponent& OwnerComp,
+		uint8* NodeMemory,
+		EBTNodeResult::Type TaskResult
+	) override;
 
 protected:
-	// 특정 보스 스킬을 고정 실행하고 싶을 때 사용. 비워두면 BossClassData.AttackSkills에서 랜덤 선택.
-	UPROPERTY(EditAnywhere, Category = "Skill")
-	TObjectPtr<UBossSkillData> SkillData;
+	// 테스트용 강제 스킬.
+	// 실전 BT에서는 비워둬야 Phase SkillSet에서 자동 선택됨.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss Skill")
+	TObjectPtr<UEnemySkillData> SkillData = nullptr;
 
-	// 타겟 액터를 가리키는 블랙보드 키. 설정되어 있으면 거리 조건 필터에 사용합니다.
-	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	struct FBlackboardKeySelector TargetKey;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Blackboard")
+	FName TargetActorKeyName = TEXT("TargetActor");
 
-	// 마지막으로 사용한 스킬을 저장할 블랙보드 키. 설정되어 있으면 연속 사용 방지에 사용합니다.
-	UPROPERTY(EditAnywhere, Category = "Blackboard")
-	struct FBlackboardKeySelector LastUsedSkillKey;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss Skill")
+	bool bRotateToTargetBeforeActivation = true;
+
+	// 먼 거리에서 접근 전투를 유도할지 여부.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss Skill|Far Combat")
+	bool bUseFarGapClosePolicy = true;
+
+	// 이 거리 이상이면 Far 상태로 보고 접근 정책을 적용.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss Skill|Far Combat")
+	float FarRange = 1600.0f;
+
+	// Far 상태에서 GapCloser를 못 쓰면 이 확률로 스킬 선택을 포기하고 MoveTo로 내려감.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss Skill|Far Combat", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float FarMoveToChanceWhenNoGapCloser = 0.7f;
+
+	// 접근 공격으로 취급할 스킬 태그.
+	// 예: Skill.Enemy.Boss.Kashapa.Skill04
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss Skill|Far Combat")
+	TArray<FGameplayTag> GapCloseSkillTags;
+
+	// 직전 사용 스킬 반복 방지.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss Skill|Selection")
+	bool bAvoidRepeatingLastSkill = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Debug")
+	bool bDebugLog = true;
+
+private:
+	TWeakObjectPtr<UAbilitySystemComponent> ActiveASC;
+	FGameplayAbilitySpecHandle ActiveAbilityHandle;
+
+	FGameplayTag LastActivatedSkillTag;
+
+private:
+	void ClearActiveAbilityState();
+
+	bool FindFirstActiveAbilityHandle(
+		const UAbilitySystemComponent* ASC,
+		FGameplayAbilitySpecHandle& OutHandle
+	) const;
+
+	bool IsAbilitySpecActiveByHandle(
+		const UAbilitySystemComponent* ASC,
+		const FGameplayAbilitySpecHandle& InHandle
+	) const;
+
+	UEnemySkillData* SelectSkillData(
+		ABossCharacterBase* BossCharacter,
+		UAbilitySystemComponent* ASC,
+		AActor* TargetActor
+	) const;
+
+	UEnemySkillData* SelectWeightedSkillData(
+		ABossCharacterBase* BossCharacter,
+		UAbilitySystemComponent* ASC,
+		AActor* TargetActor,
+		bool bGapCloseOnly
+	) const;
+
+	bool IsValidCandidateSkillData(
+		ABossCharacterBase* BossCharacter,
+		UAbilitySystemComponent* ASC,
+		AActor* TargetActor,
+		UEnemySkillData* CandidateSkillData
+	) const;
+
+	bool IsGapCloseSkillData(const UEnemySkillData* CandidateSkillData) const;
+
+	FGameplayAbilitySpec* FindAbilitySpecBySkillData(
+		UAbilitySystemComponent* ASC,
+		UEnemySkillData* InSkillData
+	) const;
+
+	bool CanActivateSkillSpec(
+		UAbilitySystemComponent* ASC,
+		const FGameplayAbilitySpec& Spec
+	) const;
+
+	float CalculateDistanceToTarget(
+		ABossCharacterBase* BossCharacter,
+		AActor* TargetActor
+	) const;
+
+	void RotateBossToTarget(
+		ABossCharacterBase* BossCharacter,
+		AActor* TargetActor
+	) const;
 };

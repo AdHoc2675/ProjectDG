@@ -22,6 +22,7 @@ class UDGMinimapMarkerComponent;
 class ADGDamageNumberActor;
 class UDataTable;
 class UDG_EnemyAttributeSet;
+class UEnemySkillData;
 struct FOnAttributeChangeData;
 struct FDT_Attribute;
 
@@ -171,6 +172,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "EnemyCharacterBase|ASC")
 	UDG_EnemyAttributeSet* GetEnemyAttributeSet() const { return EnemyAttributeSet; }
+	
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_SpawnEnemySkillIndicator(UEnemySkillData* InSkillData, const FTransform& SpawnTransform);
 
 protected:
 	UPROPERTY()

@@ -14,6 +14,8 @@
  * - 특정 프레임에서 Event.Attack.HitCheck 이벤트를 1회 전송
  * - 데미지 직접 처리 금지
  * - 실제 판정/데미지는 Enemy GA Base에서 처리
+ * - StepIndex가 INDEX_NONE이면 GA Base가 순서대로 Step을 진행
+ * - StepIndex가 0 이상이면 해당 Step을 강제 실행
  */
 UCLASS()
 class PROJECTDG_API UAN_EnemySkillHit : public UAnimNotify
@@ -37,11 +39,16 @@ protected:
 	FGameplayTag SkillHitEventTag;
 
 	/**
-	 * 같은 몽타주 안에서 여러 HitNotify를 구분하고 싶을 때 사용.
-	 * 예: 1타/2타/3타, 다단히트 Index 등
+	 * Step 기반 스킬에서 사용할 Step Index.
+	 *
+	 * INDEX_NONE(-1):
+	 * - GA_EnemySkillBase가 AN 순서대로 다음 Step 실행
+	 *
+	 * 0 이상:
+	 * - HitStepList[StepIndex] 강제 실행
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy Skill Hit")
-	float EventMagnitude = 1.f;
+	int32 StepIndex = INDEX_NONE;
 
 private:
 	void SendEnemySkillHitEvent(USkeletalMeshComponent* MeshComp) const;

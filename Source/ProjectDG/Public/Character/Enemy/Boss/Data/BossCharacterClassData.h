@@ -13,6 +13,7 @@ class UBossSkillSetData;
 class UGameplayEffect;
 class UMaterialInterface;
 class USkeletalMesh;
+class UBehaviorTree;
 
 /**
  * 구형 보스 페이즈 전환 데이터.
@@ -104,6 +105,10 @@ public:
 	// 적 공통 AttributeSet(UDG_EnemyAttributeSet) 초기화용 GE
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS")
 	TArray<TSubclassOf<UGameplayEffect>> EnemyStartupEffects;
+	
+	// 이 보스가 사용할 AI Behavior Tree
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BossCharacter|AI")
+	TObjectPtr<UBehaviorTree> BehaviorTree = nullptr;
 
 	// 구형 페이즈 전환 데이터.
 	// 새 DA 기반 보스에서는 사용하지 않는다.
