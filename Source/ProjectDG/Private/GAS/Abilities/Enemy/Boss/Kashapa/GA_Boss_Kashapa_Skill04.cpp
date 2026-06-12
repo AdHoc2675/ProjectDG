@@ -66,10 +66,7 @@ void UGA_Boss_Kashapa_Skill04::ActivateAbility(
 	AActor* FarthestTargetActor = ResolveFarthestTargetActor();
 	if (!FarthestTargetActor)
 	{
-		Debug::Print(
-			TEXT("[GA_Boss_Kashapa_Skill04] Failed: farthest target not found"),
-			FColor::Red
-		);
+		
 
 		EndAbility(
 			Handle,
@@ -90,22 +87,13 @@ void UGA_Boss_Kashapa_Skill04::ActivateAbility(
 
 	if (!PlaySkillMontageFromData(TEXT("Kashapa_Skill04")))
 	{
-		Debug::Print(
-			TEXT("[GA_Boss_Kashapa_Skill04] Failed to play montage"),
-			FColor::Red
-		);
+	
 
 		FinishEnemySkill(true);
 		return;
 	}
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[GA_Boss_Kashapa_Skill04] Activated. DashTarget=%s"),
-			*FarthestTargetActor->GetName()
-		),
-		FColor::Cyan
-	);
+	
 }
 
 void UGA_Boss_Kashapa_Skill04::HandleEnemySkillHitCheckEvent(
@@ -224,17 +212,7 @@ AActor* UGA_Boss_Kashapa_Skill04::ResolveFarthestTargetActor() const
 		}
 	}
 
-	if (FarthestTargetActor)
-	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[GA_Boss_Kashapa_Skill04] FarthestTarget=%s Distance=%.1f"),
-				*FarthestTargetActor->GetName(),
-				FMath::Sqrt(BestDistanceSq)
-			),
-			FColor::Cyan
-		);
-	}
+	
 
 	return FarthestTargetActor;
 }
@@ -340,10 +318,7 @@ void UGA_Boss_Kashapa_Skill04::StartDashToCachedTarget()
 
 	if (!DashTargetActor)
 	{
-		Debug::Print(
-			TEXT("[GA_Boss_Kashapa_Skill04] DashStart failed: target is null"),
-			FColor::Red
-		);
+		
 		return;
 	}
 
@@ -359,10 +334,7 @@ void UGA_Boss_Kashapa_Skill04::StartDashToCachedTarget()
 
 	if (DashDirection.IsNearlyZero())
 	{
-		Debug::Print(
-			TEXT("[GA_Boss_Kashapa_Skill04] DashStart failed: dash direction is zero"),
-			FColor::Red
-		);
+		
 		return;
 	}
 
@@ -401,15 +373,7 @@ void UGA_Boss_Kashapa_Skill04::StartDashToCachedTarget()
 		true
 	);
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[GA_Boss_Kashapa_Skill04] DashStart. Start=%s End=%s Target=%s"),
-			*DashStartLocation.ToString(),
-			*DashEndLocation.ToString(),
-			*DashTargetActor->GetName()
-		),
-		FColor::Green
-	);
+	
 }
 
 void UGA_Boss_Kashapa_Skill04::TickDash()
@@ -432,11 +396,7 @@ void UGA_Boss_Kashapa_Skill04::TickDash()
 
 	if (DashElapsedTime >= DashMaxDuration)
 	{
-		Debug::Print(
-			TEXT("[GA_Boss_Kashapa_Skill04] Dash stopped: max duration reached"),
-			FColor::Orange
-		);
-
+		
 		FinishDashAndEndAbility();
 		return;
 	}
@@ -450,10 +410,7 @@ void UGA_Boss_Kashapa_Skill04::TickDash()
 
 	if (DistanceToEnd <= DashStopDistance)
 	{
-		Debug::Print(
-			TEXT("[GA_Boss_Kashapa_Skill04] Dash movement finished: reached end location"),
-			FColor::Silver
-		);
+		
 
 		StopDash();
 		return;
@@ -512,13 +469,7 @@ void UGA_Boss_Kashapa_Skill04::TickDash()
 
 		bHasTriggeredFollowUpAtk = true;
 
-		Debug::Print(
-			FString::Printf(
-				TEXT("[GA_Boss_Kashapa_Skill04] Dash hit success. FollowUp target=%s"),
-				*FollowUpTargetActor->GetName()
-			),
-			FColor::Green
-		);
+		
 
 		TryActivateFollowUpAtkAbility(FollowUpTargetActor);
 		return;
@@ -526,10 +477,7 @@ void UGA_Boss_Kashapa_Skill04::TickDash()
 
 	if (MoveHitResult.bBlockingHit)
 	{
-		Debug::Print(
-			TEXT("[GA_Boss_Kashapa_Skill04] Dash movement blocked"),
-			FColor::Orange
-		);
+		
 
 		FinishDashAndEndAbility();
 		return;
@@ -540,10 +488,7 @@ void UGA_Boss_Kashapa_Skill04::TickDash()
 
 	if (RemainingToEnd.SizeSquared() <= FMath::Square(DashStopDistance))
 	{
-		Debug::Print(
-			TEXT("[GA_Boss_Kashapa_Skill04] Dash movement finished after move"),
-			FColor::Silver
-		);
+		
 
 		StopDash();
 	}
@@ -786,53 +731,28 @@ bool UGA_Boss_Kashapa_Skill04::TryActivateFollowUpAtkAbility(AActor* TargetActor
 	UEnemySkillData* CurrentSkillData = GetEnemySkillData();
 	if (!CurrentSkillData)
 	{
-		Debug::Print(
-			TEXT("[GA_Boss_Kashapa_Skill04] CurrentSkillData is null"),
-			FColor::Red
-		);
+		
 		return false;
 	}
 
 	UEnemySkillData* FollowUpSkillData = CurrentSkillData->FollowUpSkillData.Get();
 	if (!FollowUpSkillData)
 	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[GA_Boss_Kashapa_Skill04] FollowUpSkillData is null. CurrentSkillData=%s"),
-				*CurrentSkillData->GetName()
-			),
-			FColor::Red
-		);
+		
 		return false;
 	}
 
 	FGameplayAbilitySpecHandle FollowUpAbilityHandle;
 	if (!FindFollowUpAbilityHandle(FollowUpSkillData, FollowUpAbilityHandle))
 	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[GA_Boss_Kashapa_Skill04] FollowUp ability spec not found. FollowUpSkillData=%s AbilityClass=%s"),
-				*FollowUpSkillData->GetName(),
-				FollowUpSkillData->AbilityClass
-					? *FollowUpSkillData->AbilityClass->GetName()
-					: TEXT("None")
-			),
-			FColor::Red
-		);
+		
 		return false;
 	}
 
 	SetSkill04FocusTarget(TargetActor);
 	FaceTargetActor(TargetActor);
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[GA_Boss_Kashapa_Skill04] Try FollowUp DA Ability Immediately. Target=%s FollowUpSkillData=%s"),
-			*TargetActor->GetName(),
-			*FollowUpSkillData->GetName()
-		),
-		FColor::Cyan
-	);
+	
 
 	StopDash();
 	StopSkill04Montage(0.15f);
@@ -845,15 +765,7 @@ bool UGA_Boss_Kashapa_Skill04::TryActivateFollowUpAtkAbility(AActor* TargetActor
 
 	const bool bActivated = ASC->TryActivateAbility(FollowUpAbilityHandle);
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[GA_Boss_Kashapa_Skill04] FollowUp Activate Immediately Result=%s Target=%s SkillData=%s"),
-			bActivated ? TEXT("true") : TEXT("false"),
-			*TargetActor->GetName(),
-			*FollowUpSkillData->GetName()
-		),
-		bActivated ? FColor::Green : FColor::Red
-	);
+	
 
 	FinishEnemySkill(false);
 
@@ -887,13 +799,7 @@ bool UGA_Boss_Kashapa_Skill04::FindFollowUpAbilityHandle(
 
 		OutAbilityHandle = Spec.Handle;
 
-		Debug::Print(
-			FString::Printf(
-				TEXT("[GA_Boss_Kashapa_Skill04] FollowUp Spec found. SourceObject=%s"),
-				*FollowUpSkillData->GetName()
-			),
-			FColor::Green
-		);
+		
 
 		return OutAbilityHandle.IsValid();
 	}

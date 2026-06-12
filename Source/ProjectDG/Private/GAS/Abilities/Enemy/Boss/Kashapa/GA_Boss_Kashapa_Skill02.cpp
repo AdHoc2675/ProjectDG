@@ -53,10 +53,7 @@ void UGA_Boss_Kashapa_Skill02::ActivateAbility(
 
 	if (!PlaySkillMontageFromData(TEXT("Kashapa_Skill02")))
 	{
-		Debug::Print(
-			TEXT("[GA_Boss_Kashapa_Skill02] Failed to play montage"),
-			FColor::Red
-		);
+		
 
 		FinishEnemySkill(true);
 		return;

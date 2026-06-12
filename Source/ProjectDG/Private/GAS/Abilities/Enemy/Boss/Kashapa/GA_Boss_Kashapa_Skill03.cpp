@@ -61,10 +61,7 @@ void UGA_Boss_Kashapa_Skill03::ActivateAbility(
 
 	if (!PlaySkillMontageFromData(TEXT("Kashapa_Skill03"), CastingStartSectionName))
 	{
-		Debug::Print(
-			TEXT("[GA_Boss_Kashapa_Skill03] Failed to play montage"),
-			FColor::Red
-		);
+		
 
 		FinishEnemySkill(true);
 		return;
@@ -85,14 +82,7 @@ void UGA_Boss_Kashapa_Skill03::OnEnemySkillHitStepExecuted(
 		{
 			bHasAnyMainWaveHit = true;
 
-			Debug::Print(
-				FString::Printf(
-					TEXT("[GA_Boss_Kashapa_Skill03] Main wave hit. Step=%d HitNum=%d"),
-					StepIndex,
-					HitActors.Num()
-				),
-				FColor::Green
-			);
+			
 		}
 
 		if (StepIndex == MainWaveLastStepIndex)
@@ -217,10 +207,7 @@ void UGA_Boss_Kashapa_Skill03::TryJumpToFirstFollowUpSection()
 
 	if (!bHasAnyMainWaveHit)
 	{
-		Debug::Print(
-			TEXT("[GA_Boss_Kashapa_Skill03] No main wave hit. FollowUp cancelled."),
-			FColor::Silver
-		);
+		
 		return;
 	}
 
@@ -231,13 +218,7 @@ void UGA_Boss_Kashapa_Skill03::TryJumpToFirstFollowUpSection()
 
 	JumpToMontageSection(FirstFollowUpSectionName);
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[GA_Boss_Kashapa_Skill03] First FollowUp triggered. UseSecond=%s"),
-			bShouldUseSecondFollowUp ? TEXT("true") : TEXT("false")
-		),
-		FColor::Green
-	);
+	
 }
 
 void UGA_Boss_Kashapa_Skill03::TryJumpToSecondFollowUpSection()
@@ -256,10 +237,7 @@ void UGA_Boss_Kashapa_Skill03::TryJumpToSecondFollowUpSection()
 
 	JumpToMontageSection(SecondFollowUpSectionName);
 
-	Debug::Print(
-		TEXT("[GA_Boss_Kashapa_Skill03] Second FollowUp triggered."),
-		FColor::Green
-	);
+	
 }
 
 bool UGA_Boss_Kashapa_Skill03::JumpToMontageSection(FName SectionName)
@@ -298,13 +276,7 @@ bool UGA_Boss_Kashapa_Skill03::JumpToMontageSection(FName SectionName)
 		CurrentSkillData->Montage
 	);
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[GA_Boss_Kashapa_Skill03] JumpToSection: %s"),
-			*SectionName.ToString()
-		),
-		FColor::Cyan
-	);
+	
 
 	return true;
 }

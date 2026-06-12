@@ -36,13 +36,7 @@ void UAN_SkillIndicator::Notify(
 
 	if (!EventTag.IsValid())
 	{
-		if (bPrintDebug)
-		{
-			Debug::Print(
-				TEXT("[AN_SkillIndicator] EventTag is invalid"),
-				FColor::Red
-			);
-		}
+		
 
 		return;
 	}
@@ -62,18 +56,6 @@ void UAN_SkillIndicator::Notify(
 		Payload
 	);
 
-	if (bPrintDebug)
-	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[AN_SkillIndicator] Send Event. Owner=%s StepIndex=%d Tag=%s"),
-				*OwnerActor->GetName(),
-				StepIndex,
-				*EventTag.ToString()
-			),
-			FColor::Cyan
-		);
-	}
 }
 
 FString UAN_SkillIndicator::GetNotifyName_Implementation() const
