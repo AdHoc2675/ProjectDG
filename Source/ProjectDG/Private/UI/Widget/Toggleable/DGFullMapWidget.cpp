@@ -8,10 +8,17 @@
 #include "Components/UI/DGMinimapMarkerComponent.h"
 #include "UI/Widget/Minimap/DGMinimapSubsystem.h"
 #include "UI/Widget/Minimap/DGMinimapMarkerWidget.h"
+#include "UI/WidgetController/DGFullMapWidgetController.h"
+#include "GameFramework/DG_PlayerState.h"
+#include "GameFramework/Pawn.h"
 
 void UDGFullMapWidget::BindToController(UDGFullMapWidgetController* Controller)
 {
-	// 컨트롤러 처리
+	if (!Controller) return;
+
+	SetWidgetController(Controller);
+
+	Controller->OnPartyMemberLeft.AddDynamic(this, &UDGFullMapWidget::OnPartyMemberLeft);
 }
 
 void UDGFullMapWidget::CloseMap()
@@ -137,6 +144,33 @@ void UDGFullMapWidget::OnMarkerRemoved(UDGMinimapMarkerComponent* Marker)
 			WidgetToRemove->RemoveFromParent();
 		}
 		ActiveMarkerWidgets.Remove(Marker);
+	}
+}
+
+void UDGFullMapWidget::OnPartyMemberLeft(ADG_PlayerState* LeavingMemberPS)
+{
+	if (!LeavingMemberPS) return;
+
+	TArray<UDGMinimapMarkerComponent*> MarkersToRemove;
+
+	for (const auto& Pair : ActiveMarkerWidgets)
+	{
+		UDGMinimapMarkerComponent* MarkerComp = Pair.Key;
+		if (IsValid(MarkerComp))
+		{
+			if (APawn* OwnerPawn = Cast<APawn>(MarkerComp->GetOwner()))
+			{
+				if (OwnerPawn->GetPlayerState() == LeavingMemberPS)
+				{
+					MarkersToRemove.Add(MarkerComp);
+				}
+			}
+		}
+	}
+
+	for (UDGMinimapMarkerComponent* MarkerToRemove : MarkersToRemove)
+	{
+		OnMarkerRemoved(MarkerToRemove);
 	}
 }
 
