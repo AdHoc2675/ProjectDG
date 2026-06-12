@@ -7,11 +7,10 @@
 #include "Components/ProgressBar.h"
 #include "Core/DG_Debug.h"
 
-void UDGEnemyStatusWidget::BindToController(UDGOverlayWidgetController* Controller) {
+void UDGEnemyStatusWidget::BindToController(UObject* InWidgetController) {
+	Super::BindToController(InWidgetController);
+	UDGOverlayWidgetController* Controller = Cast<UDGOverlayWidgetController>(InWidgetController);
 	if (!Controller) return;
-
-	// 상속받은 DGUserWidget의 캐싱 변수에 저장 (혹시 블루프린트에서 필요할 수 있으므로)
-	SetWidgetController(Controller);
 
 	// 초기에 UI 숨김
 	SetVisibility(ESlateVisibility::Collapsed);

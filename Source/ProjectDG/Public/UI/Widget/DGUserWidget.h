@@ -16,7 +16,7 @@ class PROJECTDG_API UDGUserWidget : public UUserWidget
 public:
 	// 위젯에 데이터를 공급할 컨트롤러/오브젝트를 세팅하는 함수
 	UFUNCTION(BlueprintCallable, Category = "DG|UI")
-	virtual void SetWidgetController(UObject* InWidgetController);
+	virtual void BindToController(UObject* InWidgetController);
 
 protected:
 	UPROPERTY(BlueprintReadOnly, Category = "DG|UI")

@@ -6,6 +6,8 @@
 #include "Components/UI/DGMinimapMarkerComponent.h"
 
 #include "GameFramework/DG_GameState.h"
+#include "UI/HUD/DG_HUD.h"
+#include "GameFramework/DG_PlayerController.h"
 #include "GameFramework/DG_PlayerState.h"
 #include "GAS/Attributes/DG_EnemyAttributeSet.h"
 
@@ -183,6 +185,11 @@ void UDGOverlayWidgetController::BindCallbacksToDependencies()
 	{
 		PS->OnSkillComboStepChanged.AddDynamic(this, &UDGOverlayWidgetController::OnSkillComboStepChanged);
 		PS->OnLevelChangedDelegate.AddDynamic(this, &UDGOverlayWidgetController::OnPlayerLevelChangedCallback);
+	}
+
+	if (ADG_PlayerController* DGPlayerController = Cast<ADG_PlayerController>(PlayerController))
+	{
+		DGPlayerController->OnChatMessageReceivedDelegate.AddDynamic(this, &UDGOverlayWidgetController::OnPlayerChatMessageReceivedCallback);
 	}
 
 	// 플레이어 스킬의 쿨타임 태그들을 리스닝
@@ -532,4 +539,24 @@ void UDGOverlayWidgetController::OnSkillComboStepChanged(FGameplayTag SkillTag, 
 void UDGOverlayWidgetController::OnPlayerLevelChangedCallback(int32 NewLevel)
 {
 	OnPlayerLevelChanged.Broadcast(NewLevel);
+}
+
+void UDGOverlayWidgetController::SendChatMessage(const FString& Message)
+{
+	if (Message.IsEmpty()) return;
+
+	if (ADG_PlayerController* DGPlayerController = Cast<ADG_PlayerController>(PlayerController))
+	{
+		DGPlayerController->ServerSendChatMessage(Message);
+	}
+}
+
+void UDGOverlayWidgetController::OnPlayerChatMessageReceivedCallback(const FString& SenderName, const FString& Message)
+{
+	OnChatMessageReceived.Broadcast(SenderName, Message);
+}
+
+void UDGOverlayWidgetController::RequestChatFocus()
+{
+	OnChatFocusRequested.Broadcast();
 }

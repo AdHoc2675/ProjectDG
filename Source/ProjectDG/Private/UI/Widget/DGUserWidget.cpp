@@ -1,6 +1,6 @@
 ﻿#include "UI/Widget/DGUserWidget.h"
 
-void UDGUserWidget::SetWidgetController(UObject* InWidgetController)
+void UDGUserWidget::BindToController(UObject* InWidgetController)
 {
 	WidgetController = InWidgetController;
 	OnWidgetControllerSet();

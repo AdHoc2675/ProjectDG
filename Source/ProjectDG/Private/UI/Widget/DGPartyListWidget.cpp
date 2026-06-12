@@ -1,14 +1,14 @@
-﻿#include "UI/Widget/DGPartyListWidget.h"
+#include "UI/Widget/DGPartyListWidget.h"
 #include "UI/Widget/Party/DGPartyMemberWidget.h"
 #include "UI/WidgetController/DGOverlayWidgetController.h"
 #include "Components/VerticalBox.h"
 #include "GameFramework/DG_PlayerState.h"
 
-void UDGPartyListWidget::BindToController(UDGOverlayWidgetController* Controller)
+void UDGPartyListWidget::BindToController(UObject* InWidgetController)
 {
+	Super::BindToController(InWidgetController);
+	UDGOverlayWidgetController* Controller = Cast<UDGOverlayWidgetController>(InWidgetController);
 	if (!Controller) return;
-
-	SetWidgetController(Controller);
 
 	// 컨트롤러의 파티 이벤트 구독
 	Controller->OnPartyMemberJoined.AddDynamic(this, &UDGPartyListWidget::OnPartyMemberJoined);

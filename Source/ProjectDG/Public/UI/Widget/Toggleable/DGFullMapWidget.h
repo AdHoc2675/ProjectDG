@@ -26,8 +26,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DG|UI|Map")
 	void AddMarkerToMap(UUserWidget* MarkerWidget, const FVector& WorldLocation);
 
-	UFUNCTION(BlueprintCallable, Category = "DG|UI")
-	void BindToController(UDGFullMapWidgetController* Controller);
+	virtual void BindToController(UObject* InWidgetController) override;
 
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 

@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -24,7 +24,7 @@ class PROJECTDG_API UDGMiniMapWidget : public UDGUserWidget
 
 public:
     // 컨트롤러 바인딩
-    void BindToController(UDGOverlayWidgetController* Controller);
+    virtual void BindToController(UObject* InWidgetController) override;
 
     virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 

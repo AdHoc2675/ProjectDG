@@ -19,8 +19,7 @@ class PROJECTDG_API UDGCharacterProfileWidget : public UDGUserWidget
 
 public:
 	// HUD로부터 호출되어 하위 위젯들에 컨트롤러를 전파
-	UFUNCTION(BlueprintCallable, Category = "DG|UI")
-	void BindToController(UDGInventoryWidgetController* Controller);
+	virtual void BindToController(UObject* InWidgetController) override;
 
 protected:
 	// --- 하위 뷰 위젯 모듈들 ---

@@ -210,6 +210,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputAction* IA_ToggleInventory;
 
+	// 채팅창 활성화를 위한 InputAction
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
+	class UInputAction* IA_Chat;
+
 protected:
 	void LookAction(const FInputActionValue& InputActionValue);
 	void MoveAction(const FInputActionValue& InputActionValue);
@@ -231,6 +235,7 @@ protected:
 	// UI 토글 처리 함수
 	void ToggleMapAction();
 	void ToggleInventoryAction();
+	void ToggleChatAction();
 
 #pragma endregion Input
 	

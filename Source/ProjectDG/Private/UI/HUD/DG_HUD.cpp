@@ -105,7 +105,7 @@ void ADG_HUD::InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySyste
 			UDGOverlayWidgetController* WidgetController = GetOverlayWidgetController(WidgetControllerParams);
 
 			// 오버레이 위젯에 컨트롤러 세팅
-			OverlayWidget->SetWidgetController(WidgetController);
+			OverlayWidget->BindToController(WidgetController);
 
 			// 오버레이 위젯이 데리고 있는 자식 위젯들(C++ BindWidget)에게 컨트롤러 전파
 			if (UDGOverlayWidget* DGOverlay = Cast<UDGOverlayWidget>(OverlayWidget))

@@ -1,4 +1,4 @@
-﻿#include "Character/Player/PlayerCharacterBase.h"
+#include "Character/Player/PlayerCharacterBase.h"
 #include "Character/Player/Data/PlayerSkillData.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
@@ -563,6 +563,12 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	{
 		EnhancedInputComponent->BindAction(IA_ToggleInventory, ETriggerEvent::Started, this,
 			&APlayerCharacterBase::ToggleInventoryAction);
+	}
+
+	if (IA_Chat)
+	{
+		EnhancedInputComponent->BindAction(IA_Chat, ETriggerEvent::Started, this,
+			&APlayerCharacterBase::ToggleChatAction);
 	}
 }
 
@@ -1532,3 +1538,19 @@ void APlayerCharacterBase::ServerHandleShiftAction_Implementation(
 	ASC->HandleGameplayEvent(Payload.EventTag, &Payload);
 }
 
+void APlayerCharacterBase::ToggleChatAction()
+{
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (PC->IsLocalPlayerController())
+		{
+			if (ADG_HUD* HUD = Cast<ADG_HUD>(PC->GetHUD()))
+			{
+				if (UDGOverlayWidgetController* OWC = HUD->GetOverlayWidgetController(FWidgetControllerParams()))
+				{
+					OWC->RequestChatFocus();
+				}
+			}
+		}
+	}
+}

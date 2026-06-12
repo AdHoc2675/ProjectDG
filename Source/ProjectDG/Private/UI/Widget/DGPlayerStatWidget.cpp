@@ -25,12 +25,11 @@ void UDGPlayerStatWidget::NativeConstruct()
 	UE_LOG(LogTemp, Log, TEXT("[DGPlayerStatWidget] %d개의 스킬 슬롯을 다이나믹 배열에 할당했습니다."), AllSkillSlots.Num());
 }
 
-void UDGPlayerStatWidget::BindToController(UDGOverlayWidgetController* Controller)
+void UDGPlayerStatWidget::BindToController(UObject* InWidgetController)
 {
+	Super::BindToController(InWidgetController);
+	UDGOverlayWidgetController* Controller = Cast<UDGOverlayWidgetController>(InWidgetController);
 	if (!Controller) return;
-
-	// 상속받은 DGUserWidget의 캐싱 변수에 저장 (혹시 블루프린트에서 필요할 수 있으므로)
-	SetWidgetController(Controller);
 
 	// 각 스킬 슬롯 위젯에도 컨트롤러를 전파하여 자체적으로 이벤트 바인딩을 할 수 있게 함
 	// (만약 아직 NativeConstruct가 안 불려서 배열이 비었다면, NativeConstruct에서 전파할 것임)
@@ -38,7 +37,7 @@ void UDGPlayerStatWidget::BindToController(UDGOverlayWidgetController* Controlle
 	{
 		if (SlotWidget)
 		{
-			SlotWidget->SetWidgetController(Controller);
+			SlotWidget->BindToController(Controller);
 		}
 	}
 

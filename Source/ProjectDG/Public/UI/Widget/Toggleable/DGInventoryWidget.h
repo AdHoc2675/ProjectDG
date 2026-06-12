@@ -22,8 +22,7 @@ class PROJECTDG_API UDGInventoryWidget : public UDGUserWidget
 
 public:
 	// 컨트롤러 세팅 및 이벤트 바인딩
-	UFUNCTION(BlueprintCallable, Category = "DG|UI")
-	void BindToController(UDGInventoryWidgetController* Controller);
+	virtual void BindToController(UObject* InWidgetController) override;
 
 protected:
 	virtual void NativeConstruct() override;

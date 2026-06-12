@@ -3,20 +3,24 @@
 #include "UI/WidgetController/DGInventoryWidgetController.h"
 #include "Components/TextBlock.h"
 
-void UDGCharacterInfoWidget::BindToController(UDGInventoryWidgetController* Controller)
+void UDGCharacterInfoWidget::BindToController(UObject* InWidgetController)
 {
+	Super::BindToController(InWidgetController);
+
+	UDGInventoryWidgetController* Controller = Cast<UDGInventoryWidgetController>(InWidgetController);
+	if (!Controller) return;
+
 	if (Controller)
 	{
-		SetWidgetController(Controller);
 
 		// 컨트롤러를 장비 슬롯 위젯에도 전달하여, 슬롯에서 장착/해제 시 컨트롤러의 장비 변경 함수가 호출될 수 있도록 함
 		if (WeaponSlot)
 		{
-			WeaponSlot->SetWidgetController(Controller);
+			WeaponSlot->BindToController(Controller);
 		}
 		if (ArmorSlot)
 		{
-			ArmorSlot->SetWidgetController(Controller);
+			ArmorSlot->BindToController(Controller);
 		}
 
 		// TODO: Controller->OnEquipmentUpdated 바인딩

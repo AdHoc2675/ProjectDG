@@ -11,8 +11,11 @@
 
 #include "Components/UniformGridSlot.h" 
 
-void UDGInventoryWidget::BindToController(UDGInventoryWidgetController* Controller)
+void UDGInventoryWidget::BindToController(UObject* InWidgetController)
 {
+	Super::BindToController(InWidgetController);
+
+	UDGInventoryWidgetController* Controller = Cast<UDGInventoryWidgetController>(InWidgetController);
 	if (!Controller)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[DGInventoryWidget] Controller is null"));
@@ -21,8 +24,6 @@ void UDGInventoryWidget::BindToController(UDGInventoryWidgetController* Controll
 
 	if (Controller)
 	{
-		// 부모 클래스의 컨트롤러 저장 (필요한 경우)
-		SetWidgetController(Controller);
 
 		// 컨트롤러의 델리게이트에 C++ 콜백 함수 바인딩
 		Controller->OnInventoryUpdated.AddDynamic(this, &UDGInventoryWidget::OnInventoryUpdatedCallback);

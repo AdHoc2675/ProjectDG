@@ -17,9 +17,8 @@ class PROJECTDG_API UDGCharacterInfoWidget : public UDGUserWidget
 	GENERATED_BODY()
 
 public:
-	// 부모(ProfileWidget)로부터 컨트롤러를 넘겨받아 이벤트를 구독
-	UFUNCTION(BlueprintCallable, Category = "DG|UI")
-	void BindToController(UDGInventoryWidgetController* Controller);
+	// 부모(ProfileWidget)로부터	// 컨트롤러 바인딩 (자식 슬롯 위젯들에게 전파)
+	virtual void BindToController(UObject* InWidgetController) override;
 
 protected:
 	virtual void NativeConstruct() override;

@@ -3,11 +3,12 @@
 #include "UI/Widget/Toggleable/DGInventoryWidget.h"
 #include "UI/WidgetController/DGInventoryWidgetController.h"
 
-void UDGCharacterProfileWidget::BindToController(UDGInventoryWidgetController* Controller)
+void UDGCharacterProfileWidget::BindToController(UObject* InWidgetController)
 {
-	if (!Controller) return;
+	Super::BindToController(InWidgetController);
 
-	SetWidgetController(Controller);
+	UDGInventoryWidgetController* Controller = Cast<UDGInventoryWidgetController>(InWidgetController);
+	if (!Controller) return;
 
 	// 1. 캐릭터 장비/스탯 창에 컨트롤러 전달
 	if (DGCharaterInfoWidget)

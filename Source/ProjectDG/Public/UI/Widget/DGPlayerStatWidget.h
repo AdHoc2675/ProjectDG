@@ -21,7 +21,7 @@ public:
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	// ASC 직접 참조 방식 대신, 컨트롤러를 받아 바인딩
-	void BindToController(class UDGOverlayWidgetController* Controller);
+	virtual void BindToController(UObject* InWidgetController) override;
 
 protected:
 	UPROPERTY(meta = (BindWidget))

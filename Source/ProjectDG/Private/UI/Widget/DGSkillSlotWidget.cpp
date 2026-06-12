@@ -49,11 +49,11 @@ void UDGSkillSlotWidget::UpdateSkillIcon(UTexture2D* NewIcon)
 	}
 }
 
-void UDGSkillSlotWidget::SetWidgetController(UObject* InWidgetController)
+void UDGSkillSlotWidget::BindToController(UObject* InWidgetController)
 {
-	Super::SetWidgetController(InWidgetController);
+	Super::BindToController(InWidgetController);
 
-	UE_LOG(LogTemp, Log, TEXT("[DGSkillSlotWidget] SetWidgetController called for slot %s"), *SlotTag.ToString());
+	UE_LOG(LogTemp, Log, TEXT("[DGSkillSlotWidget] BindToController called for slot %s"), *SlotTag.ToString());
 
 	if (UDGOverlayWidgetController* OverlayWC = Cast<UDGOverlayWidgetController>(InWidgetController))
 	{

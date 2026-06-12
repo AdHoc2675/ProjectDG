@@ -1,4 +1,4 @@
-﻿#include "UI/Widget/DGMiniMapWidget.h"
+#include "UI/Widget/DGMiniMapWidget.h"
 #include "UI/WidgetController/DGOverlayWidgetController.h"
 #include "Components/UI/DGMinimapMarkerComponent.h"
 #include "Components/UI/DGMinimapCaptureComponent.h"
@@ -11,11 +11,11 @@
 
 #include "Engine/TextureRenderTarget2D.h" 
 
-void UDGMiniMapWidget::BindToController(UDGOverlayWidgetController* Controller)
+void UDGMiniMapWidget::BindToController(UObject* InWidgetController)
 {
+	Super::BindToController(InWidgetController);
+	UDGOverlayWidgetController* Controller = Cast<UDGOverlayWidgetController>(InWidgetController);
 	if (!Controller) return;
-
-	SetWidgetController(Controller);
 
 	// 컨트롤러 이벤트 구독
 	Controller->OnMarkerAdded.AddDynamic(this, &UDGMiniMapWidget::OnMarkerAdded);

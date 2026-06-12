@@ -16,7 +16,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxStaminaChangedSignature, float
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMentalChangedSignature, float, NewMental);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxMentalChangedSignature, float, NewMaxMental);
 
-
+// 채팅 관련 델리게이트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnChatMessageReceivedSignature, const FString&, SenderName, const FString&, Message);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnChatFocusRequestedSignature);
 // 적 정보 갱신 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyHealthChangedSignature, float, CurrentHealth, float, MaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyGroggyChangedSignature, float, CurrentGroggy, float, MaxGroggy);
@@ -83,8 +85,22 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Player|Growth")
 	FOnPlayerStatLevelChangedSignature OnPlayerLevelChanged;
 
+	// --- 채팅 델리게이트 및 함수 ---
+	UPROPERTY(BlueprintAssignable, Category = "DG|Chat")
+	FOnChatMessageReceivedSignature OnChatMessageReceived;
+
+	UPROPERTY(BlueprintAssignable, Category = "DG|Chat")
+	FOnChatFocusRequestedSignature OnChatFocusRequested;
+
+	UFUNCTION(BlueprintCallable, Category = "DG|Chat")
+	void SendChatMessage(const FString& Message);
+
+	void RequestChatFocus();
 
 protected:
+	UFUNCTION()
+	void OnPlayerChatMessageReceivedCallback(const FString& SenderName, const FString& Message);
+
 	// 캐싱된 프로젝트 전용 어트리뷰트 셋 (편의를 위함)
 	UDG_AttributeSet* GetDGAttributeSet();
 

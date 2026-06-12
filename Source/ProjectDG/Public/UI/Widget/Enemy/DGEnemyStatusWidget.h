@@ -20,7 +20,7 @@ class PROJECTDG_API UDGEnemyStatusWidget : public UDGUserWidget
 	
 public:
 	// ASC 직접 참조 방식 대신, 컨트롤러를 받아 바인딩
-	void BindToController(class UDGOverlayWidgetController* Controller);
+	virtual void BindToController(UObject* InWidgetController) override;
 
 	// 적 등장 또는 타겟팅 시 기본 정보를 초기화하는 함수
 	// @param InMaxBars: 이 적이 가진 총 체력줄 개수 (일반 몬스터는 1, 보스는 25, 100 등)

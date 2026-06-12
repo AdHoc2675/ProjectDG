@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -23,7 +23,7 @@ class PROJECTDG_API UDGPartyListWidget : public UDGUserWidget
 	
 public:
 	// 컨트롤러 이벤트 연동
-	void BindToController(UDGOverlayWidgetController* Controller);
+	virtual void BindToController(UObject* InWidgetController) override;
 
 protected:
 	// 파티원 위젯들이 차곡차곡 쌓일 수직 박스 (블루프린트 연동)

@@ -31,7 +31,7 @@ public:
   void RefreshCooldownUI();
 
   // 위젯 컨트롤러 설정 시 C++ 델리게이트 바인딩을 위해 오버라이드
-  virtual void SetWidgetController(UObject *InWidgetController);
+  virtual void BindToController(UObject *InWidgetController) override;
 
   // 내가 담당하는 쿨타임 태그가 맞는지 확인
   bool MatchCooldownTag(FGameplayTag TagToCheck) const;

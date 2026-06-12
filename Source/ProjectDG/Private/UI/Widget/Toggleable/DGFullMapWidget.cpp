@@ -9,8 +9,12 @@
 #include "UI/Widget/Minimap/DGMinimapSubsystem.h"
 #include "UI/Widget/Minimap/DGMinimapMarkerWidget.h"
 
-void UDGFullMapWidget::BindToController(UDGFullMapWidgetController* Controller)
+void UDGFullMapWidget::BindToController(UObject* InWidgetController)
 {
+	Super::BindToController(InWidgetController);
+	UDGFullMapWidgetController* Controller = Cast<UDGFullMapWidgetController>(InWidgetController);
+	if (!Controller) return;
+
 	// 컨트롤러 처리
 }
 
