@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Data/VFX/WeaponTrailTypes.h"
 #include "GameplayTagContainer.h"
 #include "PlayerSkillData.generated.h"
 
@@ -280,6 +281,10 @@ public:
 	/** 투사체 VFX */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|VFX")
 	TObjectPtr<UNiagaraSystem> ProjectileVFX = nullptr;
+	
+	/** 무기 소켓 부착형 지속 VFX 목록 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|VFX")
+	TArray<FWeaponTrailAttachData> WeaponTrails;
 
 	/** 사운드 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|SFX")
