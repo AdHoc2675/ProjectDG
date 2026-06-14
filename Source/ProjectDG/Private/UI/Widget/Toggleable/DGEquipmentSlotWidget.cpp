@@ -113,7 +113,18 @@ void UDGEquipmentSlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, c
 	UDGItemDragDropOperation* DragDropOp = NewObject<UDGItemDragDropOperation>();
 	DragDropOp->DraggedItem = EquippedItemInstance;
 	DragDropOp->SourceWidget = this; // '장비 슬롯'에서 출발했음을 명시
-	DragDropOp->DefaultDragVisual = this;
+	
+	UDGEquipmentSlotWidget* DragVisualWidget = CreateWidget<UDGEquipmentSlotWidget>(this, GetClass());
+	
+	if (DragVisualWidget)
+	{
+		// 새로 만든 가짜 잔상 위젯에 현재 내 아이템 아이콘을 똑같이 복사해서 그림
+		DragVisualWidget->UpdateSlot(EquippedItemInstance);
+		
+		// 만들어진 새 위젯을 잔상으로 설정 (원래 위젯은 안전하게 제자리에 보존)
+		DragDropOp->DefaultDragVisual = DragVisualWidget;
+	}
+
 	DragDropOp->Pivot = EDragPivot::MouseDown;
 
 	OutOperation = DragDropOp;
