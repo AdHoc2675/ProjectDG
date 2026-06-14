@@ -111,5 +111,9 @@ private:
 	UPROPERTY()
 	TMap<UDGMinimapMarkerComponent*, UDGMinimapMarkerWidget*> ActiveMarkerWidgets;
 
+	// 마커가 처음 생성될 때 주인의 PlayerState를 기억해두기 위한 캐시
+	UPROPERTY()
+	TMap<UDGMinimapMarkerComponent*, ADG_PlayerState*> CachedPlayerStates;
+
 	float TimeSinceLastMarkerUpdate = 0.0f;
 };
