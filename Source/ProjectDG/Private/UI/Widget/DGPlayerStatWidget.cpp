@@ -22,6 +22,15 @@ void UDGPlayerStatWidget::NativeConstruct()
 	if (SkillSlot_3) AllSkillSlots.Add(SkillSlot_3);
 	if (SkillSlot_4) AllSkillSlots.Add(SkillSlot_4);
 
+	if (ItemSlot_Q)
+	{
+		ItemSlot_Q->InitSkillSlot(FGameplayTag(), FGameplayTag(), HealthItemIcon);
+	}
+	if (ItemSlot_E)
+	{
+		ItemSlot_E->InitSkillSlot(FGameplayTag(), FGameplayTag(), MentalItemIcon);
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("[DGPlayerStatWidget] %d개의 스킬 슬롯을 다이나믹 배열에 할당했습니다."), AllSkillSlots.Num());
 }
 
@@ -56,6 +65,9 @@ void UDGPlayerStatWidget::BindToController(UDGOverlayWidgetController* Controlle
 	Controller->OnSkillCooldownChanged.AddDynamic(this, &UDGPlayerStatWidget::OnSkillCooldownChanged);
 	Controller->OnSkillIconUpdated.AddDynamic(this, &UDGPlayerStatWidget::OnSkillIconUpdated);
 
+	// 아이템 관련 이벤트 바인딩
+	Controller->OnHealthItemCooldown.AddDynamic(this, &UDGPlayerStatWidget::OnHealthItemCooldown);
+	Controller->OnMentalItemCooldown.AddDynamic(this, &UDGPlayerStatWidget::OnMentalItemCooldown);
 }
 
 void UDGPlayerStatWidget::HealthChanged(float NewHealth)
@@ -233,5 +245,21 @@ void UDGPlayerStatWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaT
 	{
 		CurrentMental = FMath::FInterpTo(CurrentMental, TargetMental, InDeltaTime, InterpSpeed);
 		UpdateMentalBar();
+	}
+}
+
+void UDGPlayerStatWidget::OnHealthItemCooldown(float CooldownDuration)
+{
+	if (ItemSlot_Q)
+	{
+		ItemSlot_Q->UpdateCooldown(CooldownDuration, CooldownDuration);
+	}
+}
+
+void UDGPlayerStatWidget::OnMentalItemCooldown(float CooldownDuration)
+{
+	if (ItemSlot_E)
+	{
+		ItemSlot_E->UpdateCooldown(CooldownDuration, CooldownDuration);
 	}
 }

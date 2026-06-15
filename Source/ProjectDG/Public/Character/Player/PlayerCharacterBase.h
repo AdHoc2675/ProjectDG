@@ -74,7 +74,11 @@ protected:
 	virtual void PawnClientRestart() override;
 	
 	//입력 바인딩
-	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	// 아이템 쿨타임 추적용
+	float LastHealthItemUseTime = 0.0f;
+	float LastMentalItemUseTime = 0.0f;
 
 public:
 	//BaseCharacter 공용 ASC getter
@@ -198,6 +202,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputMappingContext* BasicInputMappingContext;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	class UInputAction* IA_HPPotion;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	class UInputAction* IA_MPPotion;
+	
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputAction* IA_Jump;
 
@@ -223,6 +233,18 @@ protected:
 	void LookAction(const FInputActionValue& InputActionValue);
 	void MoveAction(const FInputActionValue& InputActionValue);
 	
+	void OnSkillInputCompleted(const FInputActionValue& Value, FString InputTagString);
+
+	void UseHealthItem();
+	void UseMentalItem();
+
+	UFUNCTION(Server, Reliable)
+	void Server_UseHealthItem();
+
+	UFUNCTION(Server, Reliable)
+	void Server_UseMentalItem();
+
+
 	void JumpActionStarted();
 	void JumpActionCompleted();
 	void SendJumpEvent();
