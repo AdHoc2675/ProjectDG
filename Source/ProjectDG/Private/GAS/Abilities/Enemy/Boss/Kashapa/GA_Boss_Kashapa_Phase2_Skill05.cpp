@@ -1,23 +1,24 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "GAS/Abilities/Enemy/Boss/Kashapa/GA_Boss_Kashapa_Skill05.h"
+#include "GAS/Abilities/Enemy/Boss/Kashapa/GA_Boss_Kashapa_Phase2_Skill05.h"
 
 #include "AIController.h"
 #include "Animation/AnimInstance.h"
 #include "Character/Enemy/EnemyCharacterBase.h"
 #include "Character/Enemy/Data/EnemySkillData.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Core/DG_Debug.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "TimerManager.h"
 
-UGA_Boss_Kashapa_Skill05::UGA_Boss_Kashapa_Skill05()
+UGA_Boss_Kashapa_Phase2_Skill05::UGA_Boss_Kashapa_Phase2_Skill05()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerOnly;
 }
 
-void UGA_Boss_Kashapa_Skill05::ActivateAbility(
+void UGA_Boss_Kashapa_Phase2_Skill05::ActivateAbility(
 	const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo,
@@ -63,7 +64,7 @@ void UGA_Boss_Kashapa_Skill05::ActivateAbility(
 
 	RegisterEnemySkillHitCheckEvent();
 
-	if (!PlaySkillMontageFromData(TEXT("Kashapa_Skill05"), CastingStartSectionName))
+	if (!PlaySkillMontageFromData(TEXT("Kashapa_Phase2_Skill05"), CastingStartSectionName))
 	{
 		FinishEnemySkill(true);
 		return;
@@ -72,7 +73,49 @@ void UGA_Boss_Kashapa_Skill05::ActivateAbility(
 	StartMainSkillSectionTimer();
 }
 
-void UGA_Boss_Kashapa_Skill05::ModifyEnemySkillHitStepIndicatorTransform(
+void UGA_Boss_Kashapa_Phase2_Skill05::OnEnemySkillHitStepExecuted(
+	int32 StepIndex,
+	const UEnemySkillData* RuntimeSkillData,
+	const TArray<AActor*>& HitActors
+)
+{
+	Debug::Print(
+		FString::Printf(
+			TEXT("[P2_Skill05] HitStep=%d HitActors=%d ShouldChain=%s"),
+			StepIndex,
+			HitActors.Num(),
+			bShouldChainToFollowUpSection ? TEXT("true") : TEXT("false")
+		),
+		FColor::Yellow
+	);
+
+	const bool bIsFirstOrSecondHit =
+		StepIndex == FirstHitStepIndex ||
+		StepIndex == SecondHitStepIndex;
+
+	if (bIsFirstOrSecondHit && HitActors.Num() > 0)
+	{
+		bShouldChainToFollowUpSection = true;
+
+		Debug::Print(
+			TEXT("[P2_Skill05] Chain flag ON"),
+			FColor::Green
+		);
+	}
+
+	if (StepIndex == SecondHitStepIndex)
+	{
+		Debug::Print(
+			TEXT("[P2_Skill05] Start follow-up timer"),
+			FColor::Cyan
+		);
+
+		StartFollowUpSectionTimer();
+		return;
+	}
+}
+
+void UGA_Boss_Kashapa_Phase2_Skill05::ModifyEnemySkillHitStepIndicatorTransform(
 	int32 StepIndex,
 	UEnemySkillData* RuntimeSkillData,
 	FTransform& InOutSpawnTransform
@@ -95,22 +138,27 @@ void UGA_Boss_Kashapa_Skill05::ModifyEnemySkillHitStepIndicatorTransform(
 	InOutSpawnTransform = MakeFixedCastStepTransform(RuntimeSkillData);
 }
 
-void UGA_Boss_Kashapa_Skill05::OnEnemySkillFinished(bool bWasCancelled)
+void UGA_Boss_Kashapa_Phase2_Skill05::OnEnemySkillFinished(bool bWasCancelled)
 {
 	ClearMainSkillSectionTimer();
+	ClearFollowUpSectionTimer();
 	ResetSkill05RuntimeState();
 }
 
-void UGA_Boss_Kashapa_Skill05::ResetSkill05RuntimeState()
+void UGA_Boss_Kashapa_Phase2_Skill05::ResetSkill05RuntimeState()
 {
 	ClearMainSkillSectionTimer();
+	ClearFollowUpSectionTimer();
+
+	bShouldChainToFollowUpSection = false;
+	bHasJumpedToFollowUpSection = false;
 
 	bHasCachedCastTransform = false;
 	CachedCastLocation = FVector::ZeroVector;
 	CachedCastRotation = FRotator::ZeroRotator;
 }
 
-void UGA_Boss_Kashapa_Skill05::StopBossMovement() const
+void UGA_Boss_Kashapa_Phase2_Skill05::StopBossMovement() const
 {
 	APawn* AvatarPawn = Cast<APawn>(GetAvatarActorFromActorInfo());
 	if (!AvatarPawn)
@@ -127,7 +175,7 @@ void UGA_Boss_Kashapa_Skill05::StopBossMovement() const
 	AIController->StopMovement();
 }
 
-void UGA_Boss_Kashapa_Skill05::CacheCastTransform()
+void UGA_Boss_Kashapa_Phase2_Skill05::CacheCastTransform()
 {
 	AActor* AvatarActor = GetAvatarActorFromActorInfo();
 	if (!AvatarActor)
@@ -145,7 +193,7 @@ void UGA_Boss_Kashapa_Skill05::CacheCastTransform()
 	bHasCachedCastTransform = true;
 }
 
-FTransform UGA_Boss_Kashapa_Skill05::MakeFixedCastStepTransform(
+FTransform UGA_Boss_Kashapa_Phase2_Skill05::MakeFixedCastStepTransform(
 	const UEnemySkillData* RuntimeSkillData
 ) const
 {
@@ -180,7 +228,7 @@ FTransform UGA_Boss_Kashapa_Skill05::MakeFixedCastStepTransform(
 	);
 }
 
-void UGA_Boss_Kashapa_Skill05::StartMainSkillSectionTimer()
+void UGA_Boss_Kashapa_Phase2_Skill05::StartMainSkillSectionTimer()
 {
 	ClearMainSkillSectionTimer();
 
@@ -199,13 +247,13 @@ void UGA_Boss_Kashapa_Skill05::StartMainSkillSectionTimer()
 	World->GetTimerManager().SetTimer(
 		MainSkillSectionTimerHandle,
 		this,
-		&UGA_Boss_Kashapa_Skill05::JumpToMainSkillSection,
+		&UGA_Boss_Kashapa_Phase2_Skill05::JumpToMainSkillSection,
 		MainSkillSectionDelay,
 		false
 	);
 }
 
-void UGA_Boss_Kashapa_Skill05::ClearMainSkillSectionTimer()
+void UGA_Boss_Kashapa_Phase2_Skill05::ClearMainSkillSectionTimer()
 {
 	UWorld* World = GetWorld();
 	if (!World)
@@ -216,12 +264,88 @@ void UGA_Boss_Kashapa_Skill05::ClearMainSkillSectionTimer()
 	World->GetTimerManager().ClearTimer(MainSkillSectionTimerHandle);
 }
 
-void UGA_Boss_Kashapa_Skill05::JumpToMainSkillSection()
+void UGA_Boss_Kashapa_Phase2_Skill05::StartFollowUpSectionTimer()
+{
+	ClearFollowUpSectionTimer();
+
+	if (FollowUpSectionDelayAfterSecondHit <= 0.0f)
+	{
+		TryJumpToFollowUpSkillSection();
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	World->GetTimerManager().SetTimer(
+		FollowUpSectionTimerHandle,
+		this,
+		&UGA_Boss_Kashapa_Phase2_Skill05::TryJumpToFollowUpSkillSection,
+		FollowUpSectionDelayAfterSecondHit,
+		false
+	);
+}
+
+void UGA_Boss_Kashapa_Phase2_Skill05::ClearFollowUpSectionTimer()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	World->GetTimerManager().ClearTimer(FollowUpSectionTimerHandle);
+}
+
+void UGA_Boss_Kashapa_Phase2_Skill05::JumpToMainSkillSection()
 {
 	JumpToMontageSection(MainSkillSectionName);
 }
 
-bool UGA_Boss_Kashapa_Skill05::JumpToMontageSection(FName SectionName)
+void UGA_Boss_Kashapa_Phase2_Skill05::TryJumpToFollowUpSkillSection()
+{
+	Debug::Print(
+		FString::Printf(
+			TEXT("[P2_Skill05] TryJump Skill_2 ShouldChain=%s HasJumped=%s"),
+			bShouldChainToFollowUpSection ? TEXT("true") : TEXT("false"),
+			bHasJumpedToFollowUpSection ? TEXT("true") : TEXT("false")
+		),
+		FColor::Cyan
+	);
+
+	if (bHasJumpedToFollowUpSection)
+	{
+		return;
+	}
+
+	if (!bShouldChainToFollowUpSection)
+	{
+		Debug::Print(
+			TEXT("[P2_Skill05] Finish without follow-up"),
+			FColor::Red
+		);
+
+		FinishSkill05WithoutFollowUp();
+		return;
+	}
+
+	bHasJumpedToFollowUpSection = true;
+
+	const bool bJumped = JumpToMontageSection(FollowUpSkillSectionName);
+
+	Debug::Print(
+		FString::Printf(
+			TEXT("[P2_Skill05] JumpTo Skill_2 Result=%s"),
+			bJumped ? TEXT("true") : TEXT("false")
+		),
+		FColor::Green
+	);
+}
+
+bool UGA_Boss_Kashapa_Phase2_Skill05::JumpToMontageSection(FName SectionName)
 {
 	if (SectionName == NAME_None)
 	{
@@ -258,4 +382,46 @@ bool UGA_Boss_Kashapa_Skill05::JumpToMontageSection(FName SectionName)
 	);
 
 	return true;
+}
+
+void UGA_Boss_Kashapa_Phase2_Skill05::FinishSkill05WithoutFollowUp()
+{
+	ClearMainSkillSectionTimer();
+	ClearFollowUpSectionTimer();
+
+	StopSkill05Montage(0.2f);
+
+	FinishEnemySkill(false);
+}
+
+void UGA_Boss_Kashapa_Phase2_Skill05::StopSkill05Montage(float BlendOutTime)
+{
+	UEnemySkillData* CurrentSkillData = GetEnemySkillData();
+	if (!CurrentSkillData || !CurrentSkillData->Montage)
+	{
+		return;
+	}
+
+	AEnemyCharacterBase* EnemyCharacter = GetEnemyCharacterFromActorInfo();
+	if (!EnemyCharacter)
+	{
+		return;
+	}
+
+	USkeletalMeshComponent* MeshComp = EnemyCharacter->GetMesh();
+	if (!MeshComp)
+	{
+		return;
+	}
+
+	UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
+	if (!AnimInstance)
+	{
+		return;
+	}
+
+	AnimInstance->Montage_Stop(
+		BlendOutTime,
+		CurrentSkillData->Montage
+	);
 }
