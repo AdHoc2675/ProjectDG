@@ -43,7 +43,7 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 	AttributeSet = CreateDefaultSubobject<UDG_AttributeSet>(TEXT("AttributeSet"));
 	EnemyAttributeSet = CreateDefaultSubobject<UDG_EnemyAttributeSet>(TEXT("EnemyAttributeSet"));
 
-	// 드롭 컴포넌트 생성
+	// 드롭 컴포넌트 생성a
 	LootDropComponent2 = CreateDefaultSubobject<UDGLootDropComponent>(TEXT("LootDropComponent"));
 
 	// 미니맵 마커 생성 및 기본 타입 설정
@@ -446,6 +446,26 @@ void AEnemyCharacterBase::MulticastPlayDeathMontage_Implementation()
 			AnimInstance->Montage_Play(DeathMontage);
 		}
 	}
+}
+
+void AEnemyCharacterBase::Multicast_SpawnEnemySkillHitVFX_Implementation(
+	UNiagaraSystem* VFX,
+	FVector Location,
+	FRotator Rotation,
+	FVector Scale)
+{
+	if (!VFX)
+	{
+		return;
+	}
+
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		this,
+		VFX,
+		Location,
+		Rotation,
+		Scale
+	);
 }
 
 void AEnemyCharacterBase::Multicast_SpawnAOETelegraph_Implementation(
