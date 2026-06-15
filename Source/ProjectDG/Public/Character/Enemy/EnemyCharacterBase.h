@@ -176,6 +176,10 @@ public:
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_SpawnEnemySkillIndicator(UEnemySkillData* InSkillData, const FTransform& SpawnTransform);
 
+	/** HitStep 판정 중심 위치에서 1회성 Hit VFX를 재생한다. */
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_SpawnEnemySkillHitVFX(UNiagaraSystem* VFX, FVector Location, FRotator Rotation, FVector Scale);
+
 protected:
 	UPROPERTY()
 	TObjectPtr<UNiagaraComponent> AOETelegraphComponent;
