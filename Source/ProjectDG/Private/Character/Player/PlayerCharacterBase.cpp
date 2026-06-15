@@ -17,6 +17,7 @@
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Kismet/GameplayStatics.h"
 #include "InputActionValue.h"
 #include "Net/UnrealNetwork.h"
 #include "DrawDebugHelpers.h"
@@ -607,6 +608,11 @@ void APlayerCharacterBase::UseHealthItem()
 		}
 	}
 
+	if (HealthItemSound)
+	{
+		UGameplayStatics::PlaySound2D(this, HealthItemSound);
+	}
+
 	Server_UseHealthItem();
 }
 
@@ -629,6 +635,11 @@ void APlayerCharacterBase::UseMentalItem()
 				WC->OnMentalItemCooldown.Broadcast(MentalItemCooldown);
 			}
 		}
+	}
+
+	if (MentalItemSound)
+	{
+		UGameplayStatics::PlaySound2D(this, MentalItemSound);
 	}
 
 	Server_UseMentalItem();

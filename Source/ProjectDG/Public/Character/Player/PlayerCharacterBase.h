@@ -93,6 +93,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacterBase|Item", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float MentalItemHealRatio = 0.3f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacterBase|Item|Sound")
+	class USoundBase* HealthItemSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacterBase|Item|Sound")
+	class USoundBase* MentalItemSound;
+
 public:
 	//BaseCharacter 공용 ASC getter
 	virtual UAbilitySystemComponent* GetCharacterAbilitySystemComponent() const override;
