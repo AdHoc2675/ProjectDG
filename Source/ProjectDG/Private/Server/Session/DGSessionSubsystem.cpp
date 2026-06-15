@@ -6,6 +6,7 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Engine/GameInstance.h"
+#include "UI/Loading/DGLoadingScreenSubsystem.h"
 
 void UDGSessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -237,7 +238,15 @@ void UDGSessionSubsystem::TravelToDedicatedServer(
 		*ConnectionInfo.JoinToken
 	);
 
-	// 로딩 화면은 OnPreLoadMap 델리게이트에서 자동으로 표시됨
+	// ClientTravel 직전에 로딩 화면을 수동으로 띄웁니다.
+	if (UGameInstance* GameInstance = World->GetGameInstance())
+	{
+		if (UDGLoadingScreenSubsystem* LoadingSubsystem = GameInstance->GetSubsystem<UDGLoadingScreenSubsystem>())
+		{
+			LoadingSubsystem->ShowLoadingScreen();
+		}
+	}
+
 	PlayerController->ClientTravel(TravelUrl, TRAVEL_Absolute);
 }
 

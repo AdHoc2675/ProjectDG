@@ -41,12 +41,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LoadingScreen")
 	void SetTipsDataTable(UDataTable* InDataTable);
 
+	// 로딩 화면이 유효하게 뷰포트에 표시 중인지 확인
+	UFUNCTION(BlueprintCallable, Category = "LoadingScreen")
+	bool IsLoadingScreenVisible() const;
+
 private:
 	void OnPreLoadMap(const FString& MapName);
 	void OnPostLoadMap(UWorld* LoadedWorld);
 
 	void CheckStreamingStatus();
-	void ResetState();
 
 	FText GetRandomTipText() const;
 
@@ -63,6 +66,6 @@ private:
 	FTimerHandle StreamingCheckTimerHandle;
 	FTimerHandle HideDelayTimerHandle;
 
-	/** 레벨 전환(ClientTravel) 진행 중 여부 */
-	bool bIsLevelTransitioning = false;
+	// 레벨 전환 중 로딩 화면을 다시 띄워야 하는지 기억하는 플래그
+	bool bPendingLoadingScreen = false;
 };

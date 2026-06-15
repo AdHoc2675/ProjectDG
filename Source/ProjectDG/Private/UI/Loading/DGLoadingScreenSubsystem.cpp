@@ -53,15 +53,24 @@ FText UDGLoadingScreenSubsystem::GetRandomTipText() const {
   return FText::GetEmpty();
 }
 
+bool UDGLoadingScreenSubsystem::IsLoadingScreenVisible() const {
+  return ActiveLoadingWidget && ActiveLoadingWidget->IsInViewport();
+}
+
 void UDGLoadingScreenSubsystem::ShowLoadingScreen() {
-  // 레벨 전환 중 파괴된 위젯 포인터를 안전하게 처리
-  if (ActiveLoadingWidget && IsValid(ActiveLoadingWidget) &&
-      ActiveLoadingWidget->IsInViewport()) {
-    return; // Already showing
+  // 위젯이 유효하고 실제로 뷰포트에 있는지 확인 (레벨 전환 후 댕글링 포인터 방어)
+  if (ActiveLoadingWidget && ActiveLoadingWidget->IsInViewport()) {
+    UE_LOG(LogDGLoadingScreen, Log,
+           TEXT("Loading screen is already visible. Skipping."));
+    return;
   }
 
-  // 이전 위젯이 무효화된 경우 포인터 정리
-  ActiveLoadingWidget = nullptr;
+  // 이전 레벨에서 남은 댕글링 참조 정리
+  if (ActiveLoadingWidget) {
+    UE_LOG(LogDGLoadingScreen, Warning,
+           TEXT("Clearing stale ActiveLoadingWidget reference from previous level."));
+    ActiveLoadingWidget = nullptr;
+  }
 
   if (!LoadingWidgetClass) {
     // Fallback: DefaultGame.ini의 DirectoriesToAlwaysCook에 의해 쿠킹이 보장됨
@@ -94,6 +103,8 @@ void UDGLoadingScreenSubsystem::ShowLoadingScreen() {
 
   UWorld *World = GetWorld();
   if (!World) {
+    UE_LOG(LogDGLoadingScreen, Warning,
+           TEXT("World is null. Cannot show loading screen."));
     return;
   }
 
@@ -102,13 +113,22 @@ void UDGLoadingScreenSubsystem::ShowLoadingScreen() {
   if (ActiveLoadingWidget) {
     ActiveLoadingWidget->SetTipText(GetRandomTipText());
     ActiveLoadingWidget->AddToViewport(9999); // High Z-order to render on top
+    UE_LOG(LogDGLoadingScreen, Log,
+           TEXT("Loading screen displayed successfully. World: %s"),
+           *World->GetName());
+  } else {
+    UE_LOG(LogDGLoadingScreen, Error,
+           TEXT("Failed to create loading screen widget."));
   }
 }
 
 void UDGLoadingScreenSubsystem::HideLoadingScreen() {
+  bPendingLoadingScreen = false;
+
   if (ActiveLoadingWidget) {
     ActiveLoadingWidget->RemoveFromParent();
     ActiveLoadingWidget = nullptr;
+    UE_LOG(LogDGLoadingScreen, Log, TEXT("Loading screen hidden."));
   }
 
   UWorld *World = GetWorld();
@@ -185,49 +205,30 @@ void UDGLoadingScreenSubsystem::CheckStreamingStatus() {
 
 void UDGLoadingScreenSubsystem::OnPreLoadMap(const FString &MapName) {
   UE_LOG(LogDGLoadingScreen, Log,
-         TEXT("OnPreLoadMap: %s — showing loading screen"), *MapName);
+         TEXT("OnPreLoadMap: %s — cleaning up previous level state."), *MapName);
 
-  bIsLevelTransitioning = true;
-
-  // 기존 타이머 정리 (이전 월드의 타이머는 곧 무효화됨)
-  UWorld *World = GetWorld();
-  if (World) {
-    World->GetTimerManager().ClearTimer(StreamingCheckTimerHandle);
-    World->GetTimerManager().ClearTimer(HideDelayTimerHandle);
+  // 현재 로딩 화면이 떠있었다면, 새 맵에서도 다시 띄워야 함을 기억
+  if (ActiveLoadingWidget || bPendingLoadingScreen) {
+    bPendingLoadingScreen = true;
+    UE_LOG(LogDGLoadingScreen, Log,
+           TEXT("Loading screen was active. Will re-show after new map loads."));
   }
 
-  // 이전 위젯 포인터 정리 (곧 파괴될 위젯)
+  // 레벨 전환 시 기존 위젯과 타이머가 이전 World와 함께 소멸되므로 참조를 정리
   ActiveLoadingWidget = nullptr;
-
-  // 새 로딩 화면 표시
-  ShowLoadingScreen();
+  StreamingCheckTimerHandle.Invalidate();
+  HideDelayTimerHandle.Invalidate();
 }
 
 void UDGLoadingScreenSubsystem::OnPostLoadMap(UWorld *LoadedWorld) {
   UE_LOG(LogDGLoadingScreen, Log,
-         TEXT("OnPostLoadMap — resetting state and starting streaming check"));
+         TEXT("OnPostLoadMap: %s — bPendingLoadingScreen=%s"),
+         LoadedWorld ? *LoadedWorld->GetName() : TEXT("null"),
+         bPendingLoadingScreen ? TEXT("true") : TEXT("false"));
 
-  // 레벨 전환 중에 위젯이 파괴되었을 수 있으므로 상태 리셋
-  ResetState();
-
-  if (bIsLevelTransitioning) {
-    bIsLevelTransitioning = false;
-
-    // 새 월드에서 로딩 화면을 다시 생성
+  if (bPendingLoadingScreen) {
+    bPendingLoadingScreen = false;
     ShowLoadingScreen();
-
-    // 스트리밍 완료를 기다린 후 자동으로 숨김
     StartStreamingCheck();
   }
-}
-
-void UDGLoadingScreenSubsystem::ResetState() {
-  // 위젯 포인터 정리 (레벨 전환으로 파괴되었을 수 있음)
-  if (ActiveLoadingWidget && !IsValid(ActiveLoadingWidget)) {
-    ActiveLoadingWidget = nullptr;
-  }
-
-  // 타이머 핸들 무효화 (이전 월드의 타이머는 이미 파괴됨)
-  StreamingCheckTimerHandle.Invalidate();
-  HideDelayTimerHandle.Invalidate();
 }
