@@ -23,6 +23,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Equipment Slot")
 	EDGEquipmentType SlotType;
 
+	// 아이템이 없을 때 보여줄 배경 아이콘 (무기, 방어구 등 슬롯마다 다르게 설정 가능)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment Slot")
+	TObjectPtr<UTexture2D> EmptySlotTexture;
+
 	// 에디터에서 할당할 툴팁 위젯 클래스
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ToolTip")
 	TSubclassOf<UDGItemToolTipWidget> ToolTipClass;
@@ -32,6 +36,8 @@ public:
 	void UpdateSlot(UDGItemInstance* EquippedItem);
 
 protected:
+	virtual void NativePreConstruct() override;
+
 	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;

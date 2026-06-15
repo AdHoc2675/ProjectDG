@@ -1,4 +1,4 @@
-﻿#include "Character/Player/PlayerCharacterBase.h"
+#include "Character/Player/PlayerCharacterBase.h"
 #include "Character/Player/Data/PlayerSkillData.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
@@ -829,8 +829,9 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 		}
 	}
 
-	// 플레이어 UI 초기화 (로컬 플레이어만)
-	InitializePlayerUI();
+	// 플레이어 UI 초기화 (로컬 플레이어만) - HUD 및 위젯 생성이 완료되도록 약간의 딜레이 대기
+	FTimerHandle UIInitTimerHandle;
+	GetWorldTimerManager().SetTimer(UIInitTimerHandle, this, &APlayerCharacterBase::InitializePlayerUI, 0.2f, false);
 }
 
 void APlayerCharacterBase::OnRep_PlayerState()
@@ -846,8 +847,9 @@ void APlayerCharacterBase::OnRep_PlayerState()
 	InitializeMovementStats();
 	InitializeSkillSlotsFromClassData();
 
-	// 플레이어 UI 초기화 (로컬 플레이어만)
-	InitializePlayerUI();
+	// 플레이어 UI 초기화 (로컬 플레이어만) - HUD 및 위젯 생성이 완료되도록 약간의 딜레이 대기
+	FTimerHandle UIInitTimerHandle;
+	GetWorldTimerManager().SetTimer(UIInitTimerHandle, this, &APlayerCharacterBase::InitializePlayerUI, 0.2f, false);
 }
 
 void APlayerCharacterBase::InitializePlayerStateFromClassData()

@@ -118,7 +118,7 @@ bool UDGMinimapCaptureComponent::TryUpdateCapture()
 	const FVector CurrentLocation = Owner->GetActorLocation();
 	const float DistanceMoved = FVector::Dist2D(CurrentLocation, LastCaptureLocation);
 
-	if (DistanceMoved < RecaptureDistanceThreshold) return false;
+	//if (DistanceMoved < RecaptureDistanceThreshold) return false;
 
 	CaptureComponent->SetWorldLocation(FVector(CurrentLocation.X, CurrentLocation.Y, CurrentLocation.Z + CaptureHeight));
 	CaptureComponent->SetWorldRotation(FRotator(-90.f, 0.f, 0.f)); // 항시 정동남북 방향으로 고정
