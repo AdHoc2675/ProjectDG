@@ -51,6 +51,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSkillIconUpdatedSignature, FGame
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnSkillCooldownChangedSignature, FGameplayTag, CooldownTag, float, TimeRemaining, float, Duration);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStatLevelChangedSignature, int32, NewLevel);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemCooldownSignature, float, CooldownDuration);
+
 
 UCLASS()
 class PROJECTDG_API UDGOverlayWidgetController : public UDGWidgetController
@@ -80,8 +82,14 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
 	FOnMaxMentalChangedSignature OnMaxMentalChanged;
 
-	UPROPERTY(BlueprintAssignable, Category = "Player|Growth")
+	UPROPERTY(BlueprintAssignable, Category="GAS|Attributes")
 	FOnPlayerStatLevelChangedSignature OnPlayerLevelChanged;
+
+	UPROPERTY(BlueprintAssignable, Category="DG|UI|Item")
+	FOnItemCooldownSignature OnHealthItemCooldown;
+
+	UPROPERTY(BlueprintAssignable, Category="DG|UI|Item")
+	FOnItemCooldownSignature OnMentalItemCooldown;
 
 
 protected:
