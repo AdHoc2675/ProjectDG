@@ -79,8 +79,17 @@ void UDGInventorySlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, c
 	DragDropOp->DraggedItem = CurrentItemInstance;
 	DragDropOp->SourceWidget = this;
 
-	// 마우스를 따라다닐 잔상 이미지 설정 (이 슬롯 위젯 전체의 모습을 그대로 잔상으로 사용)
-	DragDropOp->DefaultDragVisual = this;
+		UDGInventorySlotWidget* DragVisualWidget = CreateWidget<UDGInventorySlotWidget>(this, GetClass());
+	
+	if (DragVisualWidget)
+	{
+		// 새로 만든 가짜 잔상 위젯에 현재 내 아이템 아이콘을 똑같이 복사해서 그림
+		DragVisualWidget->UpdateSlot(CurrentItemInstance);
+		
+		// 만들어진 새 위젯을 잔상으로 설정 (원래 위젯은 안전하게 제자리에 보존)
+		DragDropOp->DefaultDragVisual = DragVisualWidget;
+	}
+
 	DragDropOp->Pivot = EDragPivot::MouseDown;
 
 	OutOperation = DragDropOp;

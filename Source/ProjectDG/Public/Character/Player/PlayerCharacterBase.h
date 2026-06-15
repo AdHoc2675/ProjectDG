@@ -174,6 +174,15 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Modular")
 	TObjectPtr<USkeletalMeshComponent> GlovesMesh;
 	
+	// 장비를 해제했을 때 돌아갈 기본(맨몸) 상의 메쉬
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Modular|Default")
+	TObjectPtr<USkeletalMesh> DefaultUpperBodyMesh;
+
+protected:
+	// 인벤토리에서 장비가 변경되었을 때 호출되는 함수
+	UFUNCTION()
+	void OnEquipmentChanged(EDGEquipmentType SlotType, class UDGItemDefinition* EquippedItemDef);
+
 #pragma endregion OutLook
 	
 #pragma region AI
