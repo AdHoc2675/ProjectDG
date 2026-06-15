@@ -46,6 +46,7 @@ private:
 	void OnPostLoadMap(UWorld* LoadedWorld);
 
 	void CheckStreamingStatus();
+	void ResetState();
 
 	FText GetRandomTipText() const;
 
@@ -61,4 +62,7 @@ private:
 
 	FTimerHandle StreamingCheckTimerHandle;
 	FTimerHandle HideDelayTimerHandle;
+
+	/** 레벨 전환(ClientTravel) 진행 중 여부 */
+	bool bIsLevelTransitioning = false;
 };

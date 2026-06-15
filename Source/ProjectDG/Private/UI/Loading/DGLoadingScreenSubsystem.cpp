@@ -54,9 +54,14 @@ FText UDGLoadingScreenSubsystem::GetRandomTipText() const {
 }
 
 void UDGLoadingScreenSubsystem::ShowLoadingScreen() {
-  if (ActiveLoadingWidget) {
+  // 레벨 전환 중 파괴된 위젯 포인터를 안전하게 처리
+  if (ActiveLoadingWidget && IsValid(ActiveLoadingWidget) &&
+      ActiveLoadingWidget->IsInViewport()) {
     return; // Already showing
   }
+
+  // 이전 위젯이 무효화된 경우 포인터 정리
+  ActiveLoadingWidget = nullptr;
 
   if (!LoadingWidgetClass) {
     // Fallback: DefaultGame.ini의 DirectoriesToAlwaysCook에 의해 쿠킹이 보장됨
@@ -179,12 +184,50 @@ void UDGLoadingScreenSubsystem::CheckStreamingStatus() {
 }
 
 void UDGLoadingScreenSubsystem::OnPreLoadMap(const FString &MapName) {
-  // ClientTravel 로 인한 맵 이동 시 호출됨
-  // TODO: 만약 MoviePlayer 모듈을 사용한다면 여기서 셋업을 해야 메인 스레드
-  // 블록 중에도 애니메이션이 돌아감. 현재는 간단히 UserWidget을 띄우는 형태로
-  // 시도 (단, 메인 스레드 블록 시 Throbber가 멈출 수 있음) ShowLoadingScreen();
+  UE_LOG(LogDGLoadingScreen, Log,
+         TEXT("OnPreLoadMap: %s — showing loading screen"), *MapName);
+
+  bIsLevelTransitioning = true;
+
+  // 기존 타이머 정리 (이전 월드의 타이머는 곧 무효화됨)
+  UWorld *World = GetWorld();
+  if (World) {
+    World->GetTimerManager().ClearTimer(StreamingCheckTimerHandle);
+    World->GetTimerManager().ClearTimer(HideDelayTimerHandle);
+  }
+
+  // 이전 위젯 포인터 정리 (곧 파괴될 위젯)
+  ActiveLoadingWidget = nullptr;
+
+  // 새 로딩 화면 표시
+  ShowLoadingScreen();
 }
 
 void UDGLoadingScreenSubsystem::OnPostLoadMap(UWorld *LoadedWorld) {
-  // HideLoadingScreen();
+  UE_LOG(LogDGLoadingScreen, Log,
+         TEXT("OnPostLoadMap — resetting state and starting streaming check"));
+
+  // 레벨 전환 중에 위젯이 파괴되었을 수 있으므로 상태 리셋
+  ResetState();
+
+  if (bIsLevelTransitioning) {
+    bIsLevelTransitioning = false;
+
+    // 새 월드에서 로딩 화면을 다시 생성
+    ShowLoadingScreen();
+
+    // 스트리밍 완료를 기다린 후 자동으로 숨김
+    StartStreamingCheck();
+  }
+}
+
+void UDGLoadingScreenSubsystem::ResetState() {
+  // 위젯 포인터 정리 (레벨 전환으로 파괴되었을 수 있음)
+  if (ActiveLoadingWidget && !IsValid(ActiveLoadingWidget)) {
+    ActiveLoadingWidget = nullptr;
+  }
+
+  // 타이머 핸들 무효화 (이전 월드의 타이머는 이미 파괴됨)
+  StreamingCheckTimerHandle.Invalidate();
+  HideDelayTimerHandle.Invalidate();
 }
