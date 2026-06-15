@@ -5,6 +5,8 @@
 #include "Item/DG_ItemTypes.h" 
 #include "DGInventoryComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEquipmentChanged, EDGEquipmentType, SlotType, class UDGItemInstance*, EquippedItem);
+
 class UDGItemInstance;
 class UDGItemDefinition;
 
@@ -72,6 +74,10 @@ protected:
 
 #pragma region 장비 장착/해제 관련
 public:
+	// 장착 슬롯에 아이템이 변경될 때 발생하는 이벤트 (장착/해제 모두 사용)
+	UPROPERTY(BlueprintAssignable, Category = "DG|Inventory")
+	FOnEquipmentChanged OnEquipmentChanged;
+
 	// 장비 장착 함수
 	UFUNCTION(BlueprintCallable, Category = "DG|Inventory")
 	void EquipItem(UDGItemInstance* ItemToEquip);
