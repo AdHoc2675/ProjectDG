@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -80,8 +80,15 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<class UDGUserWidget> FullMapWidget;
-	
+
 	bool bIsMapOpen = false;
+
+	UPROPERTY(EditDefaultsOnly, Category = "DG|UI|Map|Sound")
+	TObjectPtr<class USoundBase> MapOpenSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "DG|UI|Map|Sound")
+	TObjectPtr<class USoundBase> MapCloseSound;
+
 #pragma endregion FullMap
 
 
@@ -110,6 +117,13 @@ private:
 	// 인벤토리 컨트롤러 인스턴스
 	UPROPERTY()
 	TObjectPtr<UDGInventoryWidgetController> InventoryWidgetController;
+
+	UPROPERTY(EditDefaultsOnly, Category = "DG|UI|Profile|Sound")
+	TObjectPtr<class USoundBase> ProfileOpenSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "DG|UI|Profile|Sound")
+	TObjectPtr<class USoundBase> ProfileCloseSound;
+
 #pragma endregion CharacterProfile
 
 };

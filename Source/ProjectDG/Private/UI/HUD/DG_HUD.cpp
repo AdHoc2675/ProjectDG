@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "UI/HUD/DG_HUD.h"
 #include "UI/Widget/DGUserWidget.h"
@@ -11,6 +11,7 @@
 
 #include "GameFramework/DG_PlayerState.h"
 #include "GAS/Attributes/DG_AttributeSet.h"
+#include "Kismet/GameplayStatics.h"
 
 #include "Blueprint/UserWidget.h"
 
@@ -133,6 +134,11 @@ void ADG_HUD::ToggleMapWidget()
 
 	if (bIsMapOpen)
 	{
+		if (MapOpenSound)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), MapOpenSound);
+		}
+
 		if (FullMapWidget == nullptr && FullMapWidgetClass != nullptr)
 		{
 			FullMapWidget = CreateWidget<UDGUserWidget>(GetWorld(), FullMapWidgetClass);
@@ -148,6 +154,11 @@ void ADG_HUD::ToggleMapWidget()
 	}
 	else
 	{
+		if (MapCloseSound)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), MapCloseSound);
+		}
+
 		if (FullMapWidget)
 		{
 			FullMapWidget->RemoveFromParent();
@@ -187,6 +198,11 @@ void ADG_HUD::ToggleCharacterProfileWidget()
 
 	if (bIsCharacterProfileOpen)
 	{
+		if (ProfileOpenSound)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), ProfileOpenSound);
+		}
+
 		// 1. 위젯이 없으면 생성
 		if (CharacterProfileWidget == nullptr && CharacterProfileWidgetClass != nullptr)
 		{
@@ -230,6 +246,11 @@ void ADG_HUD::ToggleCharacterProfileWidget()
 	}
 	else
 	{
+		if (ProfileCloseSound)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), ProfileCloseSound);
+		}
+
 		// 3. 화면에서 내리기
 		if (CharacterProfileWidget)
 		{
