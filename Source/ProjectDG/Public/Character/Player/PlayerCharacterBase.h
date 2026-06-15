@@ -181,7 +181,7 @@ protected:
 protected:
 	// 인벤토리에서 장비가 변경되었을 때 호출되는 함수
 	UFUNCTION()
-	void OnEquipmentChanged(EDGEquipmentType SlotType, class UDGItemInstance* EquippedItem);
+	void OnEquipmentChanged(EDGEquipmentType SlotType, class UDGItemDefinition* EquippedItemDef);
 
 #pragma endregion OutLook
 	

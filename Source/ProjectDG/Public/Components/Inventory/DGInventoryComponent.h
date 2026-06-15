@@ -5,7 +5,8 @@
 #include "Item/DG_ItemTypes.h" 
 #include "DGInventoryComponent.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEquipmentChanged, EDGEquipmentType, SlotType, class UDGItemInstance*, EquippedItem);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEquipmentChanged, EDGEquipmentType, SlotType, class UDGItemDefinition*, EquippedItemDef);
+
 
 class UDGItemInstance;
 class UDGItemDefinition;
@@ -97,6 +98,10 @@ public:
 	// 장착된 아이템 정보 가져오기
 	UFUNCTION(BlueprintCallable, Category = "DG|Inventory")
 	UDGItemInstance* GetEquippedItem(EDGEquipmentType SlotType) const;
+
+	// 다른 클라이언트들에게 외형 변경을 알리기 위한 Multicast RPC
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastEquipmentChanged(EDGEquipmentType SlotType, UDGItemDefinition* EquippedItemDef);
 
 protected:
 	// [추가] 현재 부위별로 장착 중인 아이템 관리 Map
