@@ -170,6 +170,9 @@ void UDGInventoryComponent::EquipItem(UDGItemInstance* ItemToEquip)
 		InventoryEquipmentItems.Remove(ItemToEquip);
 		EquippedItems.Add(ClientEquipType, ItemToEquip);
 
+		// 외형 변경 이벤트 통지
+		OnEquipmentChanged.Broadcast(ClientEquipType, ItemToEquip->ItemDef);
+
 		return; // 클라이언트는 "스탯 부여"를 하지 않고 여기서 종료
 	}
 
@@ -189,6 +192,9 @@ void UDGInventoryComponent::EquipItem(UDGItemInstance* ItemToEquip)
 	// 서버에서의 인벤토리 이동 처리
 	InventoryEquipmentItems.Remove(ItemToEquip);
 	EquippedItems.Add(EquipType, ItemToEquip);
+
+	// 외형 변경 이벤트 통지 (서버가 직접 모든 클라이언트에게 Multicast)
+	MulticastEquipmentChanged(EquipType, ItemToEquip->ItemDef);
 
 	// 3. 서버 권한으로 GAS 스탯 적용
 	UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
@@ -245,6 +251,10 @@ void UDGInventoryComponent::UnequipItem(EDGEquipmentType SlotType)
 		// 클라이언트 예측 처리 (배열만 갱신)
 		EquippedItems.Remove(SlotType);
 		InventoryEquipmentItems.Add(ItemToUnequip);
+		
+		// 외형 변경 이벤트 통지
+		OnEquipmentChanged.Broadcast(SlotType, nullptr);
+		
 		return;
 	}
 
@@ -285,6 +295,9 @@ void UDGInventoryComponent::UnequipItem(EDGEquipmentType SlotType)
 	EquippedItems.Remove(SlotType);
 	InventoryEquipmentItems.Add(ItemToUnequip);
 
+	// 외형 변경 이벤트 통지 (서버가 직접 모든 클라이언트에게 Multicast)
+	MulticastEquipmentChanged(SlotType, nullptr);
+
 	UE_LOG(LogTemp, Log, TEXT("[DGInventoryComponent Server] [%s] 해제 완료. 스탯 감소 서버 반영됨."), *ItemToUnequip->ItemDef->ItemName.ToString());
 }
 
@@ -297,4 +310,10 @@ void UDGInventoryComponent::ServerUnequipItem_Implementation(EDGEquipmentType Sl
 UDGItemInstance* UDGInventoryComponent::GetEquippedItem(EDGEquipmentType SlotType) const
 {
 	return nullptr;
+}
+
+void UDGInventoryComponent::MulticastEquipmentChanged_Implementation(EDGEquipmentType SlotType, UDGItemDefinition* EquippedItemDef)
+{
+	// 모든 클라이언트와 서버에서 실행됨. 장비가 바뀌었다는 이벤트를 로컬 캐릭터에게 전달.
+	OnEquipmentChanged.Broadcast(SlotType, EquippedItemDef);
 }

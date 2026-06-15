@@ -27,6 +27,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data", meta = (EditCondition = "ItemType == EDGItemType::Equipment", EditConditionHides))
 	EDGEquipmentType EquipmentType;
 
+	// 장비할 메쉬 (이 부분이 캐릭터에게 전달되어 실루엣을 바꿈)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data", meta = (EditCondition = "ItemType == EDGItemType::Equipment", EditConditionHides))
+	TSoftObjectPtr<USkeletalMesh> EquipmentMesh;
+
 	// 아이템 설명 (UI에서 여러 줄로 표시될 수 있음)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data", meta = (MultiLine = true))
 	FText ItemDescription;

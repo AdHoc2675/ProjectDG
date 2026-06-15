@@ -39,7 +39,8 @@
 #include "Components/Targeting/LockOnComponent.h"
 #include "Components/Inventory/DGInventoryComponent.h"
 #include "GameFramework/GameModeBase.h"
-
+#include "Item/DGItemDefinition.h"
+#include "Item/DGItemInstance.h"
 
 namespace
 {
@@ -180,6 +181,12 @@ void APlayerCharacterBase::BeginPlay()
 	
 	// 월드시작시 ASC초기화
 	InitializePlayerAbilitySystem();
+
+	// 인벤토리 이벤트 바인딩
+	if (InventoryComponent)
+	{
+		InventoryComponent->OnEquipmentChanged.AddDynamic(this, &APlayerCharacterBase::OnEquipmentChanged);
+	}
 }
 
 void APlayerCharacterBase::Tick(float DeltaSeconds)
@@ -1534,3 +1541,22 @@ void APlayerCharacterBase::ServerHandleShiftAction_Implementation(
 	ASC->HandleGameplayEvent(Payload.EventTag, &Payload);
 }
 
+void APlayerCharacterBase::OnEquipmentChanged(EDGEquipmentType SlotType, UDGItemDefinition* EquippedItemDef)
+{
+	// 방어구(Armor) 슬롯이 변경되었을 때 상의 메쉬(UpperBodyMesh) 교체
+	if (SlotType == EDGEquipmentType::Armor)
+	{
+		USkeletalMesh* NewMesh = DefaultUpperBodyMesh; // 기본값은 맨몸 메쉬
+		
+		if (EquippedItemDef && !EquippedItemDef->EquipmentMesh.IsNull())
+		{
+			// 설정된 메쉬 에셋 동기 로드
+			NewMesh = EquippedItemDef->EquipmentMesh.LoadSynchronous();
+		}
+		
+		if (UpperBodyMesh)
+		{
+			UpperBodyMesh->SetSkeletalMesh(NewMesh);
+		}
+	}
+}
