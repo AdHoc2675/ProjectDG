@@ -589,7 +589,7 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 void APlayerCharacterBase::UseHealthItem()
 {
 	float CurrentTime = GetWorld()->GetTimeSeconds();
-	if (CurrentTime - LastHealthItemUseTime < 10.0f && LastHealthItemUseTime > 0.0f)
+	if (CurrentTime - LastHealthItemUseTime < HealthItemCooldown && LastHealthItemUseTime > 0.0f)
 	{
 		return;
 	}
@@ -602,7 +602,7 @@ void APlayerCharacterBase::UseHealthItem()
 		{
 			if (UDGOverlayWidgetController* WC = HUD->GetOverlayWidgetController(FWidgetControllerParams()))
 			{
-				WC->OnHealthItemCooldown.Broadcast(10.0f);
+				WC->OnHealthItemCooldown.Broadcast(HealthItemCooldown);
 			}
 		}
 	}
@@ -613,7 +613,7 @@ void APlayerCharacterBase::UseHealthItem()
 void APlayerCharacterBase::UseMentalItem()
 {
 	float CurrentTime = GetWorld()->GetTimeSeconds();
-	if (CurrentTime - LastMentalItemUseTime < 10.0f && LastMentalItemUseTime > 0.0f)
+	if (CurrentTime - LastMentalItemUseTime < MentalItemCooldown && LastMentalItemUseTime > 0.0f)
 	{
 		return;
 	}
@@ -626,7 +626,7 @@ void APlayerCharacterBase::UseMentalItem()
 		{
 			if (UDGOverlayWidgetController* WC = HUD->GetOverlayWidgetController(FWidgetControllerParams()))
 			{
-				WC->OnMentalItemCooldown.Broadcast(10.0f);
+				WC->OnMentalItemCooldown.Broadcast(MentalItemCooldown);
 			}
 		}
 	}
@@ -640,7 +640,7 @@ void APlayerCharacterBase::Server_UseHealthItem_Implementation()
 	{
 		float MaxHealth = ASC->GetNumericAttribute(UDG_AttributeSet::GetMaxHealthAttribute());
 		float CurrentHealth = ASC->GetNumericAttribute(UDG_AttributeSet::GetHealthAttribute());
-		float HealAmount = MaxHealth * 0.3f; // 30% 회복
+		float HealAmount = MaxHealth * HealthItemHealRatio; // 에디터 설정 비율(예: 0.3 = 30%)
 		float NewHealth = FMath::Min(MaxHealth, CurrentHealth + HealAmount);
 		
 		ASC->SetNumericAttributeBase(UDG_AttributeSet::GetHealthAttribute(), NewHealth);
@@ -653,7 +653,7 @@ void APlayerCharacterBase::Server_UseMentalItem_Implementation()
 	{
 		float MaxMental = ASC->GetNumericAttribute(UDG_AttributeSet::GetMaxMentalAttribute());
 		float CurrentMental = ASC->GetNumericAttribute(UDG_AttributeSet::GetMentalAttribute());
-		float HealAmount = MaxMental * 0.3f; // 30% 회복
+		float HealAmount = MaxMental * MentalItemHealRatio; // 에디터 설정 비율(예: 0.3 = 30%)
 		float NewMental = FMath::Min(MaxMental, CurrentMental + HealAmount);
 		
 		ASC->SetNumericAttributeBase(UDG_AttributeSet::GetMentalAttribute(), NewMental);

@@ -80,6 +80,19 @@ protected:
 	float LastHealthItemUseTime = 0.0f;
 	float LastMentalItemUseTime = 0.0f;
 
+	// 아이템 속성 설정
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacterBase|Item")
+	float HealthItemCooldown = 10.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacterBase|Item")
+	float MentalItemCooldown = 10.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacterBase|Item", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float HealthItemHealRatio = 0.3f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacterBase|Item", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float MentalItemHealRatio = 0.3f;
+
 public:
 	//BaseCharacter 공용 ASC getter
 	virtual UAbilitySystemComponent* GetCharacterAbilitySystemComponent() const override;
