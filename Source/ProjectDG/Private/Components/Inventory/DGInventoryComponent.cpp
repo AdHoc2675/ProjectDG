@@ -8,6 +8,7 @@
 #include "GAS/Attributes/DG_AttributeSet.h"
 #include "Item/DGItemDefinition.h"
 #include "Item/DGItemInstance.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values for this component's properties
 UDGInventoryComponent::UDGInventoryComponent()
@@ -139,11 +140,28 @@ void UDGInventoryComponent::InternalAddItemConfig(UDGItemDefinition* NewItemDef,
 		break;
 	}
 
+	// [사운드 처리] 현재 클라이언트 환경(로컬 플레이어)이라면 획득 사운드 재생
+	if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
+	{
+		if (OwningPawn->IsLocallyControlled() && NewItemDef->PickupSound)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), NewItemDef->PickupSound);
+		}
+	}
 }
 
 void UDGInventoryComponent::EquipItem(UDGItemInstance* ItemToEquip)
 {
 	if (!ItemToEquip || !ItemToEquip->ItemDef) return;
+
+	// [사운드 처리] 이 캐릭터를 조종하고 있는 로컬 플레이어(본인)에게만 들리게 함
+	if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
+	{
+		if (OwningPawn->IsLocallyControlled() && ItemToEquip->ItemDef->EquipSound)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), ItemToEquip->ItemDef->EquipSound);
+		}
+	}
 
 	// [네트워크 분기] 클라이언트인 경우 서버로 요청을 보냄
 	if (!GetOwner()->HasAuthority())
@@ -242,6 +260,15 @@ void UDGInventoryComponent::UnequipItem(EDGEquipmentType SlotType)
 
 	UDGItemInstance* ItemToUnequip = EquippedItems[SlotType];
 	if (!ItemToUnequip) return;
+
+	// [사운드 처리] 로컬 플레이어(본인)에게만 해제 사운드 재생
+	if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
+	{
+		if (OwningPawn->IsLocallyControlled() && ItemToUnequip->ItemDef && ItemToUnequip->ItemDef->UnequipSound)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), ItemToUnequip->ItemDef->UnequipSound);
+		}
+	}
 
 	// 클라이언트인 경우 서버로 요청을 보냄
 	if (!GetOwner()->HasAuthority())
