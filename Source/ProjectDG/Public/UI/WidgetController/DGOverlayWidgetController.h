@@ -55,6 +55,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStatMaxExpChangedSignature,
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemCooldownSignature, float, CooldownDuration);
 
+// HUD로 획득한 아이템 정보를 전달하기 위한 델리게이트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnOverlayItemLootedSignature, class UDGItemDefinition*, ItemDef, int32, Quantity);
+
 
 UCLASS()
 class PROJECTDG_API UDGOverlayWidgetController : public UDGWidgetController
@@ -98,6 +101,10 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category="DG|UI|Item")
 	FOnItemCooldownSignature OnMentalItemCooldown;
+
+	// 아이템 획득 시 UI용 알림 델리게이트
+	UPROPERTY(BlueprintAssignable, Category = "DG|UI|Loot")
+	FOnOverlayItemLootedSignature OnItemLooted;
 
 
 protected:
@@ -233,6 +240,9 @@ protected:
 
 	UFUNCTION()
 	void OnPlayerMaxExpChangedCallback(int32 NewMaxExp);
+
+	UFUNCTION()
+	void OnItemLootedCallback(class UDGItemDefinition* ItemDef, int32 Quantity);
 
 #pragma region Skill Info
 };

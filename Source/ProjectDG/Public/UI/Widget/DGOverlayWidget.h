@@ -9,6 +9,7 @@ class UDGEnemyStatusWidget;
 class UDGMiniMapWidget;
 class UDGPartyListWidget;
 class UDGLevelUpAnnouncementWidget;
+class UDGLootItemInfoListWidget;
 
 /**
  * 모든 메인 HUD 구성요소(미니맵, 파티창, 스탯, 슬롯 등)를
@@ -42,4 +43,8 @@ public:
 	// 레벨업 팝업 위젯 (HUD 캔버스에 추가 시 자동 바인딩)
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UDGLevelUpAnnouncementWidget> LevelUpAnnouncementWidget;
+
+	// 아이템 획득 알림 리스트 위젯
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UDGLootItemInfoListWidget> LootItemInfoListWidget;
 };
