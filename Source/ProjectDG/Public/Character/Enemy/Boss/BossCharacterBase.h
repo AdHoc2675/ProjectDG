@@ -9,9 +9,11 @@
 #include "BossCharacterBase.generated.h"
 
 struct FOnAttributeChangeData;
+struct FBossPhaseData;
 
 class UBossCharacterClassData;
 class UEnemySkillData;
+class UBossSkillSetData;
 class UDG_BossAttributeSet;
 class UDG_EnemyAttributeSet;
 
@@ -39,6 +41,22 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "BossCharacterBase|ASC")
 	TObjectPtr<UDG_BossAttributeSet> BossAttributeSet = nullptr;
 
+	// 현재 적용된 페이즈 인덱스
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "BossCharacterBase|Phase")
+	int32 CurrentPhaseIndex = INDEX_NONE;
+
+	// 현재 페이즈에서 실제 BT가 선택할 SkillSet
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "BossCharacterBase|Phase")
+	TObjectPtr<UBossSkillSetData> CurrentPhaseSkillSetData = nullptr;
+
+	// GA 실행 중 페이즈 전환이 발생했을 때 즉시 적용하지 않고 대기시키는 플래그
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "BossCharacterBase|Phase")
+	bool bHasPendingPhaseChange = false;
+
+	// 대기 중인 페이즈 인덱스
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "BossCharacterBase|Phase")
+	int32 PendingPhaseIndex = INDEX_NONE;
+
 	// 보스 전용 스탯 GE 적용
 	void ApplyBossSpecialEffects();
 
@@ -63,7 +81,7 @@ protected:
 	// Groggy Attribute 변경 콜백
 	void OnGroggyGaugeChanged(const FOnAttributeChangeData& Data);
 
-	// Health 비율에 따라 Phase 태그 갱신
+	// Health 비율에 따라 Phase 전환 요청
 	virtual void UpdateHealthPhaseTags(float HealthRatio);
 
 	// 보스 사망 처리
@@ -91,4 +109,20 @@ private:
 	bool bBossDataEffectsApplied = false;
 	bool bBossHealthPhaseDelegateBound = false;
 	bool bGroggyDelegateBound = false;
+
+private:
+	// 현재 DA 기반 보스 스킬 GA가 실행 중인지 확인
+	bool HasActiveEnemySkillAbility() const;
+
+	// PhaseIndex 기준 PhaseData 검색
+	const FBossPhaseData* FindPhaseDataByIndex(int32 PhaseIndex) const;
+
+	// 페이즈 전환 요청. 활성 GA가 있으면 Pending 처리
+	void RequestPhaseChange(const FBossPhaseData& PhaseData);
+
+	// 실제 페이즈 적용. PhaseTag / CurrentPhase / SkillSet 변경
+	void ApplyPhaseChange(const FBossPhaseData& PhaseData);
+
+	// Pending 페이즈가 있고 활성 GA가 없으면 적용
+	void TryApplyPendingPhaseChange();
 };

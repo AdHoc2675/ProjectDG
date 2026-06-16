@@ -23,6 +23,7 @@ class ADGDamageNumberActor;
 class UDataTable;
 class UDG_EnemyAttributeSet;
 class UEnemySkillData;
+class USoundBase;
 struct FOnAttributeChangeData;
 struct FDT_Attribute;
 
@@ -140,6 +141,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|Minimap")
 	TObjectPtr<UDGMinimapMarkerComponent> MinimapMarkerComponent;
 
+	// 피격 판정용 Box 컴포넌트
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|Collision")
+	TObjectPtr<class UBoxComponent> HitboxComponent;
+
 public:
 	/** UI 등에 표시될 적의 이름 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "EnemyCharacterBase|UI")
@@ -176,9 +181,9 @@ public:
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_SpawnEnemySkillIndicator(UEnemySkillData* InSkillData, const FTransform& SpawnTransform);
 
-	/** HitStep 판정 중심 위치에서 1회성 Hit VFX를 재생한다. */
+	/** HitStep 판정 중심 위치에서 VFX + SFX를 한 번에 재생한다. */
 	UFUNCTION(NetMulticast, Unreliable)
-	void Multicast_SpawnEnemySkillHitVFX(UNiagaraSystem* VFX, FVector Location, FRotator Rotation, FVector Scale);
+	void Multicast_PlayEnemySkillHitEffects(UNiagaraSystem* VFX, FVector VFXScale, USoundBase* SFX, FVector Location, FRotator Rotation);
 
 protected:
 	UPROPERTY()

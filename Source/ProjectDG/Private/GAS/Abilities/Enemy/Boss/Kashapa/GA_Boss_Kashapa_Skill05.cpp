@@ -7,7 +7,6 @@
 #include "Character/Enemy/EnemyCharacterBase.h"
 #include "Character/Enemy/Data/EnemySkillData.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "Core/DG_Debug.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "TimerManager.h"
@@ -66,41 +65,11 @@ void UGA_Boss_Kashapa_Skill05::ActivateAbility(
 
 	if (!PlaySkillMontageFromData(TEXT("Kashapa_Skill05"), CastingStartSectionName))
 	{
-		
-
 		FinishEnemySkill(true);
 		return;
 	}
 
 	StartMainSkillSectionTimer();
-}
-
-void UGA_Boss_Kashapa_Skill05::OnEnemySkillHitStepExecuted(
-	int32 StepIndex,
-	const UEnemySkillData* RuntimeSkillData,
-	const TArray<AActor*>& HitActors
-)
-{
-	const bool bIsFirstOrSecondHit =
-		StepIndex == FirstHitStepIndex ||
-		StepIndex == SecondHitStepIndex;
-
-	if (bIsFirstOrSecondHit && HitActors.Num() > 0)
-	{
-		bShouldChainToFollowUpSection = true;
-
-		
-	}
-
-	// 2타 판정 시점에는 바로 3타로 넘어가지 않는다.
-	// 2타 후딜/애니메이션이 어느 정도 재생된 뒤 Skill_2 진입 여부를 판단한다.
-	if (StepIndex == SecondHitStepIndex)
-	{
-		StartFollowUpSectionTimer();
-		return;
-	}
-
-	
 }
 
 void UGA_Boss_Kashapa_Skill05::ModifyEnemySkillHitStepIndicatorTransform(
@@ -124,24 +93,17 @@ void UGA_Boss_Kashapa_Skill05::ModifyEnemySkillHitStepIndicatorTransform(
 	}
 
 	InOutSpawnTransform = MakeFixedCastStepTransform(RuntimeSkillData);
-
-	
 }
 
 void UGA_Boss_Kashapa_Skill05::OnEnemySkillFinished(bool bWasCancelled)
 {
 	ClearMainSkillSectionTimer();
-	ClearFollowUpSectionTimer();
 	ResetSkill05RuntimeState();
 }
 
 void UGA_Boss_Kashapa_Skill05::ResetSkill05RuntimeState()
 {
 	ClearMainSkillSectionTimer();
-	ClearFollowUpSectionTimer();
-
-	bShouldChainToFollowUpSection = false;
-	bHasJumpedToFollowUpSection = false;
 
 	bHasCachedCastTransform = false;
 	CachedCastLocation = FVector::ZeroVector;
@@ -181,8 +143,6 @@ void UGA_Boss_Kashapa_Skill05::CacheCastTransform()
 	CachedCastRotation.Normalize();
 
 	bHasCachedCastTransform = true;
-
-
 }
 
 FTransform UGA_Boss_Kashapa_Skill05::MakeFixedCastStepTransform(
@@ -256,67 +216,9 @@ void UGA_Boss_Kashapa_Skill05::ClearMainSkillSectionTimer()
 	World->GetTimerManager().ClearTimer(MainSkillSectionTimerHandle);
 }
 
-void UGA_Boss_Kashapa_Skill05::StartFollowUpSectionTimer()
-{
-	ClearFollowUpSectionTimer();
-
-	if (FollowUpSectionDelayAfterSecondHit <= 0.0f)
-	{
-		TryJumpToFollowUpSkillSection();
-		return;
-	}
-
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return;
-	}
-
-	World->GetTimerManager().SetTimer(
-		FollowUpSectionTimerHandle,
-		this,
-		&UGA_Boss_Kashapa_Skill05::TryJumpToFollowUpSkillSection,
-		FollowUpSectionDelayAfterSecondHit,
-		false
-	);
-}
-
-void UGA_Boss_Kashapa_Skill05::ClearFollowUpSectionTimer()
-{
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return;
-	}
-
-	World->GetTimerManager().ClearTimer(FollowUpSectionTimerHandle);
-}
-
 void UGA_Boss_Kashapa_Skill05::JumpToMainSkillSection()
 {
 	JumpToMontageSection(MainSkillSectionName);
-}
-
-void UGA_Boss_Kashapa_Skill05::TryJumpToFollowUpSkillSection()
-{
-	if (bHasJumpedToFollowUpSection)
-	{
-		return;
-	}
-
-	if (!bShouldChainToFollowUpSection)
-	{
-		
-
-		FinishSkill05WithoutFollowUp();
-		return;
-	}
-
-	bHasJumpedToFollowUpSection = true;
-
-	
-
-	JumpToMontageSection(FollowUpSkillSectionName);
 }
 
 bool UGA_Boss_Kashapa_Skill05::JumpToMontageSection(FName SectionName)
@@ -355,49 +257,5 @@ bool UGA_Boss_Kashapa_Skill05::JumpToMontageSection(FName SectionName)
 		CurrentSkillData->Montage
 	);
 
-	
-
 	return true;
-}
-
-void UGA_Boss_Kashapa_Skill05::FinishSkill05WithoutFollowUp()
-{
-	ClearMainSkillSectionTimer();
-	ClearFollowUpSectionTimer();
-
-	StopSkill05Montage(0.2f);
-
-	FinishEnemySkill(false);
-}
-
-void UGA_Boss_Kashapa_Skill05::StopSkill05Montage(float BlendOutTime)
-{
-	UEnemySkillData* CurrentSkillData = GetEnemySkillData();
-	if (!CurrentSkillData || !CurrentSkillData->Montage)
-	{
-		return;
-	}
-
-	AEnemyCharacterBase* EnemyCharacter = GetEnemyCharacterFromActorInfo();
-	if (!EnemyCharacter)
-	{
-		return;
-	}
-
-	USkeletalMeshComponent* MeshComp = EnemyCharacter->GetMesh();
-	if (!MeshComp)
-	{
-		return;
-	}
-
-	UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
-	if (!AnimInstance)
-	{
-		return;
-	}
-
-	AnimInstance->Montage_Stop(
-		BlendOutTime,
-		CurrentSkillData->Montage
-	);
 }

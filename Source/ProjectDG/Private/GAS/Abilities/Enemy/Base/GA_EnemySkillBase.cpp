@@ -2093,6 +2093,10 @@ void UGA_EnemySkillBase::ApplyHitStepToRuntimeSkillData(
 	RuntimeSkillData->HitVFXScale = HitStep.HitVFX
 		                                 ? HitStep.HitVFXScale
 		                                 : SourceSkillData->HitVFXScale;
+
+	RuntimeSkillData->HitSFX = HitStep.HitSFX
+		                           ? HitStep.HitSFX
+		                           : SourceSkillData->HitSFX;
 }
 
 void UGA_EnemySkillBase::SpawnEnemySkillHitStepIndicatorByNotify(
@@ -2265,17 +2269,18 @@ void UGA_EnemySkillBase::ExecuteEnemySkillHitStepByNotify(
 		TargetActors
 	);
 
-	if (RuntimeSkillData->HitVFX)
+	if (RuntimeSkillData->HitVFX || RuntimeSkillData->HitSFX)
 	{
 		if (AEnemyCharacterBase* EnemyCharacter = GetEnemyCharacterFromActorInfo())
 		{
 			if (EnemyCharacter->HasAuthority())
 			{
-				EnemyCharacter->Multicast_SpawnEnemySkillHitVFX(
+				EnemyCharacter->Multicast_PlayEnemySkillHitEffects(
 					RuntimeSkillData->HitVFX,
+					RuntimeSkillData->HitVFXScale,
+					RuntimeSkillData->HitSFX,
 					StepContext->CachedHitCenter,
-					StepContext->CachedHitRotation,
-					RuntimeSkillData->HitVFXScale
+					StepContext->CachedHitRotation
 				);
 			}
 		}

@@ -14,13 +14,14 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
-
+#include "Components/BoxComponent.h"
 
 #include "Core/DG_GameplayTags.h"
 
 #include "GAS/Attributes/DG_AttributeSet.h"
 #include "GAS/Attributes/DG_EnemyAttributeSet.h"
 
+#include "Kismet/GameplayStatics.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Character/Enemy/Data/EnemySkillData.h"
@@ -49,6 +50,11 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 	// 미니맵 마커 생성 및 기본 타입 설정
 	MinimapMarkerComponent = CreateDefaultSubobject<UDGMinimapMarkerComponent>(TEXT("MinimapMarkerComponent"));
 	MinimapMarkerComponent->MarkerType = EMinimapMarkerType::Enemy;
+
+	// 피격/물리용 박스 컴포넌트 생성
+	HitboxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("HitboxComponent"));
+	HitboxComponent->SetupAttachment(GetCapsuleComponent());
+	HitboxComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 
 	// 서버에서도 소켓 기반 트레이스가 정상 작동하도록 애니메이션 본을 항상 갱신하게 설정
 	if (USkeletalMeshComponent* MeshComp = GetMesh())
@@ -428,6 +434,11 @@ void AEnemyCharacterBase::MulticastPlayDeathMontage_Implementation()
 		MeshComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
 	}
 
+	if (HitboxComponent)
+	{
+		HitboxComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+	}
+
 	// 사망과 동시에 미니맵에서 마커 지우기
 	if (MinimapMarkerComponent)
 	{
@@ -448,24 +459,28 @@ void AEnemyCharacterBase::MulticastPlayDeathMontage_Implementation()
 	}
 }
 
-void AEnemyCharacterBase::Multicast_SpawnEnemySkillHitVFX_Implementation(
+void AEnemyCharacterBase::Multicast_PlayEnemySkillHitEffects_Implementation(
 	UNiagaraSystem* VFX,
+	FVector VFXScale,
+	USoundBase* SFX,
 	FVector Location,
-	FRotator Rotation,
-	FVector Scale)
+	FRotator Rotation)
 {
-	if (!VFX)
+	if (VFX)
 	{
-		return;
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			this,
+			VFX,
+			Location,
+			Rotation,
+			VFXScale
+		);
 	}
 
-	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-		this,
-		VFX,
-		Location,
-		Rotation,
-		Scale
-	);
+	if (SFX)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, SFX, Location);
+	}
 }
 
 void AEnemyCharacterBase::Multicast_SpawnAOETelegraph_Implementation(
