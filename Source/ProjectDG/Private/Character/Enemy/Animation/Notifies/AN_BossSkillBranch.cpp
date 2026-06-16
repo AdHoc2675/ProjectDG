@@ -24,40 +24,31 @@ void UAN_BossSkillBranch::Notify(
 {
 	Super::Notify(MeshComp, Animation, EventReference);
 
-	Debug::Print(
-		FString::Printf(TEXT("[AN_BossSkillBranch] Notify Fired Step=%d"), BranchStepIndex),
-		FColor::Cyan
-	);
+	
 
 	if (!MeshComp)
 	{
-		Debug::Print(TEXT("[AN_BossSkillBranch] MeshComp Invalid"), FColor::Red);
+		
 		return;
 	}
 
 	AActor* OwnerActor = MeshComp->GetOwner();
 	if (!OwnerActor)
 	{
-		Debug::Print(TEXT("[AN_BossSkillBranch] OwnerActor Invalid"), FColor::Red);
+	
 		return;
 	}
 
 	if (!BranchEventTag.IsValid())
 	{
-		Debug::Print(TEXT("[AN_BossSkillBranch] BranchEventTag Invalid"), FColor::Red);
+		
 		return;
 	}
 
 	UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OwnerActor);
 	if (!ASC)
 	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[AN_BossSkillBranch] ASC Invalid Owner=%s"),
-				*OwnerActor->GetName()
-			),
-			FColor::Red
-		);
+		
 		return;
 	}
 
@@ -72,15 +63,7 @@ void UAN_BossSkillBranch::Notify(
 		&Payload
 	);
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[AN_BossSkillBranch] Event Sent Tag=%s Step=%d Owner=%s"),
-			*BranchEventTag.ToString(),
-			BranchStepIndex,
-			*OwnerActor->GetName()
-		),
-		FColor::Green
-	);
+	
 }
 
 FString UAN_BossSkillBranch::GetNotifyName_Implementation() const
