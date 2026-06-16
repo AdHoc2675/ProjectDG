@@ -17,10 +17,9 @@ struct FBossPhaseData;
  * BP_Kashapa_D에서 이 클래스를 Parent로 사용한다.
  *
  * 역할:
- * - BossCharacterClassData.PhaseDataList 기반 페이즈 적용
+ * - BossCharacterClassData.PhaseDataList 기반 카샤파 전용 페이즈 적용
  * - Phase별 SkeletalMesh / AnimClass / Materials 교체
- * - 현재 SkillSetData 캐시
- * - 현재 Phase SkillSetData 기반 보스 스킬 선택/부여
+ * - 부모 ABossCharacterBase의 CurrentPhaseSkillSetData 기반 보스 스킬 선택
  */
 UCLASS()
 class PROJECTDG_API ABossKashapaD : public ABossCharacterBase
@@ -39,7 +38,7 @@ public:
 	int32 GetCurrentPhaseIndex() const { return CurrentPhaseIndex; }
 
 	UFUNCTION(BlueprintCallable, Category = "Kashapa|Skill")
-	UBossSkillSetData* GetCurrentSkillSetData() const { return CurrentSkillSetData; }
+	UBossSkillSetData* GetCurrentSkillSetData() const { return CurrentPhaseSkillSetData; }
 
 	virtual const TArray<TObjectPtr<UEnemySkillData>>& GetAttackSkillDataList() const override;
 	virtual UEnemySkillData* GetRandomAttackSkillData() const override;
@@ -52,16 +51,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Kashapa|Phase")
 	int32 InitialPhaseIndex = 1;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, ReplicatedUsing = OnRep_CurrentPhaseIndex, Category = "Kashapa|Phase")
-	int32 CurrentPhaseIndex = 0;
-
-	UPROPERTY(Transient, BlueprintReadOnly, Category = "Kashapa|Skill")
-	TObjectPtr<UBossSkillSetData> CurrentSkillSetData = nullptr;
-
 	UFUNCTION()
 	void OnRep_CurrentPhaseIndex();
 
-	const FBossPhaseData* FindPhaseDataByIndex(int32 PhaseIndex) const;
+	const FBossPhaseData* FindKashapaPhaseDataByIndex(int32 PhaseIndex) const;
 
 	bool ApplyPhaseDataByIndex(int32 PhaseIndex);
 	void ApplyPhaseVisual(const FBossPhaseData& PhaseData);
