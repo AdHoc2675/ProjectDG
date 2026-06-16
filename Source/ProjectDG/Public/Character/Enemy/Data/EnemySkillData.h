@@ -203,6 +203,18 @@ public:
 	// 이 Step의 판정 중심 위치에서 재생할 SFX. 비워두면 SkillData의 HitSFX를 사용.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|SFX")
 	TObjectPtr<USoundBase> HitSFX = nullptr;
+
+	// =========================
+	// Effect Transform
+	// =========================
+
+	// HitVFX/HitSFX 스폰 위치 오프셋 (판정 중심 기준).
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Effect")
+	FVector HitEffectLocationOffset = FVector::ZeroVector;
+
+	// HitVFX 스폰 회전 오프셋 (판정 중심 기준).
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|Effect")
+	FRotator HitEffectRotationOffset = FRotator::ZeroRotator;
 };
 
 
@@ -417,6 +429,14 @@ public:
 	// HitVFX 스폰 시 적용할 스케일. HitStep에서 별도로 지정하지 않으면 사용.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|VFX")
 	FVector HitVFXScale = FVector(1.f, 1.f, 1.f);
+
+	// HitVFX/HitSFX 스폰 위치 오프셋 (판정 중심 기준). HitStep에서 별도로 지정하지 않으면 사용.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|VFX")
+	FVector HitEffectLocationOffset = FVector::ZeroVector;
+
+	// HitVFX 스폰 회전 오프셋 (판정 중심 기준). HitStep에서 별도로 지정하지 않으면 사용.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|VFX")
+	FRotator HitEffectRotationOffset = FRotator::ZeroRotator;
 
 	// --- SFX ---
 
