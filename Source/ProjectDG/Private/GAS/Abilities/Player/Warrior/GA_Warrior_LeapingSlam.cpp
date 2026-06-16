@@ -91,16 +91,31 @@ void UGA_Warrior_LeapingSlam::ExecuteTargetSkill(AActor* TargetActor, const FGam
               return;
       }
 
-      ApplyDamageToTarget(
-              TargetActor,
-              0.f,
-              GetSkillDamageMultiplier(),
-              GetSkillTag(),
-              TargetActor->GetActorLocation(),
-              true
-      );
+        AActor* AvatarActor = GetAvatarActorFromAbility();
+        if (!AvatarActor)
+        {
+                return;
+        }
 
-      ApplyStatusEffectToTarget(TargetActor);
+        const FDGDamageResult DamageResult =
+        ApplyDamageToTarget(
+                TargetActor,
+                0.f,
+                GetSkillDamageMultiplier(),
+                GetSkillTag(),
+                TargetActor->GetActorLocation(),
+                true
+        );
+
+        if (DamageResult.bSuccess)
+        {
+                ExecuteHitGameplayCue(
+                        TargetActor,
+                        AvatarActor->GetActorLocation()
+                );
+        }
+
+        ApplyStatusEffectToTarget(TargetActor);
 }
 
 void UGA_Warrior_LeapingSlam::OnMoveBegin(FGameplayEventData Payload)

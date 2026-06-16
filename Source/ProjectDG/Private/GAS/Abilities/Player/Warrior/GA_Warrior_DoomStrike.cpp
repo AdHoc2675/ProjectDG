@@ -130,15 +130,30 @@ void UGA_Warrior_DoomStrike::ExecuteTargetSkill(AActor* TargetActor, const FGame
 		return;
 	}
 
-	ApplyDamageToTarget(
-		TargetActor,
-		0.f,
-		GetSkillDamageMultiplier(),
-		GetSkillTag(),
-		TargetActor->GetActorLocation(),
-		true,
-		GetSkillGroggyDamage()
-	);
+	AActor* AvatarActor = GetAvatarActorFromAbility();
+	if (!AvatarActor)
+	{
+		return;
+	}
+
+	const FDGDamageResult DamageResult =
+			ApplyDamageToTarget(
+					TargetActor,
+					0.f,
+					GetSkillDamageMultiplier(),
+					GetSkillTag(),
+					TargetActor->GetActorLocation(),
+					true,
+					GetSkillGroggyDamage()
+			);
+
+	if (DamageResult.bSuccess)
+	{
+		ExecuteHitGameplayCue(
+				TargetActor,
+				AvatarActor->GetActorLocation()
+		);
+	}
 
 	ApplyStatusEffectToTarget(TargetActor);
 }
@@ -194,23 +209,43 @@ void UGA_Warrior_DoomStrike::ExecuteForwardBoxHitCheckFromSkillData(const FGamep
 	const float DamageMultiplierPerHit = GetSkillDamageMultiplier();
 	const float GroggyDamage = GetSkillGroggyDamage();
 
+	const FVector HitQueryOrigin =
+	  AvatarLocation +
+	  AvatarActor->GetActorForwardVector() *
+	  CurrentSkillData->BoxForwardOffset;
+
 	for (AActor* BoxHitActor : BoxHitActors)
 	{
-		if (!IsValidForwardBoxHitActor(AvatarActor, BoxHitActor))
+		if (!IsValidForwardBoxHitActor(
+				AvatarActor,
+				BoxHitActor))
 		{
 			continue;
 		}
 
+		bool bDamageApplied = false;
+
 		for (int32 HitIndex = 0; HitIndex < HitCount; ++HitIndex)
 		{
-			ApplyDamageToTarget(
-				BoxHitActor,
-				0.f,
-				DamageMultiplierPerHit,
-				GetSkillTag(),
-				BoxHitActor->GetActorLocation(),
-				true,
-				GroggyDamage
+			const FDGDamageResult DamageResult =
+					ApplyDamageToTarget(
+							BoxHitActor,
+							0.f,
+							DamageMultiplierPerHit,
+							GetSkillTag(),
+							BoxHitActor->GetActorLocation(),
+							true,
+							GroggyDamage
+					);
+
+			bDamageApplied |= DamageResult.bSuccess;
+		}
+
+		if (bDamageApplied)
+		{
+			ExecuteHitGameplayCue(
+					BoxHitActor,
+					HitQueryOrigin
 			);
 		}
 
