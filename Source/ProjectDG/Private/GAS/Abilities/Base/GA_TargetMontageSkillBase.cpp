@@ -11,6 +11,7 @@
 #include "DrawDebugHelpers.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/World.h"
+#include "TimerManager.h"
 
 UGA_TargetMontageSkillBase::UGA_TargetMontageSkillBase()
 {
@@ -56,6 +57,8 @@ void UGA_TargetMontageSkillBase::EndAbility(
 	bool bWasCancelled
 )
 {
+	ClearRemoteTargetDataTimeout();
+	
 	ResetTargetMontageState();
 	
 	ClearSkillMovementPolicy();
@@ -576,6 +579,8 @@ void UGA_TargetMontageSkillBase::WaitForRemoteTargetData()
 		&UGA_TargetMontageSkillBase::OnTargetDataReadyCallback
 	);
 
+	StartRemoteTargetDataTimeout();
+	
 	if (!ASC->CallReplicatedTargetDataDelegatesIfSet(SpecHandle, ActivationPredictionKey))
 	{
 		return;
@@ -645,6 +650,7 @@ void UGA_TargetMontageSkillBase::OnTargetDataReadyCallback(
 	}
 
 	bWaitingForRemoteTargetData = false;
+	ClearRemoteTargetDataTimeout();
 
 	const bool bMadeTargetResult = TryMakeTargetResultFromTargetData(
 		TargetDataHandle,
@@ -705,5 +711,51 @@ void UGA_TargetMontageSkillBase::OnMontageBlendOut()
 
 void UGA_TargetMontageSkillBase::OnMontageCancelled()
 {
+	EndTargetMontageAbility(true);
+}
+
+void UGA_TargetMontageSkillBase::StartRemoteTargetDataTimeout()
+{
+	UWorld* World = GetWorld();
+	if (!World || RemoteTargetDataTimeoutSeconds <= 0.f)
+	{
+		return;
+	}
+
+	World->GetTimerManager().ClearTimer(RemoteTargetDataTimeoutTimerHandle);
+	World->GetTimerManager().SetTimer(
+			RemoteTargetDataTimeoutTimerHandle,
+			this,
+			&UGA_TargetMontageSkillBase::OnRemoteTargetDataTimeout,
+			RemoteTargetDataTimeoutSeconds,
+			false
+	);
+}
+
+void UGA_TargetMontageSkillBase::ClearRemoteTargetDataTimeout()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(RemoteTargetDataTimeoutTimerHandle);
+	}
+}
+
+void UGA_TargetMontageSkillBase::OnRemoteTargetDataTimeout()
+{
+	if (!bWaitingForRemoteTargetData)
+	{
+		return;
+	}
+
+	bWaitingForRemoteTargetData = false;
+
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->ConsumeClientReplicatedTargetData(
+				GetCurrentAbilitySpecHandle(),
+				GetCurrentActivationInfo().GetActivationPredictionKey()
+		);
+	}
+
 	EndTargetMontageAbility(true);
 }

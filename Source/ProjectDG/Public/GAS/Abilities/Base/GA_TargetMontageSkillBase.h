@@ -76,6 +76,15 @@ private:
       bool bEndingTargetMontageAbility = false;
       
       bool bWaitingForRemoteTargetData = false;
+      
+      FTimerHandle RemoteTargetDataTimeoutTimerHandle;
+
+      UPROPERTY(EditDefaultsOnly, Category = "DG|TargetMontage", meta = (ClampMin = "0.05"))
+      float RemoteTargetDataTimeoutSeconds = 0.5f;
+
+      void StartRemoteTargetDataTimeout();
+      void ClearRemoteTargetDataTimeout();
+      void OnRemoteTargetDataTimeout();
 
 protected:
       /** 스킬 실행 중 사용하는 타겟 결과, 히트 기록, 종료 플래그를 초기화한다. */
