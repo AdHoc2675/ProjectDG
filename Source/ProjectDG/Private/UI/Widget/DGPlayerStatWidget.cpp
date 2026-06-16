@@ -7,6 +7,9 @@
 
 #include "Core/DG_GameplayTags.h"
 #include "Core/DG_Debug.h"
+#include "GameplayEffect.h"
+#include "AbilitySystemComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 void UDGPlayerStatWidget::NativeConstruct()
 {
@@ -59,6 +62,8 @@ void UDGPlayerStatWidget::BindToController(UDGOverlayWidgetController* Controlle
 	Controller->OnMentalChanged.AddDynamic(this, &UDGPlayerStatWidget::MentalChanged);
 	Controller->OnMaxMentalChanged.AddDynamic(this, &UDGPlayerStatWidget::MaxMentalChanged);
 	Controller->OnPlayerLevelChanged.AddDynamic(this, &UDGPlayerStatWidget::LevelChanged);
+	Controller->OnPlayerExpChanged.AddDynamic(this, &UDGPlayerStatWidget::ExpChanged);
+	Controller->OnPlayerMaxExpChanged.AddDynamic(this, &UDGPlayerStatWidget::MaxExpChanged);
 
 	// 스킬 관련 이벤트 바인딩
 	Controller->OnSkillInfoSet.AddDynamic(this, &UDGPlayerStatWidget::OnSkillInfoSet);
@@ -125,8 +130,37 @@ void UDGPlayerStatWidget::LevelChanged(int32 NewLevel)
 {
 	if (Text_Level)
 	{
-		Text_Level->SetText(FText::FromString(FString::FromInt(NewLevel)));
+		Text_Level->SetText(FText::AsNumber(NewLevel));
 	}
+
+	if (bLevelInitialized)
+	{
+		if (LevelUpSound)
+		{
+			UGameplayStatics::PlaySound2D(this, LevelUpSound);
+		}
+	}
+	else
+	{
+		bLevelInitialized = true;
+	}
+}
+
+void UDGPlayerStatWidget::ExpChanged(int32 NewExp)
+{
+	TargetExp = (float)NewExp;
+	if (!bExpInitialized)
+	{
+		CurrentExp = TargetExp;
+		bExpInitialized = true;
+		UpdateExpBar();
+	}
+}
+
+void UDGPlayerStatWidget::MaxExpChanged(int32 NewMaxExp)
+{
+	CurrentMaxExp = (float)NewMaxExp;
+	UpdateExpBar();
 }
 
 void UDGPlayerStatWidget::UpdateHealthBar()
@@ -150,10 +184,19 @@ void UDGPlayerStatWidget::UpdateStaminaBar()
 
 void UDGPlayerStatWidget::UpdateMentalBar()
 {
-	if (PB_MentalBar && CurrentMaxMental > 0.f)
+	if (PB_MentalBar)
 	{
-		float MentalPercent = CurrentMental / CurrentMaxMental;
-		PB_MentalBar->SetPercent(MentalPercent);
+		float Percent = CurrentMaxMental > 0.f ? CurrentMental / CurrentMaxMental : 0.f;
+		PB_MentalBar->SetPercent(Percent);
+	}
+}
+
+void UDGPlayerStatWidget::UpdateExpBar()
+{
+	if (PB_EXPBar)
+	{
+		float Percent = CurrentMaxExp > 0.f ? CurrentExp / CurrentMaxExp : 0.f;
+		PB_EXPBar->SetPercent(Percent);
 	}
 }
 
@@ -245,6 +288,12 @@ void UDGPlayerStatWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaT
 	{
 		CurrentMental = FMath::FInterpTo(CurrentMental, TargetMental, InDeltaTime, InterpSpeed);
 		UpdateMentalBar();
+	}
+
+	if (!FMath::IsNearlyEqual(CurrentExp, TargetExp, 0.1f))
+	{
+		CurrentExp = FMath::FInterpTo(CurrentExp, TargetExp, InDeltaTime, InterpSpeed);
+		UpdateExpBar();
 	}
 }
 

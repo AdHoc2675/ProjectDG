@@ -16,6 +16,7 @@ class UPlayerCharacterClassData;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSkillComboStepChangedSignature, FGameplayTag, SkillTag, int32, NewStepIndex);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStateLevelChangedSignature, int32, NewLevel);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStateMaxExpChangedSignature, int32, MaxExp);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStateExpChangedSignature, int32, NewExp);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStateGoldChangedSignature, int32, NewGold);
 
 /*
@@ -79,8 +80,11 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Player|Growth")
 	FOnPlayerStateLevelChangedSignature OnLevelChangedDelegate;
 
-	UPROPERTY(BlueprintAssignable, Category = "Player|Growth")
+	UPROPERTY(BlueprintAssignable, Category = "PlayerState|Growth")
 	FOnPlayerStateMaxExpChangedSignature OnMaxExpChangedDelegate;
+
+	UPROPERTY(BlueprintAssignable, Category = "PlayerState|Growth")
+	FOnPlayerStateExpChangedSignature OnExpChangedDelegate;
 
 	UPROPERTY(BlueprintAssignable, Category = "Player|Growth")
 	FOnPlayerStateGoldChangedSignature OnGoldChangedDelegate;

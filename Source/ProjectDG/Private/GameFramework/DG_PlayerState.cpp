@@ -377,7 +377,7 @@ void ADG_PlayerState::OnRep_Level()
 
 void ADG_PlayerState::OnRep_CurrentExp()
 {
-	// 클라이언트에서 경험치 UI 갱신
+	OnExpChangedDelegate.Broadcast(CurrentExp);
 }
 
 void ADG_PlayerState::OnRep_MaxExp()
@@ -406,6 +406,8 @@ void ADG_PlayerState::AddExpAndGold(int32 ExpAmount, int32 GoldAmount)
 			CurrentExp -= MaxExp;
 			LevelUp();
 		}
+
+		OnExpChangedDelegate.Broadcast(CurrentExp);
 	}
 
 	if (GoldAmount > 0)

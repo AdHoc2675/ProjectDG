@@ -27,7 +27,7 @@ void UDGCharacterInfoWidget::BindToController(UDGInventoryWidgetController* Cont
 		Controller->OnMainStatChanged.AddDynamic(this, &UDGCharacterInfoWidget::OnMainStatChangedCallback);
 		Controller->OnAttackPowerChanged.AddDynamic(this, &UDGCharacterInfoWidget::OnAttackPowerChangedCallback);
 		Controller->OnDefenseChanged.AddDynamic(this, &UDGCharacterInfoWidget::OnDefenseChangedCallback);
-		
+		Controller->OnPlayerLevelChanged.AddDynamic(this, &UDGCharacterInfoWidget::OnLevelChangedCallback);
 	}
 }
 
@@ -79,5 +79,14 @@ void UDGCharacterInfoWidget::OnDefenseChangedCallback(float Defense)
 	if (DefenseText)
 	{
 		DefenseText->SetText(FText::FromString(FString::Printf(TEXT("방어력: %.0f"), Defense)));
+	}
+}
+
+void UDGCharacterInfoWidget::OnLevelChangedCallback(int32 NewLevel)
+{
+	if (LVText)
+	{
+		FString Str = FString::Printf(TEXT("Lv.%d"), NewLevel);
+		LVText->SetText(FText::FromString(Str));
 	}
 }
