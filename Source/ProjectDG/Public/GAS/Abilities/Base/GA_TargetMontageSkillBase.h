@@ -139,9 +139,15 @@ protected:
       /** 로컬 예측 클라이언트가 확정 타겟을 서버에 전달한다. */
       virtual void SendTargetDataToServer(const FGameplayAbilityTargetDataHandle& TargetDataHandle);
 
+      /** 로컬 예측 클라이언트가 타겟 획득 실패를 서버에 전달한다. */
+      virtual void SendTargetDataCancelledToServer();
+
       /** 서버가 클라이언트에서 전달된 TargetData를 수신했을 때 호출된다. */
       virtual void OnTargetDataReadyCallback(const FGameplayAbilityTargetDataHandle& TargetDataHandle, FGameplayTag
-ActivationTag);
+	ActivationTag);
+
+      /** 서버가 클라이언트에서 전달된 TargetData 취소를 수신했을 때 호출된다. */
+      virtual void OnTargetDataCancelledCallback();
 
 protected:
       /** 새로운 공격 판정 구간이 시작될 때 중복 히트 기록을 초기화한다. */
