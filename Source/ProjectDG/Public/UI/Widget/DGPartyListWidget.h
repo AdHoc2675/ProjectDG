@@ -26,7 +26,7 @@ public:
 	void BindToController(UDGOverlayWidgetController* Controller);
 
 protected:
-	// 파티원 위젯들이 차곡차곡 쌓일 수직 박스 (블루프린트 연동)
+	// 파티원 위젯들이 쌓일 수직 박스 (블루프린트 연동)
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UVerticalBox> PartyContainer;
 

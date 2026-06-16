@@ -50,6 +50,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSkillInfoSetSignature, const FUIP
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSkillIconUpdatedSignature, FGameplayTag, SlotTag, UTexture2D*, NewIcon);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnSkillCooldownChangedSignature, FGameplayTag, CooldownTag, float, TimeRemaining, float, Duration);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStatLevelChangedSignature, int32, NewLevel);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStatExpChangedSignature, int32, NewExp);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStatMaxExpChangedSignature, int32, NewMaxExp);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemCooldownSignature, float, CooldownDuration);
 
@@ -84,6 +86,12 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category="GAS|Attributes")
 	FOnPlayerStatLevelChangedSignature OnPlayerLevelChanged;
+
+	UPROPERTY(BlueprintAssignable, Category="GAS|Attributes")
+	FOnPlayerStatExpChangedSignature OnPlayerExpChanged;
+
+	UPROPERTY(BlueprintAssignable, Category="GAS|Attributes")
+	FOnPlayerStatMaxExpChangedSignature OnPlayerMaxExpChanged;
 
 	UPROPERTY(BlueprintAssignable, Category="DG|UI|Item")
 	FOnItemCooldownSignature OnHealthItemCooldown;
@@ -219,6 +227,12 @@ protected:
 	// 레벨 갱신 이벤트 처리용
 	UFUNCTION()
 	void OnPlayerLevelChangedCallback(int32 NewLevel);
+
+	UFUNCTION()
+	void OnPlayerExpChangedCallback(int32 NewExp);
+
+	UFUNCTION()
+	void OnPlayerMaxExpChangedCallback(int32 NewMaxExp);
 
 #pragma region Skill Info
 };

@@ -78,4 +78,29 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	float GroggyDamageIncreaseRate = 0.f;
+
+	// 성장을 위한 변수들
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Growth")
+	int32 BaseMaxExp = 200;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Growth")
+	int32 MaxExpGrowthAmount = 50;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Growth")
+	float MaxHealthGrowth = 25.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Growth")
+	float MaxMentalGrowth = 25.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Growth")
+	float MaxStaminaGrowth = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Growth")
+	float MainStatGrowth = 3.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Growth")
+	float AttackPowerGrowth = 5.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Growth")
+	float DefenseGrowth = 0.f;
 };

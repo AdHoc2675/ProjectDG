@@ -35,6 +35,9 @@ protected:
 	TObjectPtr<UProgressBar> PB_MentalBar;
 
 	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UProgressBar> PB_EXPBar;
+
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> Text_Level;
 
 private:
@@ -60,11 +63,19 @@ private:
 	UFUNCTION()
 	void LevelChanged(int32 NewLevel);
 
-	/* 실제 프로그레스 바를 업데이트 하는 함수 */
+	UFUNCTION()
+	void ExpChanged(int32 NewExp);
+
+	UFUNCTION()
+	void MaxExpChanged(int32 NewMaxExp);
+
+	/* Progress Bar 업데이트 */
 	void UpdateHealthBar();
 	void UpdateStaminaBar();
 	void UpdateMentalBar();
+	void UpdateExpBar();
 
+protected:
 	// 퍼센티지 계산 시 사용
 	float CurrentHealth = 0.f;
 	float CurrentMaxHealth = 1.f;
@@ -77,11 +88,17 @@ private:
 	float TargetHealth = 0.f;
 	float TargetStamina = 0.f;
 	float TargetMental = 0.f;
+	float TargetExp = 0.f;
 
 	// 초기 설정 여부 (0에서 차오르는 애니메이션 방지)
 	bool bHealthInitialized = false;
 	bool bStaminaInitialized = false;
 	bool bMentalInitialized = false;
+	bool bExpInitialized = false;
+	bool bLevelInitialized = false;
+
+	float CurrentExp = 0.f;
+	float CurrentMaxExp = 1.f;
 
 	UPROPERTY(EditAnywhere, Category = "Settings")
 	float InterpSpeed = 10.0f;
@@ -138,4 +155,8 @@ protected:
 	// C++ 내부에서 반복문(for) 처리를 편하게 하기 위해 캐싱해둘 배열
 	UPROPERTY()
 	TArray<UDGSkillSlotWidget*> AllSkillSlots;
+
+	// 레벨업 효과음
+	UPROPERTY(EditDefaultsOnly, Category = "DG|Sound")
+	TObjectPtr<USoundBase> LevelUpSound;
 };
