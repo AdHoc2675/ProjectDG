@@ -14,7 +14,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
-
+#include "Components/BoxComponent.h"
 
 #include "Core/DG_GameplayTags.h"
 
@@ -50,6 +50,11 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 	// 미니맵 마커 생성 및 기본 타입 설정
 	MinimapMarkerComponent = CreateDefaultSubobject<UDGMinimapMarkerComponent>(TEXT("MinimapMarkerComponent"));
 	MinimapMarkerComponent->MarkerType = EMinimapMarkerType::Enemy;
+
+	// 피격/물리용 박스 컴포넌트 생성
+	HitboxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("HitboxComponent"));
+	HitboxComponent->SetupAttachment(GetCapsuleComponent());
+	HitboxComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 
 	// 서버에서도 소켓 기반 트레이스가 정상 작동하도록 애니메이션 본을 항상 갱신하게 설정
 	if (USkeletalMeshComponent* MeshComp = GetMesh())
@@ -427,6 +432,11 @@ void AEnemyCharacterBase::MulticastPlayDeathMontage_Implementation()
 	if (USkeletalMeshComponent* MeshComp = GetMesh())
 	{
 		MeshComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+	}
+
+	if (HitboxComponent)
+	{
+		HitboxComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
 	}
 
 	// 사망과 동시에 미니맵에서 마커 지우기
