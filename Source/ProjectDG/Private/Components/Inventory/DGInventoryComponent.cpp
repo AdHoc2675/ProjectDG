@@ -88,7 +88,7 @@ void UDGInventoryComponent::AddItemByInstance(UDGItemInstance* NewItemInstance)
 			{
 				UGameplayStatics::PlaySound2D(GetWorld(), NewItemInstance->ItemDef->PickupSound);
 			}
-			OnItemLooted.Broadcast(NewItemInstance->ItemDef, NewItemInstance->Quantity);
+			OnItemLooted.Broadcast(NewItemInstance->ItemDef, NewItemInstance->Quantity, NewItemInstance->Grade);
 		}
 	}
 }
@@ -130,7 +130,7 @@ void UDGInventoryComponent::ClientAddItemByInstance_Implementation(UDGItemDefini
 			{
 				UGameplayStatics::PlaySound2D(GetWorld(), ItemDef->PickupSound);
 			}
-			OnItemLooted.Broadcast(ItemDef, Quantity);
+			OnItemLooted.Broadcast(ItemDef, Quantity, Grade);
 		}
 	}
 }
@@ -176,7 +176,7 @@ void UDGInventoryComponent::InternalAddItemConfig(UDGItemDefinition* NewItemDef,
 			}
 
 			// 로컬 플레이어일 때 UI에 획득 이벤트 방송
-			OnItemLooted.Broadcast(NewItemDef, Quantity);
+			OnItemLooted.Broadcast(NewItemDef, Quantity, Grade);
 		}
 	}
 }
