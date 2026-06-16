@@ -13,6 +13,9 @@
 #include "Character/Player/Data/PlayerCharacterClassData.h"
 #include "Character/Player/Data/PlayerSkillData.h"
 #include "Character/Enemy/EnemyCharacterBase.h"
+#include "Core/DG_Debug.h"
+#include "Components/Inventory/DGInventoryComponent.h"
+#include "GameFramework/Character.h"
 
 
 void UDGOverlayWidgetController::BroadcastInitialValues()
@@ -112,6 +115,17 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 
 void UDGOverlayWidgetController::BindCallbacksToDependencies()
 {
+	if (APlayerController* PC = Cast<APlayerController>(PlayerController))
+	{
+		if (APawn* PlayerPawn = PC->GetPawn())
+		{
+			if (UDGInventoryComponent* InventoryComp = PlayerPawn->FindComponentByClass<UDGInventoryComponent>())
+			{
+				InventoryComp->OnItemLooted.AddDynamic(this, &UDGOverlayWidgetController::OnItemLootedCallback);
+			}
+		}
+	}
+
 	UDG_AttributeSet* DGAS = GetDGAttributeSet();
 	if (AbilitySystemComponent && DGAS)
 	{
@@ -546,4 +560,9 @@ void UDGOverlayWidgetController::OnPlayerExpChangedCallback(int32 NewExp)
 void UDGOverlayWidgetController::OnPlayerMaxExpChangedCallback(int32 NewMaxExp)
 {
 	OnPlayerMaxExpChanged.Broadcast(NewMaxExp);
+}
+
+void UDGOverlayWidgetController::OnItemLootedCallback(UDGItemDefinition* ItemDef, int32 Quantity)
+{
+	OnItemLooted.Broadcast(ItemDef, Quantity);
 }

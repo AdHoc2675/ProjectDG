@@ -74,10 +74,22 @@ void UDGInventoryComponent::AddItemByInstance(UDGItemInstance* NewItemInstance)
 	}
 
 	APawn* OwningPawn = Cast<APawn>(GetOwner());
-	if (OwningPawn && !OwningPawn->IsLocallyControlled())
+	if (OwningPawn)
 	{
-		ClientAddItemByInstance(NewItemInstance->ItemDef, NewItemInstance->Quantity, NewItemInstance->Grade, 
-			NewItemInstance->HPValue, NewItemInstance->AttackValue, NewItemInstance->DefenseValue, NewItemInstance->MainStatValue, NewItemInstance->SubOptions);
+		if (!OwningPawn->IsLocallyControlled())
+		{
+			ClientAddItemByInstance(NewItemInstance->ItemDef, NewItemInstance->Quantity, NewItemInstance->Grade, 
+				NewItemInstance->HPValue, NewItemInstance->AttackValue, NewItemInstance->DefenseValue, NewItemInstance->MainStatValue, NewItemInstance->SubOptions);
+		}
+		else
+		{
+			// 서버 호스트 본인인 경우 UI 업데이트 및 사운드 재생
+			if (NewItemInstance->ItemDef->PickupSound)
+			{
+				UGameplayStatics::PlaySound2D(GetWorld(), NewItemInstance->ItemDef->PickupSound);
+			}
+			OnItemLooted.Broadcast(NewItemInstance->ItemDef, NewItemInstance->Quantity);
+		}
 	}
 }
 
@@ -107,6 +119,19 @@ void UDGInventoryComponent::ClientAddItemByInstance_Implementation(UDGItemDefini
 	case EDGItemType::Material:
 		InventoryCraftingMaterialItems.Add(NewItemInstance);
 		break;
+	}
+
+	// 클라이언트 본인일 경우 UI 업데이트 및 사운드 재생
+	if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
+	{
+		if (OwningPawn->IsLocallyControlled())
+		{
+			if (ItemDef->PickupSound)
+			{
+				UGameplayStatics::PlaySound2D(GetWorld(), ItemDef->PickupSound);
+			}
+			OnItemLooted.Broadcast(ItemDef, Quantity);
+		}
 	}
 }
 
@@ -143,9 +168,15 @@ void UDGInventoryComponent::InternalAddItemConfig(UDGItemDefinition* NewItemDef,
 	// [사운드 처리] 현재 클라이언트 환경(로컬 플레이어)이라면 획득 사운드 재생
 	if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
 	{
-		if (OwningPawn->IsLocallyControlled() && NewItemDef->PickupSound)
+		if (OwningPawn->IsLocallyControlled())
 		{
-			UGameplayStatics::PlaySound2D(GetWorld(), NewItemDef->PickupSound);
+			if (NewItemDef->PickupSound)
+			{
+				UGameplayStatics::PlaySound2D(GetWorld(), NewItemDef->PickupSound);
+			}
+
+			// 로컬 플레이어일 때 UI에 획득 이벤트 방송
+			OnItemLooted.Broadcast(NewItemDef, Quantity);
 		}
 	}
 }
