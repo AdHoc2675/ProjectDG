@@ -23,6 +23,7 @@ class ADGDamageNumberActor;
 class UDataTable;
 class UDG_EnemyAttributeSet;
 class UEnemySkillData;
+class USoundBase;
 struct FOnAttributeChangeData;
 struct FDT_Attribute;
 
@@ -176,9 +177,9 @@ public:
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_SpawnEnemySkillIndicator(UEnemySkillData* InSkillData, const FTransform& SpawnTransform);
 
-	/** HitStep 판정 중심 위치에서 1회성 Hit VFX를 재생한다. */
+	/** HitStep 판정 중심 위치에서 VFX + SFX를 한 번에 재생한다. */
 	UFUNCTION(NetMulticast, Unreliable)
-	void Multicast_SpawnEnemySkillHitVFX(UNiagaraSystem* VFX, FVector Location, FRotator Rotation, FVector Scale);
+	void Multicast_PlayEnemySkillHitEffects(UNiagaraSystem* VFX, FVector VFXScale, USoundBase* SFX, FVector Location, FRotator Rotation);
 
 protected:
 	UPROPERTY()

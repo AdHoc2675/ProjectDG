@@ -199,6 +199,10 @@ public:
 	// HitVFX 스폰 시 적용할 스케일.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|VFX")
 	FVector HitVFXScale = FVector(1.f, 1.f, 1.f);
+
+	// 이 Step의 판정 중심 위치에서 재생할 SFX. 비워두면 SkillData의 HitSFX를 사용.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EnemySkill|HitStep|SFX")
+	TObjectPtr<USoundBase> HitSFX = nullptr;
 };
 
 
