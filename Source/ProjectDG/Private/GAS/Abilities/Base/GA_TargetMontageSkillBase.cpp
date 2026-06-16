@@ -58,6 +58,7 @@ void UGA_TargetMontageSkillBase::EndAbility(
 )
 {
 	ClearRemoteTargetDataTimeout();
+	ClearRemoteTargetDataDelegate();
 	
 	ResetTargetMontageState();
 	
@@ -651,6 +652,7 @@ void UGA_TargetMontageSkillBase::OnTargetDataReadyCallback(
 
 	bWaitingForRemoteTargetData = false;
 	ClearRemoteTargetDataTimeout();
+	ClearRemoteTargetDataDelegate();
 
 	const bool bMadeTargetResult = TryMakeTargetResultFromTargetData(
 		TargetDataHandle,
@@ -740,6 +742,20 @@ void UGA_TargetMontageSkillBase::ClearRemoteTargetDataTimeout()
 	}
 }
 
+void UGA_TargetMontageSkillBase::ClearRemoteTargetDataDelegate()
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (!ASC)
+	{
+		return;
+	}
+
+	ASC->AbilityTargetDataSetDelegate(
+			GetCurrentAbilitySpecHandle(),
+			GetCurrentActivationInfo().GetActivationPredictionKey()
+	).RemoveAll(this);
+}
+
 void UGA_TargetMontageSkillBase::OnRemoteTargetDataTimeout()
 {
 	if (!bWaitingForRemoteTargetData)
@@ -748,6 +764,7 @@ void UGA_TargetMontageSkillBase::OnRemoteTargetDataTimeout()
 	}
 
 	bWaitingForRemoteTargetData = false;
+	ClearRemoteTargetDataDelegate();
 
 	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
 	{

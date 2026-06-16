@@ -84,6 +84,7 @@ private:
 
       void StartRemoteTargetDataTimeout();
       void ClearRemoteTargetDataTimeout();
+      void ClearRemoteTargetDataDelegate();
       void OnRemoteTargetDataTimeout();
 
 protected:
