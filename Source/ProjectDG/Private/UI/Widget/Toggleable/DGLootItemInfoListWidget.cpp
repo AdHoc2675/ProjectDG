@@ -39,7 +39,7 @@ void UDGLootItemInfoListWidget::OnItemLootedCallback(UDGItemDefinition* ItemDef,
 		if (UVerticalBoxSlot* BoxSlot = LootContainer->AddChildToVerticalBox(NewLootWidget))
 		{
 			// Left, Top, Right, Bottom 순서
-			BoxSlot->SetPadding(FMargin(0.f, 0.f, 0.f, -125.f));
+			BoxSlot->SetPadding(FMargin(0.f, 0.f, 0.f, 0.f));
 		}
 	}
 }
