@@ -277,6 +277,10 @@ public:
 	/** 명중 VFX */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|VFX")
 	TObjectPtr<UNiagaraSystem> HitVFX = nullptr;
+	
+	/** 명중 VFX 스케일 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|VFX")
+	FVector HitVFXScale = FVector(1.f, 1.f, 1.f);
 
 	/** 투사체 VFX */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill|VFX")

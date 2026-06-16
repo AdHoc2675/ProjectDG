@@ -160,6 +160,14 @@ protected:
 		const FGameplayEventData& Payload
 	) const;
 	
+	void ExecuteHitGameplayCue(AActor* HitActor,const FVector& QueryOrigin) const;
+
+	bool ResolveHitEffectTransformFromMeshBounds(
+		  AActor* HitActor,
+		  const FVector& QueryOrigin,
+		  FVector& OutLocation,
+		  FVector& OutNormal
+	) const;
 	// ANS 관련 함수
 	bool bWeaponTrailCueActive = false;
 
