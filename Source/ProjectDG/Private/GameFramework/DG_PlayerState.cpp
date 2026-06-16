@@ -10,6 +10,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "GAS/Attributes/DG_AttributeSet.h"
 #include "Net/UnrealNetwork.h"
+#include "Components/Inventory/DGInventoryComponent.h"
 
 ADG_PlayerState::ADG_PlayerState()
 {
@@ -429,6 +430,15 @@ void ADG_PlayerState::LevelUp()
 
 	// 성장치가 반영되도록 스탯 재계산 및 적용
 	InitializeAttributesFromDataTable();
+
+	// 스탯이 순수 스탯으로 초기화되었으므로, 인벤토리에서 장비 스탯을 다시 덧씌움
+	if (APawn* OwningPawn = GetPawn())
+	{
+		if (UDGInventoryComponent* InventoryComp = OwningPawn->FindComponentByClass<UDGInventoryComponent>())
+		{
+			InventoryComp->ReapplyEquippedItemStats();
+		}
+	}
 
 	// 레벨업 시 체력/정신력 완전 회복 (필요시)
 	if (AttributeSet)

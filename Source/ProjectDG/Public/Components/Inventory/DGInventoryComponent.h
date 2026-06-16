@@ -103,6 +103,9 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastEquipmentChanged(EDGEquipmentType SlotType, UDGItemDefinition* EquippedItemDef);
 
+	// 스탯이 초기화(레벨업 등) 되었을 때, 현재 장착 중인 아이템의 스탯을 다시 더해주는 함수
+	void ReapplyEquippedItemStats();
+
 protected:
 	// [추가] 현재 부위별로 장착 중인 아이템 관리 Map
 	UPROPERTY(EditAnywhere, Instanced, Category = "DG|Inventory")
