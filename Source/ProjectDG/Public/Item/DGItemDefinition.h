@@ -39,4 +39,16 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data")
 	TObjectPtr<class UTexture2D> ItemIcon;
 
+	// 아이템 획득(루팅) 시 재생될 사운드
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data|Sound")
+	TObjectPtr<class USoundBase> PickupSound;
+
+	// 장비 장착 시 재생될 사운드 (장비 전용)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data|Sound", meta = (EditCondition = "ItemType == EDGItemType::Equipment", EditConditionHides))
+	TObjectPtr<class USoundBase> EquipSound;
+
+	// 장비 해제 시 재생될 사운드 (장비 전용)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data|Sound", meta = (EditCondition = "ItemType == EDGItemType::Equipment", EditConditionHides))
+	TObjectPtr<class USoundBase> UnequipSound;
+
 };

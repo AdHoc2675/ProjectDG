@@ -17,6 +17,7 @@
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Kismet/GameplayStatics.h"
 #include "InputActionValue.h"
 #include "Net/UnrealNetwork.h"
 #include "DrawDebugHelpers.h"
@@ -559,6 +560,19 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 			DGGameplayTags::Input_SkillSlot_Key4.GetTag());
 	}
 
+	// 아이템 맵핑
+	if (IA_HPPotion)
+	{
+		EnhancedInputComponent->BindAction(IA_HPPotion, ETriggerEvent::Started, this,
+			&APlayerCharacterBase::UseHealthItem);
+	}
+
+	if (IA_MPPotion)
+	{
+		EnhancedInputComponent->BindAction(IA_MPPotion, ETriggerEvent::Started, this,
+			&APlayerCharacterBase::UseMentalItem);
+	}
+
 	// UI 토글 (맵, 인벤토리)
 	if (IA_ToggleMap)
 	{
@@ -570,6 +584,90 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	{
 		EnhancedInputComponent->BindAction(IA_ToggleInventory, ETriggerEvent::Started, this,
 			&APlayerCharacterBase::ToggleInventoryAction);
+	}
+}
+
+void APlayerCharacterBase::UseHealthItem()
+{
+	float CurrentTime = GetWorld()->GetTimeSeconds();
+	if (CurrentTime - LastHealthItemUseTime < HealthItemCooldown && LastHealthItemUseTime > 0.0f)
+	{
+		return;
+	}
+
+	LastHealthItemUseTime = CurrentTime;
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ADG_HUD* HUD = Cast<ADG_HUD>(PC->GetHUD()))
+		{
+			if (UDGOverlayWidgetController* WC = HUD->GetOverlayWidgetController(FWidgetControllerParams()))
+			{
+				WC->OnHealthItemCooldown.Broadcast(HealthItemCooldown);
+			}
+		}
+	}
+
+	if (HealthItemSound)
+	{
+		UGameplayStatics::PlaySound2D(this, HealthItemSound);
+	}
+
+	Server_UseHealthItem();
+}
+
+void APlayerCharacterBase::UseMentalItem()
+{
+	float CurrentTime = GetWorld()->GetTimeSeconds();
+	if (CurrentTime - LastMentalItemUseTime < MentalItemCooldown && LastMentalItemUseTime > 0.0f)
+	{
+		return;
+	}
+
+	LastMentalItemUseTime = CurrentTime;
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ADG_HUD* HUD = Cast<ADG_HUD>(PC->GetHUD()))
+		{
+			if (UDGOverlayWidgetController* WC = HUD->GetOverlayWidgetController(FWidgetControllerParams()))
+			{
+				WC->OnMentalItemCooldown.Broadcast(MentalItemCooldown);
+			}
+		}
+	}
+
+	if (MentalItemSound)
+	{
+		UGameplayStatics::PlaySound2D(this, MentalItemSound);
+	}
+
+	Server_UseMentalItem();
+}
+
+void APlayerCharacterBase::Server_UseHealthItem_Implementation()
+{
+	if (UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent())
+	{
+		float MaxHealth = ASC->GetNumericAttribute(UDG_AttributeSet::GetMaxHealthAttribute());
+		float CurrentHealth = ASC->GetNumericAttribute(UDG_AttributeSet::GetHealthAttribute());
+		float HealAmount = MaxHealth * HealthItemHealRatio; // 에디터 설정 비율(예: 0.3 = 30%)
+		float NewHealth = FMath::Min(MaxHealth, CurrentHealth + HealAmount);
+		
+		ASC->SetNumericAttributeBase(UDG_AttributeSet::GetHealthAttribute(), NewHealth);
+	}
+}
+
+void APlayerCharacterBase::Server_UseMentalItem_Implementation()
+{
+	if (UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent())
+	{
+		float MaxMental = ASC->GetNumericAttribute(UDG_AttributeSet::GetMaxMentalAttribute());
+		float CurrentMental = ASC->GetNumericAttribute(UDG_AttributeSet::GetMentalAttribute());
+		float HealAmount = MaxMental * MentalItemHealRatio; // 에디터 설정 비율(예: 0.3 = 30%)
+		float NewMental = FMath::Min(MaxMental, CurrentMental + HealAmount);
+		
+		ASC->SetNumericAttributeBase(UDG_AttributeSet::GetMentalAttribute(), NewMental);
 	}
 }
 
