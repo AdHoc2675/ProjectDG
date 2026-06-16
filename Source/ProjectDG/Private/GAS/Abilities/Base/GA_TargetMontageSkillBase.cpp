@@ -163,14 +163,26 @@ void UGA_TargetMontageSkillBase::ExecuteTargetSkill(AActor* TargetActor, const F
 		return;
 	}
 
-	ApplyDamageToTarget(
-		TargetActor,
-		0.f,
-		GetSkillDamageMultiplierPerHit(),
-		GetSkillTag(),
-		CurrentTargetResult.AimPoint,
-		CurrentTargetResult.bHasTarget
-	);
+	const FDGDamageResult DamageResult =
+	  ApplyDamageToTarget(
+			  TargetActor,
+			  0.f,
+			  GetSkillDamageMultiplierPerHit(),
+			  GetSkillTag(),
+			  CurrentTargetResult.AimPoint,
+			  CurrentTargetResult.bHasTarget
+	  );
+
+	if (DamageResult.bSuccess)
+	{
+		if (AActor* AvatarActor = GetAvatarActorFromAbility())
+		{
+			ExecuteHitGameplayCue(
+					TargetActor,
+					AvatarActor->GetActorLocation()
+			);
+		}
+	}
 
 	ApplyStatusEffectToTarget(TargetActor);
 }
@@ -250,20 +262,35 @@ void UGA_TargetMontageSkillBase::ExecuteRadiusHitCheckFromSkillData(const FGamep
 
 	for (AActor* RadiusHitActor : RadiusHitActors)
 	{
-		if (!IsValidRadiusHitActor(AvatarActor, RadiusHitActor))
+		if (!IsValidRadiusHitActor(
+				AvatarActor,
+				RadiusHitActor))
 		{
 			continue;
 		}
 
+		bool bDamageApplied = false;
+
 		for (int32 HitIndex = 0; HitIndex < HitCount; ++HitIndex)
 		{
-			ApplyDamageToTarget(
-				RadiusHitActor,
-				0.f,
-				DamageMultiplierPerHit,
-				GetSkillTag(),
-				RadiusHitActor->GetActorLocation(),
-				true
+			const FDGDamageResult DamageResult =
+					ApplyDamageToTarget(
+							RadiusHitActor,
+							0.f,
+							DamageMultiplierPerHit,
+							GetSkillTag(),
+							RadiusHitActor->GetActorLocation(),
+							true
+					);
+
+			bDamageApplied |= DamageResult.bSuccess;
+		}
+
+		if (bDamageApplied)
+		{
+			ExecuteHitGameplayCue(
+					RadiusHitActor,
+					AvatarLocation
 			);
 		}
 

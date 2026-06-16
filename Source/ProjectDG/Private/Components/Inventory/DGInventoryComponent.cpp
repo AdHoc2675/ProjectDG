@@ -74,10 +74,22 @@ void UDGInventoryComponent::AddItemByInstance(UDGItemInstance* NewItemInstance)
 	}
 
 	APawn* OwningPawn = Cast<APawn>(GetOwner());
-	if (OwningPawn && !OwningPawn->IsLocallyControlled())
+	if (OwningPawn)
 	{
-		ClientAddItemByInstance(NewItemInstance->ItemDef, NewItemInstance->Quantity, NewItemInstance->Grade, 
-			NewItemInstance->HPValue, NewItemInstance->AttackValue, NewItemInstance->DefenseValue, NewItemInstance->MainStatValue, NewItemInstance->SubOptions);
+		if (!OwningPawn->IsLocallyControlled())
+		{
+			ClientAddItemByInstance(NewItemInstance->ItemDef, NewItemInstance->Quantity, NewItemInstance->Grade, 
+				NewItemInstance->HPValue, NewItemInstance->AttackValue, NewItemInstance->DefenseValue, NewItemInstance->MainStatValue, NewItemInstance->SubOptions);
+		}
+		else
+		{
+			// 서버 호스트 본인인 경우 UI 업데이트 및 사운드 재생
+			if (NewItemInstance->ItemDef->PickupSound)
+			{
+				UGameplayStatics::PlaySound2D(GetWorld(), NewItemInstance->ItemDef->PickupSound);
+			}
+			OnItemLooted.Broadcast(NewItemInstance->ItemDef, NewItemInstance->Quantity);
+		}
 	}
 }
 
@@ -107,6 +119,19 @@ void UDGInventoryComponent::ClientAddItemByInstance_Implementation(UDGItemDefini
 	case EDGItemType::Material:
 		InventoryCraftingMaterialItems.Add(NewItemInstance);
 		break;
+	}
+
+	// 클라이언트 본인일 경우 UI 업데이트 및 사운드 재생
+	if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
+	{
+		if (OwningPawn->IsLocallyControlled())
+		{
+			if (ItemDef->PickupSound)
+			{
+				UGameplayStatics::PlaySound2D(GetWorld(), ItemDef->PickupSound);
+			}
+			OnItemLooted.Broadcast(ItemDef, Quantity);
+		}
 	}
 }
 
@@ -143,9 +168,15 @@ void UDGInventoryComponent::InternalAddItemConfig(UDGItemDefinition* NewItemDef,
 	// [사운드 처리] 현재 클라이언트 환경(로컬 플레이어)이라면 획득 사운드 재생
 	if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
 	{
-		if (OwningPawn->IsLocallyControlled() && NewItemDef->PickupSound)
+		if (OwningPawn->IsLocallyControlled())
 		{
-			UGameplayStatics::PlaySound2D(GetWorld(), NewItemDef->PickupSound);
+			if (NewItemDef->PickupSound)
+			{
+				UGameplayStatics::PlaySound2D(GetWorld(), NewItemDef->PickupSound);
+			}
+
+			// 로컬 플레이어일 때 UI에 획득 이벤트 방송
+			OnItemLooted.Broadcast(NewItemDef, Quantity);
 		}
 	}
 }
@@ -343,4 +374,31 @@ void UDGInventoryComponent::MulticastEquipmentChanged_Implementation(EDGEquipmen
 {
 	// 모든 클라이언트와 서버에서 실행됨. 장비가 바뀌었다는 이벤트를 로컬 캐릭터에게 전달.
 	OnEquipmentChanged.Broadcast(SlotType, EquippedItemDef);
+}
+
+void UDGInventoryComponent::ReapplyEquippedItemStats()
+{
+	if (!GetOwner()->HasAuthority()) return;
+
+	UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
+	if (!ASC) return;
+
+	auto AddModifier = [&ASC](FGameplayAttribute Attribute, float Value)
+	{
+		if (Value == 0.f) return;
+		float CurrentBase = ASC->GetNumericAttributeBase(Attribute);
+		ASC->SetNumericAttributeBase(Attribute, CurrentBase + Value);
+	};
+
+	for (const auto& Pair : EquippedItems)
+	{
+		UDGItemInstance* Item = Pair.Value;
+		if (Item)
+		{
+			AddModifier(UDG_AttributeSet::GetMaxHealthAttribute(), Item->HPValue);
+			AddModifier(UDG_AttributeSet::GetAttackPowerAttribute(), Item->AttackValue);
+			AddModifier(UDG_AttributeSet::GetDefenseAttribute(), Item->DefenseValue);
+			AddModifier(UDG_AttributeSet::GetMainStatAttribute(), Item->MainStatValue);
+		}
+	}
 }

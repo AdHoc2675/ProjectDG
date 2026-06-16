@@ -7,6 +7,8 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEquipmentChanged, EDGEquipmentType, SlotType, class UDGItemDefinition*, EquippedItemDef);
 
+// 아이템 습득 시 UI(오버레이 등)에 알리기 위한 델리게이트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemLootedSignature, class UDGItemDefinition*, ItemDef, int32, Quantity);
 
 class UDGItemInstance;
 class UDGItemDefinition;
@@ -75,6 +77,11 @@ protected:
 
 #pragma region 장비 장착/해제 관련
 public:
+public:
+	// 아이템 획득 이벤트
+	UPROPERTY(BlueprintAssignable, Category = "DG|Inventory")
+	FOnItemLootedSignature OnItemLooted;
+
 	// 장착 슬롯에 아이템이 변경될 때 발생하는 이벤트 (장착/해제 모두 사용)
 	UPROPERTY(BlueprintAssignable, Category = "DG|Inventory")
 	FOnEquipmentChanged OnEquipmentChanged;
@@ -102,6 +109,9 @@ public:
 	// 다른 클라이언트들에게 외형 변경을 알리기 위한 Multicast RPC
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastEquipmentChanged(EDGEquipmentType SlotType, UDGItemDefinition* EquippedItemDef);
+
+	// 스탯이 초기화(레벨업 등) 되었을 때, 현재 장착 중인 아이템의 스탯을 다시 더해주는 함수
+	void ReapplyEquippedItemStats();
 
 protected:
 	// [추가] 현재 부위별로 장착 중인 아이템 관리 Map

@@ -13,6 +13,9 @@
 #include "Character/Player/Data/PlayerCharacterClassData.h"
 #include "Character/Player/Data/PlayerSkillData.h"
 #include "Character/Enemy/EnemyCharacterBase.h"
+#include "Core/DG_Debug.h"
+#include "Components/Inventory/DGInventoryComponent.h"
+#include "GameFramework/Character.h"
 
 
 void UDGOverlayWidgetController::BroadcastInitialValues()
@@ -33,6 +36,8 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 	if (ADG_PlayerState* PS = Cast<ADG_PlayerState>(PlayerState))
 	{
 		OnPlayerLevelChanged.Broadcast(PS->GetCharacterLevel());
+		OnPlayerExpChanged.Broadcast(PS->GetCurrentExp());
+		OnPlayerMaxExpChanged.Broadcast(PS->GetMaxExp());
 	}
 
 	// 미니맵 초기 마커 
@@ -110,6 +115,17 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 
 void UDGOverlayWidgetController::BindCallbacksToDependencies()
 {
+	if (APlayerController* PC = Cast<APlayerController>(PlayerController))
+	{
+		if (APawn* PlayerPawn = PC->GetPawn())
+		{
+			if (UDGInventoryComponent* InventoryComp = PlayerPawn->FindComponentByClass<UDGInventoryComponent>())
+			{
+				InventoryComp->OnItemLooted.AddDynamic(this, &UDGOverlayWidgetController::OnItemLootedCallback);
+			}
+		}
+	}
+
 	UDG_AttributeSet* DGAS = GetDGAttributeSet();
 	if (AbilitySystemComponent && DGAS)
 	{
@@ -183,6 +199,8 @@ void UDGOverlayWidgetController::BindCallbacksToDependencies()
 	{
 		PS->OnSkillComboStepChanged.AddDynamic(this, &UDGOverlayWidgetController::OnSkillComboStepChanged);
 		PS->OnLevelChangedDelegate.AddDynamic(this, &UDGOverlayWidgetController::OnPlayerLevelChangedCallback);
+		PS->OnExpChangedDelegate.AddDynamic(this, &UDGOverlayWidgetController::OnPlayerExpChangedCallback);
+		PS->OnMaxExpChangedDelegate.AddDynamic(this, &UDGOverlayWidgetController::OnPlayerMaxExpChangedCallback);
 	}
 
 	// 플레이어 스킬의 쿨타임 태그들을 리스닝
@@ -532,4 +550,19 @@ void UDGOverlayWidgetController::OnSkillComboStepChanged(FGameplayTag SkillTag, 
 void UDGOverlayWidgetController::OnPlayerLevelChangedCallback(int32 NewLevel)
 {
 	OnPlayerLevelChanged.Broadcast(NewLevel);
+}
+
+void UDGOverlayWidgetController::OnPlayerExpChangedCallback(int32 NewExp)
+{
+	OnPlayerExpChanged.Broadcast(NewExp);
+}
+
+void UDGOverlayWidgetController::OnPlayerMaxExpChangedCallback(int32 NewMaxExp)
+{
+	OnPlayerMaxExpChanged.Broadcast(NewMaxExp);
+}
+
+void UDGOverlayWidgetController::OnItemLootedCallback(UDGItemDefinition* ItemDef, int32 Quantity)
+{
+	OnItemLooted.Broadcast(ItemDef, Quantity);
 }

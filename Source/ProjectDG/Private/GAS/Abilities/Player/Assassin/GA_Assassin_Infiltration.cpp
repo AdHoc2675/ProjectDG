@@ -85,15 +85,30 @@ void UGA_Assassin_Infiltration::ExecuteTargetSkill(AActor* TargetActor, const FG
 		return;
 	}
 
-	ApplyDamageToTarget(
-		TargetActor,
-		0.f,
-		GetSkillDamageMultiplier(),
-		GetSkillTag(),
-		TargetActor->GetActorLocation(),
-		true,
-		GetSkillGroggyDamage()
-	);
+	AActor* AvatarActor = GetAvatarActorFromAbility();
+	if (!AvatarActor)
+	{
+		return;
+	}
+
+	const FDGDamageResult DamageResult =
+			ApplyDamageToTarget(
+					TargetActor,
+					0.f,
+					GetSkillDamageMultiplier(),
+					GetSkillTag(),
+					TargetActor->GetActorLocation(),
+					true,
+					GetSkillGroggyDamage()
+			);
+
+	if (DamageResult.bSuccess)
+	{
+		ExecuteHitGameplayCue(
+				TargetActor,
+				AvatarActor->GetActorLocation()
+		);
+	}
 
 	ApplyStatusEffectToTarget(TargetActor);
 }

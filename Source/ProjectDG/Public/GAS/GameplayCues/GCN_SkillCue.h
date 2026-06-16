@@ -74,4 +74,8 @@ protected:
 		AActor* MyTarget,
 		const FGameplayCueParameters& Parameters
 	) const;
+	
+	FVector ResolveSpawnScale(
+	  const FGameplayCueParameters& Parameters
+) const;
 };

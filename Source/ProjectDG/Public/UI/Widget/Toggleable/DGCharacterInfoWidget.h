@@ -49,6 +49,9 @@ protected:
 	UFUNCTION()
 	void OnDefenseChangedCallback(float Defense);
 
+	UFUNCTION()
+	void OnLevelChangedCallback(int32 NewLevel);
+
 	// --- 상세 스탯 텍스트 위젯 ---
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> HPText;
@@ -64,4 +67,7 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> DefenseText;      // 방어도
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> LVText;           // 레벨
 };

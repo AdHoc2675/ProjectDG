@@ -50,8 +50,13 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSkillInfoSetSignature, const FUIP
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSkillIconUpdatedSignature, FGameplayTag, SlotTag, UTexture2D*, NewIcon);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnSkillCooldownChangedSignature, FGameplayTag, CooldownTag, float, TimeRemaining, float, Duration);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStatLevelChangedSignature, int32, NewLevel);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStatExpChangedSignature, int32, NewExp);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStatMaxExpChangedSignature, int32, NewMaxExp);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemCooldownSignature, float, CooldownDuration);
+
+// HUD로 획득한 아이템 정보를 전달하기 위한 델리게이트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnOverlayItemLootedSignature, class UDGItemDefinition*, ItemDef, int32, Quantity);
 
 
 UCLASS()
@@ -85,11 +90,21 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="GAS|Attributes")
 	FOnPlayerStatLevelChangedSignature OnPlayerLevelChanged;
 
+	UPROPERTY(BlueprintAssignable, Category="GAS|Attributes")
+	FOnPlayerStatExpChangedSignature OnPlayerExpChanged;
+
+	UPROPERTY(BlueprintAssignable, Category="GAS|Attributes")
+	FOnPlayerStatMaxExpChangedSignature OnPlayerMaxExpChanged;
+
 	UPROPERTY(BlueprintAssignable, Category="DG|UI|Item")
 	FOnItemCooldownSignature OnHealthItemCooldown;
 
 	UPROPERTY(BlueprintAssignable, Category="DG|UI|Item")
 	FOnItemCooldownSignature OnMentalItemCooldown;
+
+	// 아이템 획득 시 UI용 알림 델리게이트
+	UPROPERTY(BlueprintAssignable, Category = "DG|UI|Loot")
+	FOnOverlayItemLootedSignature OnItemLooted;
 
 
 protected:
@@ -219,6 +234,15 @@ protected:
 	// 레벨 갱신 이벤트 처리용
 	UFUNCTION()
 	void OnPlayerLevelChangedCallback(int32 NewLevel);
+
+	UFUNCTION()
+	void OnPlayerExpChangedCallback(int32 NewExp);
+
+	UFUNCTION()
+	void OnPlayerMaxExpChangedCallback(int32 NewMaxExp);
+
+	UFUNCTION()
+	void OnItemLootedCallback(class UDGItemDefinition* ItemDef, int32 Quantity);
 
 #pragma region Skill Info
 };

@@ -2097,6 +2097,9 @@ void UGA_EnemySkillBase::ApplyHitStepToRuntimeSkillData(
 	RuntimeSkillData->HitSFX = HitStep.HitSFX
 		                           ? HitStep.HitSFX
 		                           : SourceSkillData->HitSFX;
+
+	RuntimeSkillData->HitEffectLocationOffset = HitStep.HitEffectLocationOffset;
+	RuntimeSkillData->HitEffectRotationOffset = HitStep.HitEffectRotationOffset;
 }
 
 void UGA_EnemySkillBase::SpawnEnemySkillHitStepIndicatorByNotify(
@@ -2275,12 +2278,15 @@ void UGA_EnemySkillBase::ExecuteEnemySkillHitStepByNotify(
 		{
 			if (EnemyCharacter->HasAuthority())
 			{
+				FVector EffectLocation = StepContext->CachedHitCenter + StepContext->CachedHitRotation.RotateVector(RuntimeSkillData->HitEffectLocationOffset);
+				FRotator EffectRotation = StepContext->CachedHitRotation + RuntimeSkillData->HitEffectRotationOffset;
+
 				EnemyCharacter->Multicast_PlayEnemySkillHitEffects(
 					RuntimeSkillData->HitVFX,
 					RuntimeSkillData->HitVFXScale,
 					RuntimeSkillData->HitSFX,
-					StepContext->CachedHitCenter,
-					StepContext->CachedHitRotation
+					EffectLocation,
+					EffectRotation
 				);
 			}
 		}

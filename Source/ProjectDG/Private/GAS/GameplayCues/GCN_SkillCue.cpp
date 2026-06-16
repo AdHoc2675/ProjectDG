@@ -26,6 +26,7 @@ bool UGCN_SkillCue::OnExecute_Implementation(
 
 	const FVector SpawnLocation = ResolveSpawnLocation(MyTarget, Parameters);
 	const FRotator SpawnRotation = ResolveSpawnRotation(MyTarget, Parameters);
+	const FVector SpawnScale = ResolveSpawnScale(Parameters);
 
 	if (UNiagaraSystem* VFX = ResolveVFXFromParameters(Parameters))
 	{
@@ -33,7 +34,8 @@ bool UGCN_SkillCue::OnExecute_Implementation(
 			World,
 			VFX,
 			SpawnLocation,
-			SpawnRotation
+			SpawnRotation,
+			SpawnScale
 		);
 
 		return true;
@@ -250,4 +252,25 @@ FRotator UGCN_SkillCue::ResolveSpawnRotation(
 	}
 
 	return MyTarget ? MyTarget->GetActorRotation() : FRotator::ZeroRotator;
+}
+
+FVector UGCN_SkillCue::ResolveSpawnScale(
+	  const FGameplayCueParameters& Parameters
+) const
+{
+	UObject* SourceObject =
+			const_cast<UObject*>(Parameters.SourceObject.Get());
+
+	if (const UPlayerSkillData* PlayerSkillData =
+			Cast<UPlayerSkillData>(SourceObject))
+	{
+		if (IsCueTag(
+				Parameters,
+				DGGameplayTags::GameplayCue_Skill_VFX_Hit))
+		{
+			return PlayerSkillData->HitVFXScale;
+		}
+	}
+
+	return FVector(1.f, 1.f, 1.f);
 }
