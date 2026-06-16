@@ -21,6 +21,7 @@
 #include "GAS/Attributes/DG_AttributeSet.h"
 #include "GAS/Attributes/DG_EnemyAttributeSet.h"
 
+#include "Kismet/GameplayStatics.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Character/Enemy/Data/EnemySkillData.h"
@@ -448,24 +449,28 @@ void AEnemyCharacterBase::MulticastPlayDeathMontage_Implementation()
 	}
 }
 
-void AEnemyCharacterBase::Multicast_SpawnEnemySkillHitVFX_Implementation(
+void AEnemyCharacterBase::Multicast_PlayEnemySkillHitEffects_Implementation(
 	UNiagaraSystem* VFX,
+	FVector VFXScale,
+	USoundBase* SFX,
 	FVector Location,
-	FRotator Rotation,
-	FVector Scale)
+	FRotator Rotation)
 {
-	if (!VFX)
+	if (VFX)
 	{
-		return;
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			this,
+			VFX,
+			Location,
+			Rotation,
+			VFXScale
+		);
 	}
 
-	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-		this,
-		VFX,
-		Location,
-		Rotation,
-		Scale
-	);
+	if (SFX)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, SFX, Location);
+	}
 }
 
 void AEnemyCharacterBase::Multicast_SpawnAOETelegraph_Implementation(
