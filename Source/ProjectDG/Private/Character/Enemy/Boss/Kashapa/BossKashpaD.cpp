@@ -82,6 +82,61 @@ bool ABossKashapaD::SetKashapaPhase(int32 NewPhaseIndex)
 	return ApplyPhaseDataByIndex(NewPhaseIndex);
 }
 
+bool ABossKashapaD::ApplyPendingPhaseChangeFromNotify(int32 ExpectedPhaseIndex)
+{
+	if (!HasAuthority())
+	{
+		return false;
+	}
+
+	if (!bHasPendingPhaseChange || PendingPhaseIndex == INDEX_NONE)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossKashapaD] ApplyPendingPhaseChangeFromNotify Failed. No pending phase. CurrentPhase=%d"),
+			CurrentPhaseIndex
+		);
+
+		return false;
+	}
+
+	const int32 PhaseIndexToApply = PendingPhaseIndex;
+
+	if (ExpectedPhaseIndex != INDEX_NONE && PhaseIndexToApply != ExpectedPhaseIndex)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossKashapaD] ApplyPendingPhaseChangeFromNotify Failed. Pending=%d Expected=%d"),
+			PhaseIndexToApply,
+			ExpectedPhaseIndex
+		);
+
+		return false;
+	}
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[BossKashapaD] ApplyPendingPhaseChangeFromNotify Start. CurrentPhase=%d PendingPhase=%d"),
+		CurrentPhaseIndex,
+		PhaseIndexToApply
+	);
+
+	const bool bApplied = ApplyPhaseDataByIndex(PhaseIndexToApply);
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[BossKashapaD] ApplyPendingPhaseChangeFromNotify Finished. Applied=%s CurrentPhase=%d"),
+		bApplied ? TEXT("true") : TEXT("false"),
+		CurrentPhaseIndex
+	);
+
+	return bApplied;
+}
+
 void ABossKashapaD::UpdateHealthPhaseTags(float HealthRatio)
 {
 	if (!HasAuthority() || !BossClassData || IsDead())
@@ -123,28 +178,28 @@ void ABossKashapaD::UpdateHealthPhaseTags(float HealthRatio)
 		return;
 	}
 
-	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
-
-	if (HasActiveEnemySkillDataAbility(ASC))
+	if (bHasPendingPhaseChange && PendingPhaseIndex == NextPhaseData->PhaseIndex)
 	{
-		if (!bHasPendingPhaseChange || PendingPhaseIndex != NextPhaseData->PhaseIndex)
-		{
-			bHasPendingPhaseChange = true;
-			PendingPhaseIndex = NextPhaseData->PhaseIndex;
-
-			UE_LOG(
-				LogTemp,
-				Warning,
-				TEXT("[BossKashapaD] Phase change pending. CurrentPhase=%d PendingPhase=%d"),
-				CurrentPhase,
-				PendingPhaseIndex
-			);
-		}
-
 		return;
 	}
 
-	ApplyPhaseDataByIndex(NextPhaseData->PhaseIndex);
+	bHasPendingPhaseChange = true;
+	PendingPhaseIndex = NextPhaseData->PhaseIndex;
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[BossKashapaD] Phase change pending only. CurrentPhase=%d PendingPhase=%d HealthRatio=%.3f"),
+		CurrentPhase,
+		PendingPhaseIndex,
+		HealthRatio
+	);
+
+	ForceNetUpdate();
+
+	// 중요:
+	// 여기서 ApplyPhaseDataByIndex 호출 금지.
+	// AN_BossPhaseApply 전까지 1페 SkeletalMesh / Material / AnimClass 유지.
 }
 
 void ABossKashapaD::OnRep_CurrentPhaseIndex()
@@ -350,27 +405,17 @@ const TArray<TObjectPtr<UEnemySkillData>>& ABossKashapaD::GetAttackSkillDataList
 {
 	static const TArray<TObjectPtr<UEnemySkillData>> EmptySkills;
 
-	ABossKashapaD* MutableThis = const_cast<ABossKashapaD*>(this);
-
-	if (MutableThis->bHasPendingPhaseChange)
+	if (bHasPendingPhaseChange)
 	{
-		UAbilitySystemComponent* ASC = MutableThis->GetCharacterAbilitySystemComponent();
-
-		if (!HasActiveEnemySkillDataAbility(ASC))
-		{
-			const int32 PhaseIndexToApply = MutableThis->PendingPhaseIndex;
-			MutableThis->ApplyPhaseDataByIndex(PhaseIndexToApply);
-		}
-		else
-		{
-			UE_LOG(
-				LogTemp,
-				Warning,
-				TEXT("[BossKashapaD] Pending phase exists but active skill remains. PendingPhase=%d"),
-				MutableThis->PendingPhaseIndex
-			);
-		}
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossKashapaD] GetAttackSkillDataList called while pending phase exists. CurrentPhase=%d PendingPhase=%d. Phase is NOT applied here."),
+			CurrentPhaseIndex,
+			PendingPhaseIndex
+		);
 	}
+	
 
 	if (!CurrentPhaseSkillSetData)
 	{

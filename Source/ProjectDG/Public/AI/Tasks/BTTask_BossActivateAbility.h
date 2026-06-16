@@ -44,6 +44,19 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss Skill")
 	TObjectPtr<UEnemySkillData> SkillData = nullptr;
 
+	// Pending Phase가 있을 때 일반 스킬 대신 강제로 실행할 페이즈 전환 스킬.
+	// DA_BossSkill_Kashapa_PhaseTransition 지정.
+	// SelectionWeight=0, HitShape=None이어도 이 경로에서는 실행 가능하게 처리한다.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss Skill|Phase Transition")
+	TObjectPtr<UEnemySkillData> PhaseTransitionSkillData = nullptr;
+
+	// PhaseTransitionSkillData가 비어 있을 때 CurrentPhaseSkillSetData 안에서 이 태그로 찾아 실행한다.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss Skill|Phase Transition")
+	FGameplayTag PhaseTransitionSkillTag;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss Skill|Phase Transition")
+	bool bUsePhaseTransitionSkillOnPendingPhase = true;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Blackboard")
 	FName TargetActorKeyName = TEXT("TargetActor");
 
@@ -195,7 +208,11 @@ private:
 	bool IsGapCloseSkillData(const UEnemySkillData* CandidateSkillData) const;
 
 	bool HasAnyGapCloseCandidate(
-		const TArray<FBossSkillTargetCandidate>& Candidates
+	const TArray<FBossSkillTargetCandidate>& Candidates
+) const;
+
+	UEnemySkillData* ResolvePhaseTransitionSkillData(
+		ABossCharacterBase* BossCharacter
 	) const;
 
 	FGameplayAbilitySpec* FindAbilitySpecBySkillData(

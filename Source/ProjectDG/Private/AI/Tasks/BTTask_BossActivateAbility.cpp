@@ -20,6 +20,11 @@ UBTTask_BossActivateAbility::UBTTask_BossActivateAbility()
 	// ActiveASC / ActiveAbilityHandle / LastActivatedSkillTag / LastSelectedTargetActor를 노드가 들고 있으므로
 	// AI별 인스턴스가 필요함.
 	bCreateNodeInstance = true;
+
+	PhaseTransitionSkillTag = FGameplayTag::RequestGameplayTag(
+		FName(TEXT("Boss.Kashapa.PhaseTransition")),
+		false
+	);
 }
 
 EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(
@@ -62,6 +67,7 @@ EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(
 
 	AActor* SelectedTargetActor = nullptr;
 	UEnemySkillData* SelectedSkillData = nullptr;
+	bool bSelectedPhaseTransitionSkill = false;
 
 	if (SkillData)
 	{
@@ -88,6 +94,46 @@ EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(
 			}
 		}
 	}
+	else if (
+	bUsePhaseTransitionSkillOnPendingPhase &&
+	BossCharacter->HasPendingPhaseChange()
+)
+	{
+		SelectedSkillData = ResolvePhaseTransitionSkillData(BossCharacter);
+		bSelectedPhaseTransitionSkill = true;
+
+		if (BlackboardComp)
+		{
+			SelectedTargetActor = Cast<AActor>(
+				BlackboardComp->GetValueAsObject(TargetActorKeyName)
+			);
+		}
+
+		if (!SelectedTargetActor)
+		{
+			const TArray<AActor*> TargetCandidates = GatherTargetCandidates(
+				BossCharacter,
+				BlackboardComp
+			);
+
+			if (TargetCandidates.Num() > 0)
+			{
+				SelectedTargetActor = TargetCandidates[0];
+			}
+		}
+
+		if (bDebugLog)
+		{
+			UE_LOG(
+				LogTemp,
+				Warning,
+				TEXT("[BTTask_BossActivateAbility] Pending phase detected. Force PhaseTransition Skill=%s PendingPhase=%d Target=%s"),
+				*GetNameSafe(SelectedSkillData),
+				BossCharacter->GetPendingPhaseIndex(),
+				*GetNameSafe(SelectedTargetActor)
+			);
+		}
+	}
 	else
 	{
 		SelectedSkillData = SelectSkillData(
@@ -100,7 +146,20 @@ EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(
 
 	if (!SelectedSkillData || !SelectedTargetActor)
 	{
-		
+		if (bDebugLog)
+		{
+			UE_LOG(
+				LogTemp,
+				Warning,
+				TEXT("[BTTask_BossActivateAbility] Select failed. Skill=%s Target=%s Pending=%s PendingPhase=%d PhaseTransitionData=%s PhaseTransitionTag=%s"),
+				*GetNameSafe(SelectedSkillData),
+				*GetNameSafe(SelectedTargetActor),
+				BossCharacter->HasPendingPhaseChange() ? TEXT("true") : TEXT("false"),
+				BossCharacter->GetPendingPhaseIndex(),
+				*GetNameSafe(PhaseTransitionSkillData.Get()),
+				PhaseTransitionSkillTag.IsValid() ? *PhaseTransitionSkillTag.ToString() : TEXT("Invalid")
+			);
+		}
 
 		// Failed를 반환해야 BT가 아래 MoveTo TargetActor로 내려감.
 		return EBTNodeResult::Failed;
@@ -115,15 +174,13 @@ EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(
 	}
 
 	if (!IsValidCandidateSkillData(
-		BossCharacter,
-		ASC,
-		SelectedTargetActor,
-		SelectedSkillData,
-		SkillData != nullptr
-	))
+	BossCharacter,
+	ASC,
+	SelectedTargetActor,
+	SelectedSkillData,
+	SkillData != nullptr || bSelectedPhaseTransitionSkill
+))
 	{
-		
-
 		return EBTNodeResult::Failed;
 	}
 
@@ -597,21 +654,24 @@ bool UBTTask_BossActivateAbility::IsValidCandidateSkillData(
 		return false;
 	}
 
-	if (!bIgnoreSelectionWeight && CandidateSkillData->SelectionWeight <= 0.0f)
+	if (!bIgnoreSelectionWeight)
 	{
-		return false;
-	}
+		if (CandidateSkillData->SelectionWeight <= 0.0f)
+		{
+			return false;
+		}
 
-	const bool bHasValidStepData =
-		CandidateSkillData->bUseHitSteps &&
-		CandidateSkillData->HitStepList.Num() > 0;
+		const bool bHasValidStepData =
+			CandidateSkillData->bUseHitSteps &&
+			CandidateSkillData->HitStepList.Num() > 0;
 
-	const bool bHasValidSingleHitData =
-		CandidateSkillData->HitShape != EDGEnemySkillHitShape::None;
+		const bool bHasValidSingleHitData =
+			CandidateSkillData->HitShape != EDGEnemySkillHitShape::None;
 
-	if (!bHasValidStepData && !bHasValidSingleHitData)
-	{
-		return false;
+		if (!bHasValidStepData && !bHasValidSingleHitData)
+		{
+			return false;
+		}
 	}
 
 	const float DistanceToTarget = CalculateDistanceToTarget(
@@ -811,6 +871,45 @@ bool UBTTask_BossActivateAbility::HasAnyGapCloseCandidate(
 	}
 
 	return false;
+}
+
+UEnemySkillData* UBTTask_BossActivateAbility::ResolvePhaseTransitionSkillData(
+	ABossCharacterBase* BossCharacter
+) const
+{
+	if (PhaseTransitionSkillData)
+	{
+		return PhaseTransitionSkillData;
+	}
+
+	if (!BossCharacter)
+	{
+		return nullptr;
+	}
+
+	if (!PhaseTransitionSkillTag.IsValid())
+	{
+		return nullptr;
+	}
+
+	const TArray<TObjectPtr<UEnemySkillData>>& SkillDataList =
+		BossCharacter->GetAttackSkillDataList();
+
+	for (const TObjectPtr<UEnemySkillData>& SkillDataPtr : SkillDataList)
+	{
+		UEnemySkillData* CandidateSkillData = SkillDataPtr.Get();
+		if (!CandidateSkillData)
+		{
+			continue;
+		}
+
+		if (CandidateSkillData->SkillTag == PhaseTransitionSkillTag)
+		{
+			return CandidateSkillData;
+		}
+	}
+
+	return nullptr;
 }
 
 FGameplayAbilitySpec* UBTTask_BossActivateAbility::FindAbilitySpecBySkillData(

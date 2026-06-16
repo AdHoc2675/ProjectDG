@@ -27,7 +27,10 @@ public class ProjectDG : ModuleRules
 			"HTTP",
 			"Json",
 			"JsonUtilities",
-			"NavigationSystem"
+			"NavigationSystem",
+			"LevelSequence",
+			"MovieScene",
+			"MovieSceneTracks"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "GameplayAbilities", "GameplayTags", "GameplayTasks", "Slate", "SlateCore" });

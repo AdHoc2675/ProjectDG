@@ -43,6 +43,9 @@ public:
 	virtual const TArray<TObjectPtr<UEnemySkillData>>& GetAttackSkillDataList() const override;
 	virtual UEnemySkillData* GetRandomAttackSkillData() const override;
 
+	// PhaseTransition GA의 AN_BossPhaseApply 수신 시점에서만 호출된다.
+	// 여기서 2페 SkeletalMesh / AnimClass / Material / SkillSet이 실제 적용된다.
+	virtual bool ApplyPendingPhaseChangeFromNotify(int32 ExpectedPhaseIndex = INDEX_NONE) override;
 protected:
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;

@@ -107,6 +107,21 @@ void ABossCharacterBase::InitializeBossTagFromClassData()
 void ABossCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (!bHasInitialBossTransform)
+	{
+		InitialBossTransform = GetActorTransform();
+		bHasInitialBossTransform = true;
+
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossCharacterBase] InitialBossTransform saved. Owner=%s Location=%s Rotation=%s"),
+			*GetName(),
+			*InitialBossTransform.GetLocation().ToString(),
+			*InitialBossTransform.GetRotation().Rotator().ToString()
+		);
+	}
 }
 
 void ABossCharacterBase::PossessedBy(AController* NewController)
@@ -408,8 +423,16 @@ const TArray<TObjectPtr<UEnemySkillData>>& ABossCharacterBase::GetAttackSkillDat
 		return EmptySkills;
 	}
 
-	// 다음 스킬 선택 직전, 대기 중인 페이즈 전환이 있고 현재 활성 GA가 없으면 여기서 적용.
-	const_cast<ABossCharacterBase*>(this)->TryApplyPendingPhaseChange();
+	if (bHasPendingPhaseChange)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossCharacterBase] GetAttackSkillDataList called while pending phase exists. CurrentPhase=%d PendingPhase=%d. Phase is NOT applied here."),
+			CurrentPhaseIndex,
+			PendingPhaseIndex
+		);
+	}
 
 	if (CurrentPhaseSkillSetData)
 	{
@@ -423,7 +446,7 @@ const TArray<TObjectPtr<UEnemySkillData>>& ABossCharacterBase::GetAttackSkillDat
 		);
 
 		return CurrentPhaseSkillSetData->Skills;
-	}
+	} 
 
 	// 초기 상태 보정:
 	// CurrentPhaseSkillSetData가 아직 세팅되지 않았다면 AttributeSet의 CurrentPhase 기준으로 1회 캐싱.
@@ -532,7 +555,7 @@ void ABossCharacterBase::RequestPhaseChange(const FBossPhaseData& PhaseData)
 			? FMath::RoundToInt(BossAttributeSet->GetCurrentPhase())
 			: CurrentPhaseIndex;
 
-	if (AttributeCurrentPhase == PhaseData.PhaseIndex)
+	if (AttributeCurrentPhase >= PhaseData.PhaseIndex)
 	{
 		return;
 	}
@@ -542,23 +565,23 @@ void ABossCharacterBase::RequestPhaseChange(const FBossPhaseData& PhaseData)
 		return;
 	}
 
-	if (HasActiveEnemySkillAbility())
-	{
-		bHasPendingPhaseChange = true;
-		PendingPhaseIndex = PhaseData.PhaseIndex;
+	bHasPendingPhaseChange = true;
+	PendingPhaseIndex = PhaseData.PhaseIndex;
 
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[BossCharacterBase] Phase change pending. CurrentPhase=%d PendingPhase=%d"),
-			AttributeCurrentPhase,
-			PendingPhaseIndex
-		);
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[BossCharacterBase] Phase change pending only. CurrentPhase=%d PendingPhase=%d"),
+		AttributeCurrentPhase,
+		PendingPhaseIndex
+	);
 
-		return;
-	}
+	ForceNetUpdate();
 
-	ApplyPhaseChange(PhaseData);
+	// 중요:
+	// 컷신 구조에서는 여기서 ApplyPhaseChange를 호출하지 않는다.
+	// 실제 적용은 GA_Boss_Kashapa_PhaseTransition이
+	// Event.Boss.PhaseApply를 받은 시점에만 수행한다.
 }
 
 void ABossCharacterBase::ApplyPhaseChange(const FBossPhaseData& PhaseData)
@@ -603,34 +626,117 @@ void ABossCharacterBase::ApplyPhaseChange(const FBossPhaseData& PhaseData)
 	// 여기서 호출해야 GA 종료 이후 안전하게 외형 전환된다.
 }
 
-void ABossCharacterBase::TryApplyPendingPhaseChange()
+bool ABossCharacterBase::ApplyPendingPhaseChangeFromNotify(int32 ExpectedPhaseIndex)
 {
-	if (!bHasPendingPhaseChange)
+	if (!HasAuthority())
 	{
-		return;
+		return false;
 	}
 
-	if (HasActiveEnemySkillAbility())
+	if (!bHasPendingPhaseChange || PendingPhaseIndex == INDEX_NONE)
 	{
-		return;
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossCharacterBase] ApplyPendingPhaseChangeFromNotify Failed. No pending phase. CurrentPhase=%d"),
+			CurrentPhaseIndex
+		);
+
+		return false;
 	}
 
-	const FBossPhaseData* PendingPhaseData = FindPhaseDataByIndex(PendingPhaseIndex);
+	const int32 PhaseIndexToApply = PendingPhaseIndex;
+
+	if (ExpectedPhaseIndex != INDEX_NONE && PhaseIndexToApply != ExpectedPhaseIndex)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossCharacterBase] ApplyPendingPhaseChangeFromNotify Failed. Pending=%d Expected=%d"),
+			PhaseIndexToApply,
+			ExpectedPhaseIndex
+		);
+
+		return false;
+	}
+
+	const FBossPhaseData* PendingPhaseData = FindPhaseDataByIndex(PhaseIndexToApply);
 	if (!PendingPhaseData)
 	{
 		UE_LOG(
 			LogTemp,
 			Warning,
-			TEXT("[BossCharacterBase] Pending phase data not found. PendingPhaseIndex=%d"),
-			PendingPhaseIndex
+			TEXT("[BossCharacterBase] ApplyPendingPhaseChangeFromNotify Failed. PhaseData not found. Pending=%d"),
+			PhaseIndexToApply
 		);
 
 		bHasPendingPhaseChange = false;
 		PendingPhaseIndex = INDEX_NONE;
-		return;
+		return false;
 	}
 
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[BossCharacterBase] ApplyPendingPhaseChangeFromNotify Start. CurrentPhase=%d PendingPhase=%d"),
+		CurrentPhaseIndex,
+		PhaseIndexToApply
+	);
+
 	ApplyPhaseChange(*PendingPhaseData);
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[BossCharacterBase] ApplyPendingPhaseChangeFromNotify Finished. CurrentPhase=%d"),
+		CurrentPhaseIndex
+	);
+
+	return true;
+}
+
+bool ABossCharacterBase::MoveToInitialBossTransformForCutscene()
+{
+	if (!HasAuthority())
+	{
+		return false;
+	}
+
+	if (!bHasInitialBossTransform)
+	{
+		InitialBossTransform = GetActorTransform();
+		bHasInitialBossTransform = true;
+
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossCharacterBase] InitialBossTransform was missing. Saved current transform instead. Owner=%s"),
+			*GetName()
+		);
+
+		return true;
+	}
+
+	SetActorLocationAndRotation(
+		InitialBossTransform.GetLocation(),
+		InitialBossTransform.GetRotation().Rotator(),
+		false,
+		nullptr,
+		ETeleportType::TeleportPhysics
+	);
+
+	ForceNetUpdate();
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[BossCharacterBase] Moved to InitialBossTransform for cutscene. Owner=%s Location=%s Rotation=%s"),
+		*GetName(),
+		*InitialBossTransform.GetLocation().ToString(),
+		*InitialBossTransform.GetRotation().Rotator().ToString()
+	);
+
+	return true;
 }
 
 void ABossCharacterBase::HandleDeath()

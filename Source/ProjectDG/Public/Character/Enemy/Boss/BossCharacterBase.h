@@ -57,6 +57,14 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "BossCharacterBase|Phase")
 	int32 PendingPhaseIndex = INDEX_NONE;
 
+	// 컷신 기준 위치.
+	// 보스가 전투 중 이동했더라도 PhaseTransition 컷신 시작 시 이 위치로 되돌린다.
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "BossCharacterBase|Cutscene")
+	FTransform InitialBossTransform = FTransform::Identity;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "BossCharacterBase|Cutscene")
+	bool bHasInitialBossTransform = false;
+
 	// 보스 전용 스탯 GE 적용
 	void ApplyBossSpecialEffects();
 
@@ -102,6 +110,30 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Skill")
 	virtual UEnemySkillData* GetRandomAttackSkillData() const;
 
+	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Phase")
+	bool HasPendingPhaseChange() const
+	{
+		return bHasPendingPhaseChange && PendingPhaseIndex != INDEX_NONE;
+	}
+
+	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Phase")
+	int32 GetPendingPhaseIndex() const
+	{
+		return PendingPhaseIndex;
+	}
+
+	// PhaseTransition GA의 AN_BossPhaseApply 수신 시점에서만 호출한다.
+	// ActivateAbility 시점에서 호출하면 안 됨.
+	virtual bool ApplyPendingPhaseChangeFromNotify(int32 ExpectedPhaseIndex = INDEX_NONE);
+
+	// PhaseTransition 컷신 시작 시 보스를 최초 배치 위치로 되돌린다.
+	// 카메라 연출은 이 위치 기준으로 제작한다.
+	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Cutscene")
+	virtual bool MoveToInitialBossTransformForCutscene();
+
+	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Cutscene")
+	FTransform GetInitialBossTransform() const { return InitialBossTransform; }
+
 	virtual FGameplayTag GetAttributeSourceTag() const override;
 
 private:
@@ -117,12 +149,11 @@ private:
 	// PhaseIndex 기준 PhaseData 검색
 	const FBossPhaseData* FindPhaseDataByIndex(int32 PhaseIndex) const;
 
-	// 페이즈 전환 요청. 활성 GA가 있으면 Pending 처리
+	// 페이즈 전환 요청.
+	// 컷신 구조에서는 즉시 적용하지 않고 Pending만 설정한다.
 	void RequestPhaseChange(const FBossPhaseData& PhaseData);
 
 	// 실제 페이즈 적용. PhaseTag / CurrentPhase / SkillSet 변경
+	// 카샤파 전용 외형 변경은 ABossKashapaD::ApplyPhaseDataByIndex 쪽에서 처리한다.
 	void ApplyPhaseChange(const FBossPhaseData& PhaseData);
-
-	// Pending 페이즈가 있고 활성 GA가 없으면 적용
-	void TryApplyPendingPhaseChange();
 };

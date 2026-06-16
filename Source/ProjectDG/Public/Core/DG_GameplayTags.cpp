@@ -205,6 +205,9 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase2_Skill11, "Boss.Kashapa.Phase2.SKill11")
 	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase2_Skill12, "Boss.Kashapa.Phase2.SKill12")
 	
+	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_PhaseTransition, "Boss.Kashapa.PhaseTransition")
+	
+	
 
 
 	// State
@@ -275,5 +278,6 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Boss_Indicator, "Event.Boss.Indicator")
 	
 	UE_DEFINE_GAMEPLAY_TAG(Event_Boss_SkillBranch, "Event.Boss.SkillBranch")
-
+	UE_DEFINE_GAMEPLAY_TAG(Event_Boss_PhaseApply, "Event.Boss.PhaseApply")
+	
 }
