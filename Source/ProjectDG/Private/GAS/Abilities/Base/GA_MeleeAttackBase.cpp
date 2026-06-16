@@ -425,6 +425,11 @@ void UGA_MeleeAttackBase::ExecuteForwardBoxHitCheckFromSkillData()
 	const int32 HitCount = FMath::Max(1, ActiveHitCount);
 	const float DamageMultiplierPerHit = GetCurrentComboDamage();
 
+	const FVector HitQueryOrigin =
+	  AvatarLocation +
+	  AvatarActor->GetActorForwardVector() *
+	  CurrentSkillData->BoxForwardOffset;
+
 	for (AActor* BoxHitActor : BoxHitActors)
 	{
 		if (!IsValidMeleeHitActor(AvatarActor, BoxHitActor))
@@ -432,15 +437,28 @@ void UGA_MeleeAttackBase::ExecuteForwardBoxHitCheckFromSkillData()
 			continue;
 		}
 
+		bool bDamageApplied = false;
+
 		for (int32 HitIndex = 0; HitIndex < HitCount; ++HitIndex)
 		{
-			ApplyDamageToTarget(
-				BoxHitActor,
-				0.f,
-				DamageMultiplierPerHit,
-				GetSkillTag(),
-				BoxHitActor->GetActorLocation(),
-				true
+			const FDGDamageResult DamageResult =
+					ApplyDamageToTarget(
+							BoxHitActor,
+							0.f,
+							DamageMultiplierPerHit,
+							GetSkillTag(),
+							BoxHitActor->GetActorLocation(),
+							true
+					);
+
+			bDamageApplied |= DamageResult.bSuccess;
+		}
+
+		if (bDamageApplied)
+		{
+			ExecuteHitGameplayCue(
+					BoxHitActor,
+					HitQueryOrigin
 			);
 		}
 	}
@@ -564,15 +582,28 @@ void UGA_MeleeAttackBase::ExecuteRadiusHitCheckFromSkillData()
 			continue;
 		}
 
+		bool bDamageApplied = false;
+
 		for (int32 HitIndex = 0; HitIndex < HitCount; ++HitIndex)
 		{
-			ApplyDamageToTarget(
-				RadiusHitActor,
-				0.f,
-				DamageMultiplierPerHit,
-				GetSkillTag(),
-				RadiusHitActor->GetActorLocation(),
-				true
+			const FDGDamageResult DamageResult =
+					ApplyDamageToTarget(
+							RadiusHitActor,
+							0.f,
+							DamageMultiplierPerHit,
+							GetSkillTag(),
+							RadiusHitActor->GetActorLocation(),
+							true
+					);
+
+			bDamageApplied |= DamageResult.bSuccess;
+		}
+
+		if (bDamageApplied)
+		{
+			ExecuteHitGameplayCue(
+					RadiusHitActor,
+					AvatarLocation
 			);
 		}
 	}
