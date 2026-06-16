@@ -141,6 +141,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|Minimap")
 	TObjectPtr<UDGMinimapMarkerComponent> MinimapMarkerComponent;
 
+	// 피격 판정용 Box 컴포넌트
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "EnemyCharacterBase|Collision")
+	TObjectPtr<class UBoxComponent> HitboxComponent;
+
 public:
 	/** UI 등에 표시될 적의 이름 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "EnemyCharacterBase|UI")
