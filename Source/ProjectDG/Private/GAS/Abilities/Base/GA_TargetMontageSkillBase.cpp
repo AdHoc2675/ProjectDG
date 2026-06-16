@@ -11,6 +11,7 @@
 #include "DrawDebugHelpers.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/World.h"
+#include "TimerManager.h"
 
 UGA_TargetMontageSkillBase::UGA_TargetMontageSkillBase()
 {
@@ -56,7 +57,12 @@ void UGA_TargetMontageSkillBase::EndAbility(
 	bool bWasCancelled
 )
 {
-	ResetTargetMontageState();
+	ClearRemoteTargetDataTimeout();
+	ClearRemoteTargetDataDelegate();
+	
+	bWaitingForRemoteTargetData = false;
+	CurrentTargetResult = FDGSkillTargetResult();
+	HitActors.Reset();
 	
 	ClearSkillMovementPolicy();
 
@@ -531,18 +537,32 @@ void UGA_TargetMontageSkillBase::EndTargetMontageAbility(bool bWasCancelled)
 	}
 
 	bEndingTargetMontageAbility = true;
-	K2_EndAbility();
+	EndAbility(
+		CurrentSpecHandle,
+		CurrentActorInfo,
+		CurrentActivationInfo,
+		true,
+		bWasCancelled
+	);
 }
 
 bool UGA_TargetMontageSkillBase::AcquireLocalTargetAndSendTargetData()
 {
 	if (!TryAcquireSkillTarget(CurrentTargetResult))
 	{
+		if (!HasAuthorityAvatar())
+		{
+			SendTargetDataCancelledToServer();
+		}
 		return false;
 	}
 
 	if (!IsCurrentTargetStillValid())
 	{
+		if (!HasAuthorityAvatar())
+		{
+			SendTargetDataCancelledToServer();
+		}
 		return false;
 	}
 
@@ -566,16 +586,23 @@ void UGA_TargetMontageSkillBase::WaitForRemoteTargetData()
 		return;
 	}
 
-	bWaitingForRemoteTargetData = true;
-
 	const FGameplayAbilitySpecHandle SpecHandle = GetCurrentAbilitySpecHandle();
 	const FPredictionKey ActivationPredictionKey = GetCurrentActivationInfo().GetActivationPredictionKey();
+
+	bWaitingForRemoteTargetData = true;
 
 	ASC->AbilityTargetDataSetDelegate(SpecHandle, ActivationPredictionKey).AddUObject(
 		this,
 		&UGA_TargetMontageSkillBase::OnTargetDataReadyCallback
 	);
 
+	ASC->AbilityTargetDataCancelledDelegate(SpecHandle, ActivationPredictionKey).AddUObject(
+		this,
+		&UGA_TargetMontageSkillBase::OnTargetDataCancelledCallback
+	);
+
+	StartRemoteTargetDataTimeout();
+	
 	if (!ASC->CallReplicatedTargetDataDelegatesIfSet(SpecHandle, ActivationPredictionKey))
 	{
 		return;
@@ -590,7 +617,7 @@ void UGA_TargetMontageSkillBase::ContinueTargetMontageAbility()
 		return;
 	}
 
-	if (!CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo))
+	if (HasAuthorityAvatar() && !CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo))
 	{
 		EndTargetMontageAbility(true);
 		return;
@@ -632,6 +659,23 @@ void UGA_TargetMontageSkillBase::SendTargetDataToServer(const FGameplayAbilityTa
 	);
 }
 
+void UGA_TargetMontageSkillBase::SendTargetDataCancelledToServer()
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (!ASC)
+	{
+		return;
+	}
+
+	FScopedPredictionWindow ScopedPrediction(ASC, true);
+
+	ASC->ServerSetReplicatedTargetDataCancelled(
+		GetCurrentAbilitySpecHandle(),
+		GetCurrentActivationInfo().GetActivationPredictionKey(),
+		ASC->ScopedPredictionKey
+	);
+}
+
 void UGA_TargetMontageSkillBase::OnTargetDataReadyCallback(
 	const FGameplayAbilityTargetDataHandle& TargetDataHandle,
 	FGameplayTag ActivationTag
@@ -645,6 +689,8 @@ void UGA_TargetMontageSkillBase::OnTargetDataReadyCallback(
 	}
 
 	bWaitingForRemoteTargetData = false;
+	ClearRemoteTargetDataTimeout();
+	ClearRemoteTargetDataDelegate();
 
 	const bool bMadeTargetResult = TryMakeTargetResultFromTargetData(
 		TargetDataHandle,
@@ -663,6 +709,15 @@ void UGA_TargetMontageSkillBase::OnTargetDataReadyCallback(
 	}
 
 	ContinueTargetMontageAbility();
+}
+
+void UGA_TargetMontageSkillBase::OnTargetDataCancelledCallback()
+{
+	bWaitingForRemoteTargetData = false;
+	ClearRemoteTargetDataTimeout();
+	ClearRemoteTargetDataDelegate();
+
+	EndTargetMontageAbility(true);
 }
 
 void UGA_TargetMontageSkillBase::OnAttackHitWindowBegin(FGameplayEventData Payload)
@@ -705,5 +760,71 @@ void UGA_TargetMontageSkillBase::OnMontageBlendOut()
 
 void UGA_TargetMontageSkillBase::OnMontageCancelled()
 {
+	EndTargetMontageAbility(true);
+}
+
+void UGA_TargetMontageSkillBase::StartRemoteTargetDataTimeout()
+{
+	UWorld* World = GetWorld();
+	if (!World || RemoteTargetDataTimeoutSeconds <= 0.f)
+	{
+		return;
+	}
+
+	World->GetTimerManager().ClearTimer(RemoteTargetDataTimeoutTimerHandle);
+	World->GetTimerManager().SetTimer(
+			RemoteTargetDataTimeoutTimerHandle,
+			this,
+			&UGA_TargetMontageSkillBase::OnRemoteTargetDataTimeout,
+			RemoteTargetDataTimeoutSeconds,
+			false
+	);
+}
+
+void UGA_TargetMontageSkillBase::ClearRemoteTargetDataTimeout()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(RemoteTargetDataTimeoutTimerHandle);
+	}
+}
+
+void UGA_TargetMontageSkillBase::ClearRemoteTargetDataDelegate()
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (!ASC)
+	{
+		return;
+	}
+
+	ASC->AbilityTargetDataSetDelegate(
+			GetCurrentAbilitySpecHandle(),
+			GetCurrentActivationInfo().GetActivationPredictionKey()
+	).RemoveAll(this);
+
+	ASC->AbilityTargetDataCancelledDelegate(
+			GetCurrentAbilitySpecHandle(),
+			GetCurrentActivationInfo().GetActivationPredictionKey()
+	).RemoveAll(this);
+}
+
+void UGA_TargetMontageSkillBase::OnRemoteTargetDataTimeout()
+{
+	if (!bWaitingForRemoteTargetData)
+	{
+		return;
+	}
+
+	bWaitingForRemoteTargetData = false;
+	ClearRemoteTargetDataDelegate();
+
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->ConsumeClientReplicatedTargetData(
+				GetCurrentAbilitySpecHandle(),
+				GetCurrentActivationInfo().GetActivationPredictionKey()
+		);
+	}
+
 	EndTargetMontageAbility(true);
 }

@@ -32,7 +32,13 @@ bool UGA_TargetSkillBase::TryAcquireSkillTarget(FDGSkillTargetResult& OutTargetR
 
 	if (LockOnComponent->TryGetLockedTargetResult(LockOnResult))
 	{
-		if (IsValidSkillTarget(LockOnResult.TargetActor))
+		const bool bValidSkillTarget = IsValidSkillTarget(LockOnResult.TargetActor);
+		const bool bValidLockOnTarget = LockOnComponent->IsValidTarget(
+			LockOnResult.TargetActor,
+			SkillRange
+		);
+
+		if (bValidSkillTarget && bValidLockOnTarget)
 		{
 			OutTargetResult.TargetActor = LockOnResult.TargetActor;
 			OutTargetResult.TargetTags = LockOnResult.TargetTags;

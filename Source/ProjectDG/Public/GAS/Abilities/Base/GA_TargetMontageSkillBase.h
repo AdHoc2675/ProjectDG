@@ -76,6 +76,16 @@ private:
       bool bEndingTargetMontageAbility = false;
       
       bool bWaitingForRemoteTargetData = false;
+      
+      FTimerHandle RemoteTargetDataTimeoutTimerHandle;
+
+      UPROPERTY(EditDefaultsOnly, Category = "DG|TargetMontage", meta = (ClampMin = "0.05"))
+      float RemoteTargetDataTimeoutSeconds = 0.5f;
+
+      void StartRemoteTargetDataTimeout();
+      void ClearRemoteTargetDataTimeout();
+      void ClearRemoteTargetDataDelegate();
+      void OnRemoteTargetDataTimeout();
 
 protected:
       /** 스킬 실행 중 사용하는 타겟 결과, 히트 기록, 종료 플래그를 초기화한다. */
@@ -129,9 +139,15 @@ protected:
       /** 로컬 예측 클라이언트가 확정 타겟을 서버에 전달한다. */
       virtual void SendTargetDataToServer(const FGameplayAbilityTargetDataHandle& TargetDataHandle);
 
+      /** 로컬 예측 클라이언트가 타겟 획득 실패를 서버에 전달한다. */
+      virtual void SendTargetDataCancelledToServer();
+
       /** 서버가 클라이언트에서 전달된 TargetData를 수신했을 때 호출된다. */
       virtual void OnTargetDataReadyCallback(const FGameplayAbilityTargetDataHandle& TargetDataHandle, FGameplayTag
-ActivationTag);
+	ActivationTag);
+
+      /** 서버가 클라이언트에서 전달된 TargetData 취소를 수신했을 때 호출된다. */
+      virtual void OnTargetDataCancelledCallback();
 
 protected:
       /** 새로운 공격 판정 구간이 시작될 때 중복 히트 기록을 초기화한다. */
