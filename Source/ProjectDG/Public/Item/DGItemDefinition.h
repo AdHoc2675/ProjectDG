@@ -27,6 +27,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data", meta = (EditCondition = "ItemType == EDGItemType::Equipment", EditConditionHides))
 	EDGEquipmentType EquipmentType;
 
+	// 장비할 메쉬 (이 부분이 캐릭터에게 전달되어 실루엣을 바꿈)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data", meta = (EditCondition = "ItemType == EDGItemType::Equipment", EditConditionHides))
+	TSoftObjectPtr<USkeletalMesh> EquipmentMesh;
+
 	// 아이템 설명 (UI에서 여러 줄로 표시될 수 있음)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data", meta = (MultiLine = true))
 	FText ItemDescription;
@@ -34,5 +38,17 @@ public:
 	// 아이콘 이미지
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data")
 	TObjectPtr<class UTexture2D> ItemIcon;
+
+	// 아이템 획득(루팅) 시 재생될 사운드
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data|Sound")
+	TObjectPtr<class USoundBase> PickupSound;
+
+	// 장비 장착 시 재생될 사운드 (장비 전용)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data|Sound", meta = (EditCondition = "ItemType == EDGItemType::Equipment", EditConditionHides))
+	TObjectPtr<class USoundBase> EquipSound;
+
+	// 장비 해제 시 재생될 사운드 (장비 전용)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Data|Sound", meta = (EditCondition = "ItemType == EDGItemType::Equipment", EditConditionHides))
+	TObjectPtr<class USoundBase> UnequipSound;
 
 };

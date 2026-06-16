@@ -97,7 +97,25 @@ private:
 	UFUNCTION()
 	void OnSkillIconUpdated(FGameplayTag SlotTag, UTexture2D* NewIcon);
 
+	UFUNCTION()
+	void OnHealthItemCooldown(float CooldownDuration);
+
+	UFUNCTION()
+	void OnMentalItemCooldown(float CooldownDuration);
+
 protected:
+	UPROPERTY(EditDefaultsOnly, Category="DG|UI|Item")
+	TObjectPtr<UTexture2D> HealthItemIcon;
+
+	UPROPERTY(EditDefaultsOnly, Category="DG|UI|Item")
+	TObjectPtr<UTexture2D> MentalItemIcon;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UDGSkillSlotWidget> ItemSlot_Q;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UDGSkillSlotWidget> ItemSlot_E;
+
 	// 스킬 슬롯
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UDGSkillSlotWidget> SkillSlot_LMB;

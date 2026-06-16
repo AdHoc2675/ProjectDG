@@ -132,6 +132,15 @@ void UDGFullMapWidget::OnMarkerAdded(UDGMinimapMarkerComponent* Marker)
 		}
 
 		ActiveMarkerWidgets.Add(Marker, NewMarkerWidget);
+
+		// 마커 추가 시점에 폰의 PlayerState를 미리 캐싱
+		if (APawn* OwnerPawn = Cast<APawn>(Marker->GetOwner()))
+		{
+			if (ADG_PlayerState* PS = Cast<ADG_PlayerState>(OwnerPawn->GetPlayerState()))
+			{
+				CachedPlayerStates.Add(Marker, PS);
+			}
+		}
 	}
 }
 
@@ -144,6 +153,7 @@ void UDGFullMapWidget::OnMarkerRemoved(UDGMinimapMarkerComponent* Marker)
 			WidgetToRemove->RemoveFromParent();
 		}
 		ActiveMarkerWidgets.Remove(Marker);
+		CachedPlayerStates.Remove(Marker);
 	}
 }
 
@@ -153,18 +163,11 @@ void UDGFullMapWidget::OnPartyMemberLeft(ADG_PlayerState* LeavingMemberPS)
 
 	TArray<UDGMinimapMarkerComponent*> MarkersToRemove;
 
-	for (const auto& Pair : ActiveMarkerWidgets)
+	for (const auto& Pair : CachedPlayerStates)
 	{
-		UDGMinimapMarkerComponent* MarkerComp = Pair.Key;
-		if (IsValid(MarkerComp))
+		if (Pair.Value == LeavingMemberPS)
 		{
-			if (APawn* OwnerPawn = Cast<APawn>(MarkerComp->GetOwner()))
-			{
-				if (OwnerPawn->GetPlayerState() == LeavingMemberPS)
-				{
-					MarkersToRemove.Add(MarkerComp);
-				}
-			}
+			MarkersToRemove.Add(Pair.Key);
 		}
 	}
 

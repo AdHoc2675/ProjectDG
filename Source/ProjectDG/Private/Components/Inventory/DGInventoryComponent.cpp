@@ -8,6 +8,7 @@
 #include "GAS/Attributes/DG_AttributeSet.h"
 #include "Item/DGItemDefinition.h"
 #include "Item/DGItemInstance.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values for this component's properties
 UDGInventoryComponent::UDGInventoryComponent()
@@ -139,11 +140,28 @@ void UDGInventoryComponent::InternalAddItemConfig(UDGItemDefinition* NewItemDef,
 		break;
 	}
 
+	// [사운드 처리] 현재 클라이언트 환경(로컬 플레이어)이라면 획득 사운드 재생
+	if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
+	{
+		if (OwningPawn->IsLocallyControlled() && NewItemDef->PickupSound)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), NewItemDef->PickupSound);
+		}
+	}
 }
 
 void UDGInventoryComponent::EquipItem(UDGItemInstance* ItemToEquip)
 {
 	if (!ItemToEquip || !ItemToEquip->ItemDef) return;
+
+	// [사운드 처리] 이 캐릭터를 조종하고 있는 로컬 플레이어(본인)에게만 들리게 함
+	if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
+	{
+		if (OwningPawn->IsLocallyControlled() && ItemToEquip->ItemDef->EquipSound)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), ItemToEquip->ItemDef->EquipSound);
+		}
+	}
 
 	// [네트워크 분기] 클라이언트인 경우 서버로 요청을 보냄
 	if (!GetOwner()->HasAuthority())
@@ -170,6 +188,9 @@ void UDGInventoryComponent::EquipItem(UDGItemInstance* ItemToEquip)
 		InventoryEquipmentItems.Remove(ItemToEquip);
 		EquippedItems.Add(ClientEquipType, ItemToEquip);
 
+		// 외형 변경 이벤트 통지
+		OnEquipmentChanged.Broadcast(ClientEquipType, ItemToEquip->ItemDef);
+
 		return; // 클라이언트는 "스탯 부여"를 하지 않고 여기서 종료
 	}
 
@@ -189,6 +210,9 @@ void UDGInventoryComponent::EquipItem(UDGItemInstance* ItemToEquip)
 	// 서버에서의 인벤토리 이동 처리
 	InventoryEquipmentItems.Remove(ItemToEquip);
 	EquippedItems.Add(EquipType, ItemToEquip);
+
+	// 외형 변경 이벤트 통지 (서버가 직접 모든 클라이언트에게 Multicast)
+	MulticastEquipmentChanged(EquipType, ItemToEquip->ItemDef);
 
 	// 3. 서버 권한으로 GAS 스탯 적용
 	UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
@@ -237,6 +261,15 @@ void UDGInventoryComponent::UnequipItem(EDGEquipmentType SlotType)
 	UDGItemInstance* ItemToUnequip = EquippedItems[SlotType];
 	if (!ItemToUnequip) return;
 
+	// [사운드 처리] 로컬 플레이어(본인)에게만 해제 사운드 재생
+	if (APawn* OwningPawn = Cast<APawn>(GetOwner()))
+	{
+		if (OwningPawn->IsLocallyControlled() && ItemToUnequip->ItemDef && ItemToUnequip->ItemDef->UnequipSound)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), ItemToUnequip->ItemDef->UnequipSound);
+		}
+	}
+
 	// 클라이언트인 경우 서버로 요청을 보냄
 	if (!GetOwner()->HasAuthority())
 	{
@@ -245,6 +278,10 @@ void UDGInventoryComponent::UnequipItem(EDGEquipmentType SlotType)
 		// 클라이언트 예측 처리 (배열만 갱신)
 		EquippedItems.Remove(SlotType);
 		InventoryEquipmentItems.Add(ItemToUnequip);
+		
+		// 외형 변경 이벤트 통지
+		OnEquipmentChanged.Broadcast(SlotType, nullptr);
+		
 		return;
 	}
 
@@ -285,6 +322,9 @@ void UDGInventoryComponent::UnequipItem(EDGEquipmentType SlotType)
 	EquippedItems.Remove(SlotType);
 	InventoryEquipmentItems.Add(ItemToUnequip);
 
+	// 외형 변경 이벤트 통지 (서버가 직접 모든 클라이언트에게 Multicast)
+	MulticastEquipmentChanged(SlotType, nullptr);
+
 	UE_LOG(LogTemp, Log, TEXT("[DGInventoryComponent Server] [%s] 해제 완료. 스탯 감소 서버 반영됨."), *ItemToUnequip->ItemDef->ItemName.ToString());
 }
 
@@ -297,4 +337,10 @@ void UDGInventoryComponent::ServerUnequipItem_Implementation(EDGEquipmentType Sl
 UDGItemInstance* UDGInventoryComponent::GetEquippedItem(EDGEquipmentType SlotType) const
 {
 	return nullptr;
+}
+
+void UDGInventoryComponent::MulticastEquipmentChanged_Implementation(EDGEquipmentType SlotType, UDGItemDefinition* EquippedItemDef)
+{
+	// 모든 클라이언트와 서버에서 실행됨. 장비가 바뀌었다는 이벤트를 로컬 캐릭터에게 전달.
+	OnEquipmentChanged.Broadcast(SlotType, EquippedItemDef);
 }

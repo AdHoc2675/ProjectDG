@@ -10,6 +10,7 @@
 #include "Character/Enemy/Data/EnemySkillData.h"
 #include "Character/Enemy/Field/Data/FieldCharacterClassData.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/BoxComponent.h"
 #include "Components/UI/DGMinimapMarkerComponent.h"
 #include "Core/DG_GameplayTags.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -557,6 +558,12 @@ void AFieldEnemyBase::Multicast_OnSpawnedFromPool_Implementation()
 	{
 		MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		MeshComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+	}
+
+	if (HitboxComponent)
+	{
+		HitboxComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		HitboxComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
 	}
 
 	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())

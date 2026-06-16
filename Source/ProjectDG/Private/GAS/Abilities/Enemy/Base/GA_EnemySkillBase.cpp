@@ -2085,6 +2085,18 @@ void UGA_EnemySkillBase::ApplyHitStepToRuntimeSkillData(
 	RuntimeSkillData->IndicatorYawOffsetDegrees = HitStep.IndicatorYawOffsetDegrees;
 	RuntimeSkillData->bIndicatorFollowTargetDuringTelegraph = HitStep.bIndicatorFollowTargetDuringTelegraph;
 	RuntimeSkillData->bIndicatorRotateToTargetDuringTelegraph = HitStep.bIndicatorRotateToTargetDuringTelegraph;
+
+	RuntimeSkillData->HitVFX = HitStep.HitVFX
+		                           ? HitStep.HitVFX
+		                           : SourceSkillData->HitVFX;
+
+	RuntimeSkillData->HitVFXScale = HitStep.HitVFX
+		                                 ? HitStep.HitVFXScale
+		                                 : SourceSkillData->HitVFXScale;
+
+	RuntimeSkillData->HitSFX = HitStep.HitSFX
+		                           ? HitStep.HitSFX
+		                           : SourceSkillData->HitSFX;
 }
 
 void UGA_EnemySkillBase::SpawnEnemySkillHitStepIndicatorByNotify(
@@ -2256,6 +2268,23 @@ void UGA_EnemySkillBase::ExecuteEnemySkillHitStepByNotify(
 		RuntimeSkillData,
 		TargetActors
 	);
+
+	if (RuntimeSkillData->HitVFX || RuntimeSkillData->HitSFX)
+	{
+		if (AEnemyCharacterBase* EnemyCharacter = GetEnemyCharacterFromActorInfo())
+		{
+			if (EnemyCharacter->HasAuthority())
+			{
+				EnemyCharacter->Multicast_PlayEnemySkillHitEffects(
+					RuntimeSkillData->HitVFX,
+					RuntimeSkillData->HitVFXScale,
+					RuntimeSkillData->HitSFX,
+					StepContext->CachedHitCenter,
+					StepContext->CachedHitRotation
+				);
+			}
+		}
+	}
 
 	OnEnemySkillHitStepExecuted(
 		StepIndex,

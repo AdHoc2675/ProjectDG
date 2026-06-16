@@ -1,4 +1,4 @@
-﻿#include "Character/Player/PlayerCharacterBase.h"
+#include "Character/Player/PlayerCharacterBase.h"
 #include "Character/Player/Data/PlayerSkillData.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
@@ -17,6 +17,7 @@
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Kismet/GameplayStatics.h"
 #include "InputActionValue.h"
 #include "Net/UnrealNetwork.h"
 #include "DrawDebugHelpers.h"
@@ -39,7 +40,8 @@
 #include "Components/Targeting/LockOnComponent.h"
 #include "Components/Inventory/DGInventoryComponent.h"
 #include "GameFramework/GameModeBase.h"
-
+#include "Item/DGItemDefinition.h"
+#include "Item/DGItemInstance.h"
 
 namespace
 {
@@ -180,6 +182,12 @@ void APlayerCharacterBase::BeginPlay()
 	
 	// 월드시작시 ASC초기화
 	InitializePlayerAbilitySystem();
+
+	// 인벤토리 이벤트 바인딩
+	if (InventoryComponent)
+	{
+		InventoryComponent->OnEquipmentChanged.AddDynamic(this, &APlayerCharacterBase::OnEquipmentChanged);
+	}
 }
 
 void APlayerCharacterBase::Tick(float DeltaSeconds)
@@ -552,6 +560,19 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 			DGGameplayTags::Input_SkillSlot_Key4.GetTag());
 	}
 
+	// 아이템 맵핑
+	if (IA_HPPotion)
+	{
+		EnhancedInputComponent->BindAction(IA_HPPotion, ETriggerEvent::Started, this,
+			&APlayerCharacterBase::UseHealthItem);
+	}
+
+	if (IA_MPPotion)
+	{
+		EnhancedInputComponent->BindAction(IA_MPPotion, ETriggerEvent::Started, this,
+			&APlayerCharacterBase::UseMentalItem);
+	}
+
 	// UI 토글 (맵, 인벤토리)
 	if (IA_ToggleMap)
 	{
@@ -563,6 +584,90 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	{
 		EnhancedInputComponent->BindAction(IA_ToggleInventory, ETriggerEvent::Started, this,
 			&APlayerCharacterBase::ToggleInventoryAction);
+	}
+}
+
+void APlayerCharacterBase::UseHealthItem()
+{
+	float CurrentTime = GetWorld()->GetTimeSeconds();
+	if (CurrentTime - LastHealthItemUseTime < HealthItemCooldown && LastHealthItemUseTime > 0.0f)
+	{
+		return;
+	}
+
+	LastHealthItemUseTime = CurrentTime;
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ADG_HUD* HUD = Cast<ADG_HUD>(PC->GetHUD()))
+		{
+			if (UDGOverlayWidgetController* WC = HUD->GetOverlayWidgetController(FWidgetControllerParams()))
+			{
+				WC->OnHealthItemCooldown.Broadcast(HealthItemCooldown);
+			}
+		}
+	}
+
+	if (HealthItemSound)
+	{
+		UGameplayStatics::PlaySound2D(this, HealthItemSound);
+	}
+
+	Server_UseHealthItem();
+}
+
+void APlayerCharacterBase::UseMentalItem()
+{
+	float CurrentTime = GetWorld()->GetTimeSeconds();
+	if (CurrentTime - LastMentalItemUseTime < MentalItemCooldown && LastMentalItemUseTime > 0.0f)
+	{
+		return;
+	}
+
+	LastMentalItemUseTime = CurrentTime;
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ADG_HUD* HUD = Cast<ADG_HUD>(PC->GetHUD()))
+		{
+			if (UDGOverlayWidgetController* WC = HUD->GetOverlayWidgetController(FWidgetControllerParams()))
+			{
+				WC->OnMentalItemCooldown.Broadcast(MentalItemCooldown);
+			}
+		}
+	}
+
+	if (MentalItemSound)
+	{
+		UGameplayStatics::PlaySound2D(this, MentalItemSound);
+	}
+
+	Server_UseMentalItem();
+}
+
+void APlayerCharacterBase::Server_UseHealthItem_Implementation()
+{
+	if (UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent())
+	{
+		float MaxHealth = ASC->GetNumericAttribute(UDG_AttributeSet::GetMaxHealthAttribute());
+		float CurrentHealth = ASC->GetNumericAttribute(UDG_AttributeSet::GetHealthAttribute());
+		float HealAmount = MaxHealth * HealthItemHealRatio; // 에디터 설정 비율(예: 0.3 = 30%)
+		float NewHealth = FMath::Min(MaxHealth, CurrentHealth + HealAmount);
+		
+		ASC->SetNumericAttributeBase(UDG_AttributeSet::GetHealthAttribute(), NewHealth);
+	}
+}
+
+void APlayerCharacterBase::Server_UseMentalItem_Implementation()
+{
+	if (UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent())
+	{
+		float MaxMental = ASC->GetNumericAttribute(UDG_AttributeSet::GetMaxMentalAttribute());
+		float CurrentMental = ASC->GetNumericAttribute(UDG_AttributeSet::GetMentalAttribute());
+		float HealAmount = MaxMental * MentalItemHealRatio; // 에디터 설정 비율(예: 0.3 = 30%)
+		float NewMental = FMath::Min(MaxMental, CurrentMental + HealAmount);
+		
+		ASC->SetNumericAttributeBase(UDG_AttributeSet::GetMentalAttribute(), NewMental);
 	}
 }
 
@@ -829,8 +934,9 @@ void APlayerCharacterBase::PossessedBy(AController* NewController)
 		}
 	}
 
-	// 플레이어 UI 초기화 (로컬 플레이어만)
-	InitializePlayerUI();
+	// 플레이어 UI 초기화 (로컬 플레이어만) - HUD 및 위젯 생성이 완료되도록 약간의 딜레이 대기
+	FTimerHandle UIInitTimerHandle;
+	GetWorldTimerManager().SetTimer(UIInitTimerHandle, this, &APlayerCharacterBase::InitializePlayerUI, 0.2f, false);
 }
 
 void APlayerCharacterBase::OnRep_PlayerState()
@@ -846,8 +952,9 @@ void APlayerCharacterBase::OnRep_PlayerState()
 	InitializeMovementStats();
 	InitializeSkillSlotsFromClassData();
 
-	// 플레이어 UI 초기화 (로컬 플레이어만)
-	InitializePlayerUI();
+	// 플레이어 UI 초기화 (로컬 플레이어만) - HUD 및 위젯 생성이 완료되도록 약간의 딜레이 대기
+	FTimerHandle UIInitTimerHandle;
+	GetWorldTimerManager().SetTimer(UIInitTimerHandle, this, &APlayerCharacterBase::InitializePlayerUI, 0.2f, false);
 }
 
 void APlayerCharacterBase::InitializePlayerStateFromClassData()
@@ -1532,3 +1639,22 @@ void APlayerCharacterBase::ServerHandleShiftAction_Implementation(
 	ASC->HandleGameplayEvent(Payload.EventTag, &Payload);
 }
 
+void APlayerCharacterBase::OnEquipmentChanged(EDGEquipmentType SlotType, UDGItemDefinition* EquippedItemDef)
+{
+	// 방어구(Armor) 슬롯이 변경되었을 때 상의 메쉬(UpperBodyMesh) 교체
+	if (SlotType == EDGEquipmentType::Armor)
+	{
+		USkeletalMesh* NewMesh = DefaultUpperBodyMesh; // 기본값은 맨몸 메쉬
+		
+		if (EquippedItemDef && !EquippedItemDef->EquipmentMesh.IsNull())
+		{
+			// 설정된 메쉬 에셋 동기 로드
+			NewMesh = EquippedItemDef->EquipmentMesh.LoadSynchronous();
+		}
+		
+		if (UpperBodyMesh)
+		{
+			UpperBodyMesh->SetSkeletalMesh(NewMesh);
+		}
+	}
+}

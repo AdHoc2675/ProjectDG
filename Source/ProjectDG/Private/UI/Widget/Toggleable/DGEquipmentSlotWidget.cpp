@@ -5,12 +5,26 @@
 #include "Item/DGItemDefinition.h"
 #include "UI/WidgetController/DGInventoryWidgetController.h"
 
+void UDGEquipmentSlotWidget::NativePreConstruct()
+{
+	Super::NativePreConstruct();
+
+	// UMG 에디터 뷰포트에서 빈 슬롯 모양을 미리 볼 수 있도록 초기화
+	if (EmptySlotTexture && !EquippedItemInstance && ItemIcon)
+	{
+		ItemIcon->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		ItemIcon->SetBrushFromTexture(EmptySlotTexture, false);
+		ItemIcon->SetColorAndOpacity(FLinearColor(1.f, 1.f, 1.f, 0.3f)); // 실루엣처럼 반투명하게
+	}
+}
+
 
 void UDGEquipmentSlotWidget::UpdateSlot(UDGItemInstance* EquippedItem)
 {
 	if (EquippedItem && EquippedItem->ItemDef)
 	{
 		ItemIcon->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		ItemIcon->SetColorAndOpacity(FLinearColor(1.f, 1.f, 1.f, 1.f)); // 원래 색상/투명도로 복구
 
 		if (UTexture2D* IconTexture = EquippedItem->ItemDef->ItemIcon)
 		{
@@ -30,8 +44,18 @@ void UDGEquipmentSlotWidget::UpdateSlot(UDGItemInstance* EquippedItem)
 	}
 	else
 	{
-		// 아이템이 없으면 투명하게 하여 위젯 블루프린트에 깔아둔 기본 배경(무기 실루엣 모양 등)이 보이게 함
-		ItemIcon->SetVisibility(ESlateVisibility::Hidden);
+		if (EmptySlotTexture)
+		{
+			// 설정된 기본 빈 슬롯 텍스처를 띄움
+			ItemIcon->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+			ItemIcon->SetBrushFromTexture(EmptySlotTexture, false);
+			ItemIcon->SetColorAndOpacity(FLinearColor(1.f, 1.f, 1.f, 0.3f)); // 실루엣처럼 반투명하게
+		}
+		else
+		{
+			ItemIcon->SetVisibility(ESlateVisibility::Hidden);
+		}
+		
 		SetToolTip(nullptr);
 	}
 }
@@ -113,7 +137,18 @@ void UDGEquipmentSlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, c
 	UDGItemDragDropOperation* DragDropOp = NewObject<UDGItemDragDropOperation>();
 	DragDropOp->DraggedItem = EquippedItemInstance;
 	DragDropOp->SourceWidget = this; // '장비 슬롯'에서 출발했음을 명시
-	DragDropOp->DefaultDragVisual = this;
+	
+	UDGEquipmentSlotWidget* DragVisualWidget = CreateWidget<UDGEquipmentSlotWidget>(this, GetClass());
+	
+	if (DragVisualWidget)
+	{
+		// 새로 만든 가짜 잔상 위젯에 현재 내 아이템 아이콘을 똑같이 복사해서 그림
+		DragVisualWidget->UpdateSlot(EquippedItemInstance);
+		
+		// 만들어진 새 위젯을 잔상으로 설정 (원래 위젯은 안전하게 제자리에 보존)
+		DragDropOp->DefaultDragVisual = DragVisualWidget;
+	}
+
 	DragDropOp->Pivot = EDragPivot::MouseDown;
 
 	OutOperation = DragDropOp;

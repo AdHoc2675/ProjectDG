@@ -74,7 +74,30 @@ protected:
 	virtual void PawnClientRestart() override;
 	
 	//입력 바인딩
-	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	// 아이템 쿨타임 추적용
+	float LastHealthItemUseTime = 0.0f;
+	float LastMentalItemUseTime = 0.0f;
+
+	// 아이템 속성 설정
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacterBase|Item")
+	float HealthItemCooldown = 10.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacterBase|Item")
+	float MentalItemCooldown = 10.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacterBase|Item", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float HealthItemHealRatio = 0.3f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacterBase|Item", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float MentalItemHealRatio = 0.3f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacterBase|Item|Sound")
+	class USoundBase* HealthItemSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerCharacterBase|Item|Sound")
+	class USoundBase* MentalItemSound;
 
 public:
 	//BaseCharacter 공용 ASC getter
@@ -174,6 +197,15 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Modular")
 	TObjectPtr<USkeletalMeshComponent> GlovesMesh;
 	
+	// 장비를 해제했을 때 돌아갈 기본(맨몸) 상의 메쉬
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Modular|Default")
+	TObjectPtr<USkeletalMesh> DefaultUpperBodyMesh;
+
+protected:
+	// 인벤토리에서 장비가 변경되었을 때 호출되는 함수
+	UFUNCTION()
+	void OnEquipmentChanged(EDGEquipmentType SlotType, class UDGItemDefinition* EquippedItemDef);
+
 #pragma endregion OutLook
 	
 #pragma region AI
@@ -188,6 +220,12 @@ protected:
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputMappingContext* BasicInputMappingContext;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	class UInputAction* IA_HPPotion;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	class UInputAction* IA_MPPotion;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputAction* IA_Jump;
@@ -214,6 +252,18 @@ protected:
 	void LookAction(const FInputActionValue& InputActionValue);
 	void MoveAction(const FInputActionValue& InputActionValue);
 	
+	void OnSkillInputCompleted(const FInputActionValue& Value, FString InputTagString);
+
+	void UseHealthItem();
+	void UseMentalItem();
+
+	UFUNCTION(Server, Reliable)
+	void Server_UseHealthItem();
+
+	UFUNCTION(Server, Reliable)
+	void Server_UseMentalItem();
+
+
 	void JumpActionStarted();
 	void JumpActionCompleted();
 	void SendJumpEvent();

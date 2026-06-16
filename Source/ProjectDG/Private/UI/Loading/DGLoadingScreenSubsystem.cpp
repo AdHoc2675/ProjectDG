@@ -53,9 +53,23 @@ FText UDGLoadingScreenSubsystem::GetRandomTipText() const {
   return FText::GetEmpty();
 }
 
+bool UDGLoadingScreenSubsystem::IsLoadingScreenVisible() const {
+  return ActiveLoadingWidget && ActiveLoadingWidget->IsInViewport();
+}
+
 void UDGLoadingScreenSubsystem::ShowLoadingScreen() {
+  // 위젯이 유효하고 실제로 뷰포트에 있는지 확인 (레벨 전환 후 댕글링 포인터 방어)
+  if (ActiveLoadingWidget && ActiveLoadingWidget->IsInViewport()) {
+    UE_LOG(LogDGLoadingScreen, Log,
+           TEXT("Loading screen is already visible. Skipping."));
+    return;
+  }
+
+  // 이전 레벨에서 남은 댕글링 참조 정리
   if (ActiveLoadingWidget) {
-    return; // Already showing
+    UE_LOG(LogDGLoadingScreen, Warning,
+           TEXT("Clearing stale ActiveLoadingWidget reference from previous level."));
+    ActiveLoadingWidget = nullptr;
   }
 
   if (!LoadingWidgetClass) {
@@ -89,6 +103,8 @@ void UDGLoadingScreenSubsystem::ShowLoadingScreen() {
 
   UWorld *World = GetWorld();
   if (!World) {
+    UE_LOG(LogDGLoadingScreen, Warning,
+           TEXT("World is null. Cannot show loading screen."));
     return;
   }
 
@@ -97,13 +113,22 @@ void UDGLoadingScreenSubsystem::ShowLoadingScreen() {
   if (ActiveLoadingWidget) {
     ActiveLoadingWidget->SetTipText(GetRandomTipText());
     ActiveLoadingWidget->AddToViewport(9999); // High Z-order to render on top
+    UE_LOG(LogDGLoadingScreen, Log,
+           TEXT("Loading screen displayed successfully. World: %s"),
+           *World->GetName());
+  } else {
+    UE_LOG(LogDGLoadingScreen, Error,
+           TEXT("Failed to create loading screen widget."));
   }
 }
 
 void UDGLoadingScreenSubsystem::HideLoadingScreen() {
+  bPendingLoadingScreen = false;
+
   if (ActiveLoadingWidget) {
     ActiveLoadingWidget->RemoveFromParent();
     ActiveLoadingWidget = nullptr;
+    UE_LOG(LogDGLoadingScreen, Log, TEXT("Loading screen hidden."));
   }
 
   UWorld *World = GetWorld();
@@ -179,12 +204,31 @@ void UDGLoadingScreenSubsystem::CheckStreamingStatus() {
 }
 
 void UDGLoadingScreenSubsystem::OnPreLoadMap(const FString &MapName) {
-  // ClientTravel 로 인한 맵 이동 시 호출됨
-  // TODO: 만약 MoviePlayer 모듈을 사용한다면 여기서 셋업을 해야 메인 스레드
-  // 블록 중에도 애니메이션이 돌아감. 현재는 간단히 UserWidget을 띄우는 형태로
-  // 시도 (단, 메인 스레드 블록 시 Throbber가 멈출 수 있음) ShowLoadingScreen();
+  UE_LOG(LogDGLoadingScreen, Log,
+         TEXT("OnPreLoadMap: %s — cleaning up previous level state."), *MapName);
+
+  // 현재 로딩 화면이 떠있었다면, 새 맵에서도 다시 띄워야 함을 기억
+  if (ActiveLoadingWidget || bPendingLoadingScreen) {
+    bPendingLoadingScreen = true;
+    UE_LOG(LogDGLoadingScreen, Log,
+           TEXT("Loading screen was active. Will re-show after new map loads."));
+  }
+
+  // 레벨 전환 시 기존 위젯과 타이머가 이전 World와 함께 소멸되므로 참조를 정리
+  ActiveLoadingWidget = nullptr;
+  StreamingCheckTimerHandle.Invalidate();
+  HideDelayTimerHandle.Invalidate();
 }
 
 void UDGLoadingScreenSubsystem::OnPostLoadMap(UWorld *LoadedWorld) {
-  // HideLoadingScreen();
+  UE_LOG(LogDGLoadingScreen, Log,
+         TEXT("OnPostLoadMap: %s — bPendingLoadingScreen=%s"),
+         LoadedWorld ? *LoadedWorld->GetName() : TEXT("null"),
+         bPendingLoadingScreen ? TEXT("true") : TEXT("false"));
+
+  if (bPendingLoadingScreen) {
+    bPendingLoadingScreen = false;
+    ShowLoadingScreen();
+    StartStreamingCheck();
+  }
 }
