@@ -99,13 +99,7 @@ void UBTService_KashapaUpdateTargetDistance::TickNode(
 	// 2. 기존 타겟이 있었지만 유효하지 않으면 해제.
 	if (CurrentTarget)
 	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[BTService_KashapaUpdateTargetDistance] Clear invalid target. Target=%s"),
-				*GetNameSafe(CurrentTarget)
-			),
-			FColor::Silver
-		);
+		
 
 		ClearTargetBlackboard(BlackboardComp);
 		ApplyMoveSpeedByCombatState(
@@ -178,14 +172,7 @@ void UBTService_KashapaUpdateTargetDistance::TickNode(
 		EAIFocusPriority::Gameplay
 	);
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[BTService_KashapaUpdateTargetDistance] Acquire target. Target=%s Distance=%.1f"),
-			*GetNameSafe(NewTarget),
-			NewTargetDistance
-		),
-		FColor::Green
-	);
+	
 }
 
 AActor* UBTService_KashapaUpdateTargetDistance::FindNearestPlayerTarget(
@@ -517,11 +504,5 @@ void UBTService_KashapaUpdateTargetDistance::SetOwnerMoveSpeed(
 
 	MovementComponent->MaxWalkSpeed = ClampedMoveSpeed;
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[BTService_KashapaUpdateTargetDistance] MoveSpeed changed: %.1f"),
-			ClampedMoveSpeed
-		),
-		FColor::Cyan
-	);
+	
 }

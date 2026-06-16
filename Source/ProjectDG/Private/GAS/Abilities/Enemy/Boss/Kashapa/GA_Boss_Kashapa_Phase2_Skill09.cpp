@@ -87,58 +87,24 @@ void UGA_Boss_Kashapa_Phase2_Skill09::OnEnemySkillHitStepExecuted(
 		AActor* TargetActor = FindFirstValidCapturedTarget(HitActors);
 		if (!TargetActor)
 		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[P2_Skill09] Grab Miss Step=%d HitActors=%d"),
-					StepIndex,
-					HitActors.Num()
-				),
-				FColor::Yellow
-			);
+			
 			return;
 		}
 
 		const bool bCaptured = CaptureTarget(TargetActor);
 
-		Debug::Print(
-			FString::Printf(
-				TEXT("[P2_Skill09] Grab Hit Step=%d Target=%s Capture=%s"),
-				StepIndex,
-				*TargetActor->GetName(),
-				bCaptured ? TEXT("true") : TEXT("false")
-			),
-			bCaptured ? FColor::Green : FColor::Red
-		);
+		
 
 		if (bCaptured)
 		{
 			const bool bJumped = JumpToMontageSection(GrabSuccessSectionName);
 
-			Debug::Print(
-				FString::Printf(
-					TEXT("[P2_Skill09] JumpToSection=%s Result=%s"),
-					*GrabSuccessSectionName.ToString(),
-					bJumped ? TEXT("true") : TEXT("false")
-				),
-				FColor::Cyan
-			);
 		}
 
 		return;
 	}
 
-	if (StepIndex == FollowUpHitStepIndex)
-	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[P2_Skill09] FollowUp Hit Step=%d HitActors=%d CapturedTarget=%s"),
-				StepIndex,
-				HitActors.Num(),
-				CapturedTargetActor ? *CapturedTargetActor->GetName() : TEXT("None")
-			),
-			FColor::Yellow
-		);
-	}
+	
 }
 
 void UGA_Boss_Kashapa_Phase2_Skill09::OnEnemySkillFinished(bool bWasCancelled)

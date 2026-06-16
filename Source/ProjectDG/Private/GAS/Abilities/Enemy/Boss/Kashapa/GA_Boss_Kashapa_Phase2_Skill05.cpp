@@ -79,15 +79,7 @@ void UGA_Boss_Kashapa_Phase2_Skill05::OnEnemySkillHitStepExecuted(
 	const TArray<AActor*>& HitActors
 )
 {
-	Debug::Print(
-		FString::Printf(
-			TEXT("[P2_Skill05] HitStep=%d HitActors=%d ShouldChain=%s"),
-			StepIndex,
-			HitActors.Num(),
-			bShouldChainToFollowUpSection ? TEXT("true") : TEXT("false")
-		),
-		FColor::Yellow
-	);
+	
 
 	const bool bIsFirstOrSecondHit =
 		StepIndex == FirstHitStepIndex ||
@@ -97,19 +89,12 @@ void UGA_Boss_Kashapa_Phase2_Skill05::OnEnemySkillHitStepExecuted(
 	{
 		bShouldChainToFollowUpSection = true;
 
-		Debug::Print(
-			TEXT("[P2_Skill05] Chain flag ON"),
-			FColor::Green
-		);
+		
 	}
 
 	if (StepIndex == SecondHitStepIndex)
 	{
-		Debug::Print(
-			TEXT("[P2_Skill05] Start follow-up timer"),
-			FColor::Cyan
-		);
-
+		
 		StartFollowUpSectionTimer();
 		return;
 	}
@@ -307,14 +292,7 @@ void UGA_Boss_Kashapa_Phase2_Skill05::JumpToMainSkillSection()
 
 void UGA_Boss_Kashapa_Phase2_Skill05::TryJumpToFollowUpSkillSection()
 {
-	Debug::Print(
-		FString::Printf(
-			TEXT("[P2_Skill05] TryJump Skill_2 ShouldChain=%s HasJumped=%s"),
-			bShouldChainToFollowUpSection ? TEXT("true") : TEXT("false"),
-			bHasJumpedToFollowUpSection ? TEXT("true") : TEXT("false")
-		),
-		FColor::Cyan
-	);
+	
 
 	if (bHasJumpedToFollowUpSection)
 	{
@@ -323,10 +301,7 @@ void UGA_Boss_Kashapa_Phase2_Skill05::TryJumpToFollowUpSkillSection()
 
 	if (!bShouldChainToFollowUpSection)
 	{
-		Debug::Print(
-			TEXT("[P2_Skill05] Finish without follow-up"),
-			FColor::Red
-		);
+	
 
 		FinishSkill05WithoutFollowUp();
 		return;
@@ -336,13 +311,7 @@ void UGA_Boss_Kashapa_Phase2_Skill05::TryJumpToFollowUpSkillSection()
 
 	const bool bJumped = JumpToMontageSection(FollowUpSkillSectionName);
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[P2_Skill05] JumpTo Skill_2 Result=%s"),
-			bJumped ? TEXT("true") : TEXT("false")
-		),
-		FColor::Green
-	);
+	
 }
 
 bool UGA_Boss_Kashapa_Phase2_Skill05::JumpToMontageSection(FName SectionName)

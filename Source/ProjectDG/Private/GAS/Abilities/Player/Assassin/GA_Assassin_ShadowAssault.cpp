@@ -75,27 +75,42 @@ void UGA_Assassin_ShadowAssault::StartTargetMontageEventTasks()
 
 void UGA_Assassin_ShadowAssault::ExecuteTargetSkill(AActor* TargetActor, const FGameplayEventData& Payload)
 {
-      if (!HasAuthorityAvatar())
-      {
-              return;
-      }
+	if (!HasAuthorityAvatar())
+	{
+	      return;
+	}
 
-      if (!TargetActor)
-      {
-              return;
-      }
+	if (!TargetActor)
+	{
+	      return;
+	}
 
-      ApplyDamageToTarget(
-                      TargetActor,
-                      0.f,
-                      GetSkillDamageMultiplier(),
-                      GetSkillTag(),
-                      TargetActor->GetActorLocation(),
-                      true,
-                      GetSkillGroggyDamage()
-      );
+	AActor* AvatarActor = GetAvatarActorFromAbility();
+	if (!AvatarActor)
+	{
+		return;
+	}
 
-      ApplyStatusEffectToTarget(TargetActor);
+	const FDGDamageResult DamageResult =
+			ApplyDamageToTarget(
+					TargetActor,
+					0.f,
+					GetSkillDamageMultiplier(),
+					GetSkillTag(),
+					TargetActor->GetActorLocation(),
+					true,
+					GetSkillGroggyDamage()
+			);
+
+	if (DamageResult.bSuccess)
+	{
+		ExecuteHitGameplayCue(
+				TargetActor,
+				AvatarActor->GetActorLocation()
+		);
+	}
+
+	ApplyStatusEffectToTarget(TargetActor);
 }
 
 void UGA_Assassin_ShadowAssault::OnMoveBegin(FGameplayEventData Payload)

@@ -18,6 +18,9 @@
 #include "GAS/Effects/Skills/GE_SkillCost.h"
 #include "GAS/Attributes/DG_AttributeSet.h"
 
+#include "Components/SkeletalMeshComponent.h"
+#include "GameFramework/Character.h"
+
 #include "AbilitySystemComponent.h"
 
 UGA_PlayerSkillBase::UGA_PlayerSkillBase()
@@ -573,6 +576,104 @@ void UGA_PlayerSkillBase::ExecuteSkillGameplayCue(
 	CueParameters.RawMagnitude = Payload.EventMagnitude;
 
 	ASC->ExecuteGameplayCue(GameplayCueTag, CueParameters);
+}
+
+bool UGA_PlayerSkillBase::ResolveHitEffectTransformFromMeshBounds(
+      AActor* HitActor,
+      const FVector& QueryOrigin,
+      FVector& OutLocation,
+      FVector& OutNormal
+) const
+{
+      const ACharacter* HitCharacter = Cast<ACharacter>(HitActor);
+      if (!HitCharacter)
+      {
+              return false;
+      }
+
+      const USkeletalMeshComponent* HitMesh = HitCharacter->GetMesh();
+      if (!HitMesh || !HitMesh->GetSkeletalMeshAsset())
+      {
+              return false;
+      }
+
+      const FBox MeshBounds = HitMesh->Bounds.GetBox();
+      if (!MeshBounds.IsValid)
+      {
+              return false;
+      }
+
+      OutLocation = MeshBounds.GetClosestPointTo(QueryOrigin);
+      OutNormal = (QueryOrigin - OutLocation).GetSafeNormal();
+
+      if (OutNormal.IsNearlyZero())
+      {
+              OutNormal =
+                      (OutLocation - MeshBounds.GetCenter()).GetSafeNormal();
+      }
+
+      if (OutNormal.IsNearlyZero())
+      {
+              OutNormal = FVector::UpVector;
+      }
+
+      return true;
+}
+
+void UGA_PlayerSkillBase::ExecuteHitGameplayCue(
+      AActor* HitActor,
+      const FVector& QueryOrigin
+) const
+{
+      if (!HasAuthorityAvatar() || !HitActor)
+      {
+              return;
+      }
+
+      UAbilitySystemComponent* ASC =
+              GetAbilitySystemComponentFromActorInfo();
+
+      AActor* AvatarActor =
+              GetAvatarActorFromActorInfo();
+
+      const UPlayerSkillData* CurrentSkillData =
+              GetCurrentComboSkillData();
+
+      if (!CurrentSkillData)
+      {
+              CurrentSkillData = GetPlayerSkillData();
+      }
+
+      if (!ASC ||
+              !AvatarActor ||
+              !CurrentSkillData ||
+              !CurrentSkillData->HitVFX)
+      {
+              return;
+      }
+
+      FVector HitLocation = HitActor->GetActorLocation();
+      FVector HitNormal =
+              (QueryOrigin - HitLocation).GetSafeNormal();
+
+      ResolveHitEffectTransformFromMeshBounds(
+              HitActor,
+              QueryOrigin,
+              HitLocation,
+              HitNormal
+      );
+
+      FGameplayCueParameters CueParameters;
+      CueParameters.Instigator = AvatarActor;
+      CueParameters.EffectCauser = AvatarActor;
+      CueParameters.SourceObject = CurrentSkillData;
+      CueParameters.Location = HitLocation;
+      CueParameters.Normal = HitNormal;
+
+      ASC->ExecuteGameplayCue(
+              DGGameplayTags::GameplayCue_Skill_VFX_Hit,
+              CueParameters
+      );
 }
 
 void UGA_PlayerSkillBase::RegisterWeaponTrailEvents()

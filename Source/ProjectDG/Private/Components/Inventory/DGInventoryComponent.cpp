@@ -344,3 +344,30 @@ void UDGInventoryComponent::MulticastEquipmentChanged_Implementation(EDGEquipmen
 	// 모든 클라이언트와 서버에서 실행됨. 장비가 바뀌었다는 이벤트를 로컬 캐릭터에게 전달.
 	OnEquipmentChanged.Broadcast(SlotType, EquippedItemDef);
 }
+
+void UDGInventoryComponent::ReapplyEquippedItemStats()
+{
+	if (!GetOwner()->HasAuthority()) return;
+
+	UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
+	if (!ASC) return;
+
+	auto AddModifier = [&ASC](FGameplayAttribute Attribute, float Value)
+	{
+		if (Value == 0.f) return;
+		float CurrentBase = ASC->GetNumericAttributeBase(Attribute);
+		ASC->SetNumericAttributeBase(Attribute, CurrentBase + Value);
+	};
+
+	for (const auto& Pair : EquippedItems)
+	{
+		UDGItemInstance* Item = Pair.Value;
+		if (Item)
+		{
+			AddModifier(UDG_AttributeSet::GetMaxHealthAttribute(), Item->HPValue);
+			AddModifier(UDG_AttributeSet::GetAttackPowerAttribute(), Item->AttackValue);
+			AddModifier(UDG_AttributeSet::GetDefenseAttribute(), Item->DefenseValue);
+			AddModifier(UDG_AttributeSet::GetMainStatAttribute(), Item->MainStatValue);
+		}
+	}
+}

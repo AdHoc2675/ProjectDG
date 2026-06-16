@@ -18,6 +18,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnStatChangedSignature, float, Cur
 // 한 개의 값만 전송할 델리게이트 (공격력, 방어력 등)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSingleStatChangedSignature, float, Value);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInventoryPlayerLevelChangedSignature, int32, NewLevel);
+
 /**
  * 인벤토리 전용 컨트롤러
  * UInventoryComponent(Model)의 데이터 변화를 감지해 UI(View)에 알리거나,
@@ -56,6 +58,9 @@ protected:
 	UFUNCTION()
 	void OnGoldChangedCallback(int32 NewGold);
 
+	UFUNCTION()
+	void OnPlayerLevelChangedCallback(int32 NewLevel);
+
 public:
 
 
@@ -74,4 +79,7 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "DG|Attributes")
 	FOnSingleStatChangedSignature OnDefenseChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "DG|Attributes")
+	FOnInventoryPlayerLevelChangedSignature OnPlayerLevelChanged;
 };

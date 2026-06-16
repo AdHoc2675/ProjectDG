@@ -15,6 +15,8 @@ class UPlayerCharacterClassData;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSkillComboStepChangedSignature, FGameplayTag, SkillTag, int32, NewStepIndex);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStateLevelChangedSignature, int32, NewLevel);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStateMaxExpChangedSignature, int32, MaxExp);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStateExpChangedSignature, int32, NewExp);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStateGoldChangedSignature, int32, NewGold);
 
 /*
@@ -78,6 +80,12 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Player|Growth")
 	FOnPlayerStateLevelChangedSignature OnLevelChangedDelegate;
 
+	UPROPERTY(BlueprintAssignable, Category = "PlayerState|Growth")
+	FOnPlayerStateMaxExpChangedSignature OnMaxExpChangedDelegate;
+
+	UPROPERTY(BlueprintAssignable, Category = "PlayerState|Growth")
+	FOnPlayerStateExpChangedSignature OnExpChangedDelegate;
+
 	UPROPERTY(BlueprintAssignable, Category = "Player|Growth")
 	FOnPlayerStateGoldChangedSignature OnGoldChangedDelegate;
 	
@@ -91,11 +99,18 @@ public:
 	int32 GetCurrentExp() const { return CurrentExp; }
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Growth")
+	int32 GetMaxExp() const { return MaxExp; }
+
+	UFUNCTION(BlueprintCallable, Category = "Player|Growth")
 	int32 GetGold() const { return OwnedGold; }
 
 	UFUNCTION(BlueprintCallable, Category = "Player|Growth")
 	void AddExpAndGold(int32 ExpAmount, int32 GoldAmount);
 
+protected:
+	void LevelUp();
+
+public:
 	UFUNCTION(BlueprintCallable, Category = "Player|Session")
 	FString GetSessionId() const { return SessionId; }
 
@@ -139,7 +154,7 @@ protected:
 	/**
 	 * DataTable에서 초기 속성값을 읽어 AttributeSet에 적용
 	 */
-	void InitializeAttributesFromDataTable() const;
+	void InitializeAttributesFromDataTable();
 
 	float GetSkillComboServerTime() const;
 
@@ -176,6 +191,9 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentExp, BlueprintReadOnly, Category = "Player|Growth")
 	int32 CurrentExp = 0;
 
+	UPROPERTY(ReplicatedUsing = OnRep_MaxExp, BlueprintReadOnly, Category = "Player|Growth")
+	int32 MaxExp = 100;
+
 	UPROPERTY(ReplicatedUsing = OnRep_OwnedGold, BlueprintReadOnly, Category = "Player|Growth")
 	int32 OwnedGold = 0;
 
@@ -190,6 +208,9 @@ protected:
 
 	UFUNCTION()
 	void OnRep_CurrentExp();
+
+	UFUNCTION()
+	void OnRep_MaxExp();
 
 	UFUNCTION()
 	void OnRep_OwnedGold();

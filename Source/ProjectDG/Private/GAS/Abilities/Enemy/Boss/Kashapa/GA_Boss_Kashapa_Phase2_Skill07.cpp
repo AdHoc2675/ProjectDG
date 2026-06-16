@@ -84,30 +84,13 @@ void UGA_Boss_Kashapa_Phase2_Skill07::OnEnemySkillHitStepExecuted(
 		{
 			bHasSlamHit = true;
 
-			Debug::Print(
-				FString::Printf(
-					TEXT("[P2_Skill07] Slam Hit Saved Step=%d HitActors=%d"),
-					StepIndex,
-					HitActors.Num()
-				),
-				FColor::Green
-			);
+			
 		}
 
 		return;
 	}
 
-	if (StepIndex == FollowUpHitStepIndex)
-	{
-		Debug::Print(
-			FString::Printf(
-				TEXT("[P2_Skill07] FollowUp Hit Step=%d HitActors=%d"),
-				StepIndex,
-				HitActors.Num()
-			),
-			FColor::Yellow
-		);
-	}
+	
 }
 
 void UGA_Boss_Kashapa_Phase2_Skill07::OnEnemySkillFinished(bool bWasCancelled)
@@ -134,7 +117,7 @@ void UGA_Boss_Kashapa_Phase2_Skill07::RegisterBossSkillBranchEvent()
 
 	if (!BossSkillBranchEventTag.IsValid())
 	{
-		Debug::Print(TEXT("[P2_Skill07] BossSkillBranchEventTag Invalid"), FColor::Red);
+		
 		return;
 	}
 
@@ -153,7 +136,7 @@ void UGA_Boss_Kashapa_Phase2_Skill07::RegisterBossSkillBranchEvent()
 
 	if (!BossSkillBranchEventTask)
 	{
-		Debug::Print(TEXT("[P2_Skill07] BossSkillBranchEventTask Invalid"), FColor::Red);
+		
 		return;
 	}
 
@@ -180,14 +163,7 @@ void UGA_Boss_Kashapa_Phase2_Skill07::OnBossSkillBranchEvent(FGameplayEventData 
 {
 	const int32 BranchStepIndex = FMath::RoundToInt(Payload.EventMagnitude);
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[P2_Skill07] BranchEvent=%d SlamHit=%s"),
-			BranchStepIndex,
-			bHasSlamHit ? TEXT("true") : TEXT("false")
-		),
-		FColor::Cyan
-	);
+
 
 	if (BranchStepIndex == SlamResultBranchStepIndex)
 	{
@@ -211,14 +187,7 @@ void UGA_Boss_Kashapa_Phase2_Skill07::TryJumpToSlamResultSection()
 
 	const bool bJumped = JumpToMontageSection(TargetSectionName);
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[P2_Skill07] JumpToSection=%s Result=%s"),
-			*TargetSectionName.ToString(),
-			bJumped ? TEXT("true") : TEXT("false")
-		),
-		FColor::Yellow
-	);
+	
 }
 
 bool UGA_Boss_Kashapa_Phase2_Skill07::JumpToMontageSection(FName SectionName)

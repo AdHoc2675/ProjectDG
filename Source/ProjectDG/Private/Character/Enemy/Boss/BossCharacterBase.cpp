@@ -12,6 +12,7 @@
 #include "GAS/Attributes/DG_BossAttributeSet.h"
 #include "GAS/Attributes/DG_EnemyAttributeSet.h"
 #include "GameplayAbilitySpec.h"
+#include "AI/Controller/BossAIController.h"
 
 namespace
 {
@@ -50,6 +51,10 @@ namespace
 ABossCharacterBase::ABossCharacterBase()
 {
 	BossAttributeSet = CreateDefaultSubobject<UDG_BossAttributeSet>(TEXT("BossAttributeSet"));
+	
+	AIControllerClass = ABossAIController::StaticClass();
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+
 
 	if (MinimapMarkerComponent)
 	{

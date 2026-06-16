@@ -7,6 +7,9 @@
 #include "Character/Enemy/Boss/BossCharacterBase.h"
 #include "Character/Enemy/Data/EnemySkillData.h"
 #include "Core/DG_Debug.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
+#include "GameFramework/Pawn.h"
 
 UBTTask_BossActivateAbility::UBTTask_BossActivateAbility()
 {
@@ -14,7 +17,7 @@ UBTTask_BossActivateAbility::UBTTask_BossActivateAbility()
 
 	bNotifyTick = true;
 
-	// ActiveASC / ActiveAbilityHandle / LastActivatedSkillTag를 노드가 들고 있으므로
+	// ActiveASC / ActiveAbilityHandle / LastActivatedSkillTag / LastSelectedTargetActor를 노드가 들고 있으므로
 	// AI별 인스턴스가 필요함.
 	bCreateNodeInstance = true;
 }
@@ -50,95 +53,76 @@ EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(
 		ActiveASC = ASC;
 		ActiveAbilityHandle = RunningAbilityHandle;
 
-		if (bDebugLog)
-		{
-			Debug::Print(
-				TEXT("[BTTask_BossActivateAbility] Wait: ability already active"),
-				FColor::Silver
-			);
-		}
+		
 
 		return EBTNodeResult::InProgress;
 	}
 
 	UBlackboardComponent* BlackboardComp = OwnerComp.GetBlackboardComponent();
-	AActor* TargetActor = nullptr;
 
-	if (BlackboardComp)
-	{
-		TargetActor = Cast<AActor>(
-			BlackboardComp->GetValueAsObject(TargetActorKeyName)
-		);
-	}
-
-	if (!TargetActor)
-	{
-		if (bDebugLog)
-		{
-			Debug::Print(
-				TEXT("[BTTask_BossActivateAbility] Failed: TargetActor is null"),
-				FColor::Red
-			);
-		}
-
-		return EBTNodeResult::Failed;
-	}
-
+	AActor* SelectedTargetActor = nullptr;
 	UEnemySkillData* SelectedSkillData = nullptr;
 
 	if (SkillData)
 	{
 		// 강제 테스트용.
 		SelectedSkillData = SkillData;
+
+		if (BlackboardComp)
+		{
+			SelectedTargetActor = Cast<AActor>(
+				BlackboardComp->GetValueAsObject(TargetActorKeyName)
+			);
+		}
+
+		if (!SelectedTargetActor)
+		{
+			const TArray<AActor*> TargetCandidates = GatherTargetCandidates(
+				BossCharacter,
+				BlackboardComp
+			);
+
+			if (TargetCandidates.Num() > 0)
+			{
+				SelectedTargetActor = TargetCandidates[0];
+			}
+		}
 	}
 	else
 	{
 		SelectedSkillData = SelectSkillData(
 			BossCharacter,
 			ASC,
-			TargetActor
+			BlackboardComp,
+			SelectedTargetActor
 		);
 	}
 
-	if (!SelectedSkillData)
+	if (!SelectedSkillData || !SelectedTargetActor)
 	{
-		if (bDebugLog)
-		{
-			const float DistanceToTarget = CalculateDistanceToTarget(
-				BossCharacter,
-				TargetActor
-			);
-
-			Debug::Print(
-				FString::Printf(
-					TEXT("[BTTask_BossActivateAbility] Failed: no selected skill. MoveTo allowed. Distance=%.1f"),
-					DistanceToTarget
-				),
-				FColor::Silver
-			);
-		}
+		
 
 		// Failed를 반환해야 BT가 아래 MoveTo TargetActor로 내려감.
 		return EBTNodeResult::Failed;
 	}
 
+	if (BlackboardComp)
+	{
+		BlackboardComp->SetValueAsObject(
+			TargetActorKeyName,
+			SelectedTargetActor
+		);
+	}
+
 	if (!IsValidCandidateSkillData(
 		BossCharacter,
 		ASC,
-		TargetActor,
-		SelectedSkillData
+		SelectedTargetActor,
+		SelectedSkillData,
+		SkillData != nullptr
 	))
 	{
-		if (bDebugLog)
-		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[BTTask_BossActivateAbility] Failed: invalid selected skill. Skill=%s"),
-					*GetNameSafe(SelectedSkillData)
-				),
-				FColor::Red
-			);
-		}
+		
 
 		return EBTNodeResult::Failed;
 	}
@@ -150,32 +134,13 @@ EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(
 
 	if (!AbilitySpec)
 	{
-		if (bDebugLog)
-		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[BTTask_BossActivateAbility] Failed: ability spec not found. Skill=%s"),
-					*GetNameSafe(SelectedSkillData)
-				),
-				FColor::Red
-			);
-		}
-
+		
 		return EBTNodeResult::Failed;
 	}
 
 	if (!CanActivateSkillSpec(ASC, *AbilitySpec))
 	{
-		if (bDebugLog)
-		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[BTTask_BossActivateAbility] Failed: cannot activate ability. Skill=%s"),
-					*GetNameSafe(SelectedSkillData)
-				),
-				FColor::Silver
-			);
-		}
+		
 
 		return EBTNodeResult::Failed;
 	}
@@ -184,7 +149,7 @@ EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(
 	{
 		RotateBossToTarget(
 			BossCharacter,
-			TargetActor
+			SelectedTargetActor
 		);
 	}
 
@@ -193,16 +158,7 @@ EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(
 
 	if (!bActivated)
 	{
-		if (bDebugLog)
-		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[BTTask_BossActivateAbility] Failed: TryActivateAbility failed. Skill=%s"),
-					*GetNameSafe(SelectedSkillData)
-				),
-				FColor::Red
-			);
-		}
+		
 
 		return EBTNodeResult::Failed;
 	}
@@ -210,22 +166,16 @@ EBTNodeResult::Type UBTTask_BossActivateAbility::ExecuteTask(
 	ActiveASC = ASC;
 	ActiveAbilityHandle = ActivatedAbilityHandle;
 	LastActivatedSkillTag = SelectedSkillData->SkillTag;
+	LastSelectedTargetActor = SelectedTargetActor;
 
 	if (bDebugLog)
 	{
 		const float DistanceToTarget = CalculateDistanceToTarget(
 			BossCharacter,
-			TargetActor
+			SelectedTargetActor
 		);
 
-		Debug::Print(
-			FString::Printf(
-				TEXT("[BTTask_BossActivateAbility] Activated and waiting. Skill=%s Distance=%.1f"),
-				*GetNameSafe(SelectedSkillData),
-				DistanceToTarget
-			),
-			FColor::Green
-		);
+		
 	}
 
 	return EBTNodeResult::InProgress;
@@ -258,14 +208,7 @@ void UBTTask_BossActivateAbility::TickTask(
 
 	if (!IsAbilitySpecActiveByHandle(ASC, ActiveAbilityHandle))
 	{
-		if (bDebugLog)
-		{
-			Debug::Print(
-				TEXT("[BTTask_BossActivateAbility] Ability finished. Resume BT"),
-				FColor::Silver
-			);
-		}
-
+		
 		ClearActiveAbilityState();
 
 		FinishLatentTask(
@@ -342,215 +285,306 @@ bool UBTTask_BossActivateAbility::IsAbilitySpecActiveByHandle(
 UEnemySkillData* UBTTask_BossActivateAbility::SelectSkillData(
 	ABossCharacterBase* BossCharacter,
 	UAbilitySystemComponent* ASC,
-	AActor* TargetActor
+	UBlackboardComponent* BlackboardComp,
+	AActor*& OutSelectedTargetActor
 ) const
 {
-	if (!BossCharacter || !ASC || !TargetActor)
+	OutSelectedTargetActor = nullptr;
+
+	if (!BossCharacter || !ASC)
 	{
 		return nullptr;
 	}
 
-	const float DistanceToTarget = CalculateDistanceToTarget(
-		BossCharacter,
-		TargetActor
-	);
-
-	if (bUseFarGapClosePolicy && DistanceToTarget >= FarRange)
+	if (!bUseSmartPartyTargetSelection)
 	{
-		// 1. 먼 거리에서는 접근 공격을 우선 시도.
-		UEnemySkillData* GapCloseSkillData = SelectWeightedSkillData(
-			BossCharacter,
-			ASC,
-			TargetActor,
-			true
-		);
+		AActor* BlackboardTargetActor = nullptr;
 
-		if (GapCloseSkillData)
+		if (BlackboardComp)
 		{
-			if (bDebugLog)
-			{
-				Debug::Print(
-					FString::Printf(
-						TEXT("[BTTask_BossActivateAbility] Far policy selected GapCloser. Skill=%s Distance=%.1f"),
-						*GetNameSafe(GapCloseSkillData),
-						DistanceToTarget
-					),
-					FColor::Cyan
-				);
-			}
-
-			return GapCloseSkillData;
+			BlackboardTargetActor = Cast<AActor>(
+				BlackboardComp->GetValueAsObject(TargetActorKeyName)
+			);
 		}
 
-		// 2. 접근 공격이 쿨다운/조건 때문에 불가능하면,
-		//    일정 확률로 스킬 선택을 포기해서 MoveTo로 내려간다.
-		if (FMath::FRand() < FarMoveToChanceWhenNoGapCloser)
+		if (!BlackboardTargetActor)
 		{
-			if (bDebugLog)
-			{
-				Debug::Print(
-					FString::Printf(
-						TEXT("[BTTask_BossActivateAbility] Far policy selected MoveTo. Distance=%.1f"),
-						DistanceToTarget
-					),
-					FColor::Silver
-				);
-			}
-
 			return nullptr;
 		}
 
-		// 3. 나머지 확률로만 장판/원거리 견제기 허용.
-		if (bDebugLog)
-		{
-			Debug::Print(
-				FString::Printf(
-					TEXT("[BTTask_BossActivateAbility] Far policy allows ranged pattern. Distance=%.1f"),
-					DistanceToTarget
-				),
-				FColor::Yellow
-			);
-		}
-	}
+		OutSelectedTargetActor = BlackboardTargetActor;
 
-	return SelectWeightedSkillData(
-		BossCharacter,
-		ASC,
-		TargetActor,
-		false
-	);
-}
-
-UEnemySkillData* UBTTask_BossActivateAbility::SelectWeightedSkillData(
-	ABossCharacterBase* BossCharacter,
-	UAbilitySystemComponent* ASC,
-	AActor* TargetActor,
-	bool bGapCloseOnly
-) const
-{
-	if (!BossCharacter || !ASC || !TargetActor)
-	{
-		return nullptr;
-	}
-
-	const TArray<UEnemySkillData*> SkillDataList = BossCharacter->GetAttackSkillDataList();
-
-	TArray<UEnemySkillData*> ValidCandidates;
-
-	for (UEnemySkillData* CandidateSkillData : SkillDataList)
-	{
-		if (!IsValidCandidateSkillData(
+		FBossSkillTargetCandidate Candidate;
+		if (SelectSmartSkillTargetCandidate(
 			BossCharacter,
 			ASC,
-			TargetActor,
-			CandidateSkillData
+			BlackboardComp,
+			Candidate
 		))
 		{
-			continue;
+			OutSelectedTargetActor = Candidate.TargetActor;
+			return Candidate.SkillData;
 		}
 
-		if (bGapCloseOnly && !IsGapCloseSkillData(CandidateSkillData))
-		{
-			continue;
-		}
-
-		ValidCandidates.Add(CandidateSkillData);
+		return nullptr;
 	}
 
-	if (ValidCandidates.Num() <= 0)
+	FBossSkillTargetCandidate Candidate;
+	if (!SelectSmartSkillTargetCandidate(
+		BossCharacter,
+		ASC,
+		BlackboardComp,
+		Candidate
+	))
 	{
 		return nullptr;
 	}
 
-	// 직전 스킬 반복 방지.
-	// 단, 후보가 여러 개 있을 때만 제거한다.
-	if (bAvoidRepeatingLastSkill && LastActivatedSkillTag.IsValid() && ValidCandidates.Num() > 1)
-	{
-		const int32 OriginalCount = ValidCandidates.Num();
+	OutSelectedTargetActor = Candidate.TargetActor;
+	return Candidate.SkillData;
+}
 
-		ValidCandidates.RemoveAll(
-			[this](const UEnemySkillData* CandidateSkillData)
-			{
-				return CandidateSkillData &&
-					CandidateSkillData->SkillTag.IsValid() &&
-					CandidateSkillData->SkillTag == LastActivatedSkillTag;
-			}
+bool UBTTask_BossActivateAbility::SelectSmartSkillTargetCandidate(
+	ABossCharacterBase* BossCharacter,
+	UAbilitySystemComponent* ASC,
+	UBlackboardComponent* BlackboardComp,
+	FBossSkillTargetCandidate& OutCandidate
+) const
+{
+	OutCandidate = FBossSkillTargetCandidate();
+
+	if (!BossCharacter || !ASC)
+	{
+		return false;
+	}
+
+	AActor* BlackboardTargetActor = nullptr;
+	if (BlackboardComp)
+	{
+		BlackboardTargetActor = Cast<AActor>(
+			BlackboardComp->GetValueAsObject(TargetActorKeyName)
 		);
+	}
 
-		if (ValidCandidates.Num() <= 0)
+	const TArray<AActor*> TargetCandidates = GatherTargetCandidates(
+		BossCharacter,
+		BlackboardComp
+	);
+
+	if (TargetCandidates.Num() <= 0)
+	{
+		return false;
+	}
+
+	const TArray<TObjectPtr<UEnemySkillData>>& SkillDataList =
+		BossCharacter->GetAttackSkillDataList();
+
+	TArray<FBossSkillTargetCandidate> Candidates;
+
+	bool bAllTargetsAreFar = true;
+
+	for (const TObjectPtr<UEnemySkillData>& SkillDataPtr : SkillDataList)
+	{
+		UEnemySkillData* CandidateSkillData = SkillDataPtr.Get();
+		if (!CandidateSkillData)
 		{
-			// 혹시 전부 제거되면 원래 로직을 유지해야 하므로 반복 방지는 포기.
-			for (UEnemySkillData* CandidateSkillData : SkillDataList)
+			continue;
+		}
+
+		for (AActor* TargetActor : TargetCandidates)
+		{
+			if (!IsValidCandidateSkillData(
+				BossCharacter,
+				ASC,
+				TargetActor,
+				CandidateSkillData
+			))
 			{
-				if (!IsValidCandidateSkillData(
-					BossCharacter,
-					ASC,
-					TargetActor,
-					CandidateSkillData
-				))
-				{
-					continue;
-				}
-
-				if (bGapCloseOnly && !IsGapCloseSkillData(CandidateSkillData))
-				{
-					continue;
-				}
-
-				ValidCandidates.Add(CandidateSkillData);
+				continue;
 			}
-		}
-		else if (bDebugLog && OriginalCount != ValidCandidates.Num())
-		{
-			Debug::Print(
-				TEXT("[BTTask_BossActivateAbility] Avoid repeated last skill"),
-				FColor::Silver
+
+			const float Distance = CalculateDistanceToTarget(
+				BossCharacter,
+				TargetActor
 			);
+
+			if (Distance < FarRange)
+			{
+				bAllTargetsAreFar = false;
+			}
+
+			FBossSkillTargetCandidate Candidate;
+			Candidate.SkillData = CandidateSkillData;
+			Candidate.TargetActor = TargetActor;
+			Candidate.Distance = Distance;
+			Candidate.bIsGapCloseSkill = IsGapCloseSkillData(CandidateSkillData);
+			Candidate.Score = CalculateSkillTargetScore(
+				BossCharacter,
+				CandidateSkillData,
+				TargetActor,
+				BlackboardTargetActor
+			);
+
+			if (Candidate.Score <= 0.0f)
+			{
+				continue;
+			}
+
+			Candidates.Add(Candidate);
 		}
 	}
 
-	float TotalWeight = 0.0f;
-
-	for (const UEnemySkillData* CandidateSkillData : ValidCandidates)
+	if (Candidates.Num() <= 0)
 	{
-		if (!CandidateSkillData)
-		{
-			continue;
-		}
-
-		TotalWeight += FMath::Max(CandidateSkillData->SelectionWeight, 0.0f);
+		return false;
 	}
 
-	if (TotalWeight <= 0.0f)
+	if (bUseFarGapClosePolicy &&
+		bAllTargetsAreFar &&
+		!HasAnyGapCloseCandidate(Candidates) &&
+		FMath::FRand() < FarMoveToChanceWhenNoGapCloser)
 	{
-		return nullptr;
+	
+
+		return false;
 	}
 
-	float RandomValue = FMath::FRandRange(0.0f, TotalWeight);
-
-	for (UEnemySkillData* CandidateSkillData : ValidCandidates)
+	float TotalScore = 0.0f;
+	for (const FBossSkillTargetCandidate& Candidate : Candidates)
 	{
-		if (!CandidateSkillData)
-		{
-			continue;
-		}
+		TotalScore += FMath::Max(Candidate.Score, 0.0f);
+	}
 
-		RandomValue -= FMath::Max(CandidateSkillData->SelectionWeight, 0.0f);
+	if (TotalScore <= 0.0f)
+	{
+		return false;
+	}
+
+	float RandomValue = FMath::FRandRange(0.0f, TotalScore);
+
+	for (const FBossSkillTargetCandidate& Candidate : Candidates)
+	{
+		RandomValue -= FMath::Max(Candidate.Score, 0.0f);
 
 		if (RandomValue <= 0.0f)
 		{
-			return CandidateSkillData;
+			OutCandidate = Candidate;
+
+			
+
+			return true;
 		}
 	}
 
-	return ValidCandidates.Last();
+	OutCandidate = Candidates.Last();
+
+	return true;
+}
+
+TArray<AActor*> UBTTask_BossActivateAbility::GatherTargetCandidates(
+	ABossCharacterBase* BossCharacter,
+	UBlackboardComponent* BlackboardComp
+) const
+{
+	TArray<AActor*> Result;
+
+	if (!BossCharacter)
+	{
+		return Result;
+	}
+
+	auto AddTargetIfValid = [this, BossCharacter, &Result](AActor* TargetActor)
+	{
+		if (!IsValidTargetCandidate(BossCharacter, TargetActor))
+		{
+			return;
+		}
+
+		Result.AddUnique(TargetActor);
+	};
+
+	if (BlackboardComp)
+		
+	{
+		AActor* BlackboardTargetActor = Cast<AActor>(
+			BlackboardComp->GetValueAsObject(TargetActorKeyName)
+		);
+
+		AddTargetIfValid(BlackboardTargetActor);
+	}
+
+	if (!bSearchPlayerPawnsAsTargets)
+	{
+		return Result;
+	}
+
+	UWorld* World = BossCharacter->GetWorld();
+	if (!World)
+	{
+		return Result;
+	}
+	
+	for (TActorIterator<APawn> It(World); It; ++It)
+	{
+		APawn* Pawn = *It;
+		if (!Pawn)
+		{
+			continue;
+		}
+
+		if (!Pawn->IsPlayerControlled())
+		{
+			continue;
+		}
+
+		AddTargetIfValid(Pawn);
+	}
+
+	return Result;
+}
+
+bool UBTTask_BossActivateAbility::IsValidTargetCandidate(
+	ABossCharacterBase* BossCharacter,
+	AActor* TargetActor
+) const
+{
+	if (!BossCharacter || !IsValid(TargetActor))
+	{
+		return false;
+	}
+
+	if (TargetActor == BossCharacter)
+	{
+		return false;
+	}
+
+	if (TargetActor->IsActorBeingDestroyed())
+	{
+		return false;
+	}
+
+	if (MaxTargetSearchRange > 0.0f)
+	{
+		const float Distance = CalculateDistanceToTarget(
+			BossCharacter,
+			TargetActor
+		);
+
+		if (Distance > MaxTargetSearchRange)
+		{
+			return false;
+		}
+	}
+
+	return true;
 }
 
 bool UBTTask_BossActivateAbility::IsValidCandidateSkillData(
 	ABossCharacterBase* BossCharacter,
 	UAbilitySystemComponent* ASC,
 	AActor* TargetActor,
-	UEnemySkillData* CandidateSkillData
+	UEnemySkillData* CandidateSkillData,
+	bool bIgnoreSelectionWeight
 ) const
 {
 	if (!BossCharacter || !ASC || !TargetActor || !CandidateSkillData)
@@ -563,7 +597,7 @@ bool UBTTask_BossActivateAbility::IsValidCandidateSkillData(
 		return false;
 	}
 
-	if (CandidateSkillData->SelectionWeight <= 0.0f)
+	if (!bIgnoreSelectionWeight && CandidateSkillData->SelectionWeight <= 0.0f)
 	{
 		return false;
 	}
@@ -615,6 +649,125 @@ bool UBTTask_BossActivateAbility::IsValidCandidateSkillData(
 	return true;
 }
 
+float UBTTask_BossActivateAbility::CalculateSkillTargetScore(
+	ABossCharacterBase* BossCharacter,
+	UEnemySkillData* CandidateSkillData,
+	AActor* TargetActor,
+	AActor* BlackboardTargetActor
+) const
+{
+	if (!BossCharacter || !CandidateSkillData || !TargetActor)
+	{
+		return 0.0f;
+	}
+
+	float Score = FMath::Max(CandidateSkillData->SelectionWeight, 0.0f);
+	if (Score <= 0.0f)
+	{
+		return 0.0f;
+	}
+
+	const float Distance = CalculateDistanceToTarget(
+		BossCharacter,
+		TargetActor
+	);
+
+	if (bUseDistanceFitScore)
+	{
+		Score *= CalculateDistanceFitScore(
+			CandidateSkillData,
+			Distance
+		);
+	}
+
+	if (TargetActor == BlackboardTargetActor)
+	{
+		Score *= CurrentBlackboardTargetScoreMultiplier;
+	}
+
+	AActor* LastTargetActor = LastSelectedTargetActor.Get();
+	if (LastTargetActor && TargetActor == LastTargetActor)
+	{
+		Score *= RecentlySelectedTargetScoreMultiplier;
+	}
+	else if (LastTargetActor)
+	{
+		Score *= TargetSwitchScoreMultiplier;
+	}
+
+	if (bAvoidRepeatingLastSkill &&
+		LastActivatedSkillTag.IsValid() &&
+		CandidateSkillData->SkillTag.IsValid() &&
+		CandidateSkillData->SkillTag == LastActivatedSkillTag)
+	{
+		Score *= RepeatedLastSkillScoreMultiplier;
+	}
+
+	if (bUseFarGapClosePolicy && Distance >= FarRange)
+	{
+		if (IsGapCloseSkillData(CandidateSkillData))
+		{
+			Score *= FarGapCloseScoreMultiplier;
+		}
+		else
+		{
+			Score *= FarNonGapCloseScoreMultiplier;
+		}
+	}
+
+	return Score;
+}
+
+float UBTTask_BossActivateAbility::CalculateDistanceFitScore(
+	UEnemySkillData* CandidateSkillData,
+	float Distance
+) const
+{
+	if (!CandidateSkillData)
+	{
+		return 0.0f;
+	}
+
+	const float MinRange = FMath::Max(CandidateSkillData->MinRange, 0.0f);
+	const float MaxRange = CandidateSkillData->MaxRange > 0.0f
+		? CandidateSkillData->MaxRange
+		: MaxTargetSearchRange;
+
+	if (MaxRange <= 0.0f)
+	{
+		return 1.0f;
+	}
+
+	if (Distance < MinRange || Distance > MaxRange)
+	{
+		return 0.0f;
+	}
+
+	const float RangeSize = MaxRange - MinRange;
+	if (RangeSize <= KINDA_SMALL_NUMBER)
+	{
+		return 1.0f;
+	}
+
+	const float IdealDistance = (MinRange + MaxRange) * 0.5f;
+	const float HalfRange = RangeSize * 0.5f;
+
+	const float NormalizedDistanceFromIdeal =
+		FMath::Clamp(
+			FMath::Abs(Distance - IdealDistance) / HalfRange,
+			0.0f,
+			1.0f
+		);
+
+	const float FitAlpha = 1.0f - NormalizedDistanceFromIdeal;
+
+	return FMath::Lerp(
+		MinDistanceFitScore,
+		1.0f,
+		FitAlpha
+	);
+}
+
 bool UBTTask_BossActivateAbility::IsGapCloseSkillData(
 	const UEnemySkillData* CandidateSkillData
 ) const
@@ -637,6 +790,21 @@ bool UBTTask_BossActivateAbility::IsGapCloseSkillData(
 		}
 
 		if (CandidateSkillData->SkillTag == GapCloseSkillTag)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool UBTTask_BossActivateAbility::HasAnyGapCloseCandidate(
+	const TArray<FBossSkillTargetCandidate>& Candidates
+) const
+{
+	for (const FBossSkillTargetCandidate& Candidate : Candidates)
+	{
+		if (Candidate.bIsGapCloseSkill)
 		{
 			return true;
 		}

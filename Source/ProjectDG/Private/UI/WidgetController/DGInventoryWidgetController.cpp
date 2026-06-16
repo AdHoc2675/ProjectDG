@@ -34,6 +34,7 @@ void UDGInventoryWidgetController::BroadcastInitialValues()
 			if (ADG_PlayerState* PS = PlayerPawn->GetPlayerState<ADG_PlayerState>())
 			{
 				OnGoldChanged.Broadcast(PS->GetGold());
+				OnPlayerLevelChanged.Broadcast(PS->GetCharacterLevel());
 			}
 		}
 	}
@@ -59,6 +60,7 @@ void UDGInventoryWidgetController::BindCallbacksToDependencies()
 		if (ADG_PlayerState* PS = PlayerController->GetPlayerState<ADG_PlayerState>())
 		{
 			PS->OnGoldChangedDelegate.AddDynamic(this, &UDGInventoryWidgetController::OnGoldChangedCallback);
+			PS->OnLevelChangedDelegate.AddDynamic(this, &UDGInventoryWidgetController::OnPlayerLevelChangedCallback);
 		}
 	}
 
@@ -178,4 +180,9 @@ void UDGInventoryWidgetController::SwitchTab(EDGItemType TabType)
 void UDGInventoryWidgetController::OnGoldChangedCallback(int32 NewGold)
 {
 	OnGoldChanged.Broadcast(NewGold);
+}
+
+void UDGInventoryWidgetController::OnPlayerLevelChangedCallback(int32 NewLevel)
+{
+	OnPlayerLevelChanged.Broadcast(NewLevel);
 }

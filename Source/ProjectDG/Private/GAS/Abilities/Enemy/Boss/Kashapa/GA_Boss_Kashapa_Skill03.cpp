@@ -81,14 +81,7 @@ void UGA_Boss_Kashapa_Skill03::OnEnemySkillHitStepExecuted(
 	const TArray<AActor*>& HitActors
 )
 {
-	Debug::Print(
-		FString::Printf(
-			TEXT("[Skill03] HitStep=%d HitActors=%d"),
-			StepIndex,
-			HitActors.Num()
-		),
-		FColor::Red
-	);
+	
 
 	if (StepIndex >= MainWaveFirstStepIndex && StepIndex <= MainWaveLastStepIndex)
 	{
@@ -96,10 +89,7 @@ void UGA_Boss_Kashapa_Skill03::OnEnemySkillHitStepExecuted(
 		{
 			bHasAnyMainWaveHit = true;
 
-			Debug::Print(
-				TEXT("[Skill03] MainWave Hit Saved"),
-				FColor::Green
-			);
+			
 		}
 
 		return;
@@ -111,10 +101,7 @@ void UGA_Boss_Kashapa_Skill03::OnEnemySkillHitStepExecuted(
 		{
 			bHasFirstFollowUpHit = true;
 
-			Debug::Print(
-				TEXT("[Skill03] FirstFollowUp Hit Saved"),
-				FColor::Green
-			);
+			
 		}
 
 		return;
@@ -223,17 +210,11 @@ void UGA_Boss_Kashapa_Skill03::RegisterBossSkillBranchEvent()
 
 	if (!BossSkillBranchEventTag.IsValid())
 	{
-		Debug::Print(TEXT("[Skill03] BossSkillBranchEventTag Invalid"), FColor::Red);
+		
 		return;
 	}
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[Skill03] Register Branch Event: %s"),
-			*BossSkillBranchEventTag.ToString()
-		),
-		FColor::Cyan
-	);
+	
 
 	BossSkillBranchEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this,
@@ -245,7 +226,7 @@ void UGA_Boss_Kashapa_Skill03::RegisterBossSkillBranchEvent()
 
 	if (!BossSkillBranchEventTask)
 	{
-		Debug::Print(TEXT("[Skill03] BossSkillBranchEventTask Invalid"), FColor::Red);
+		
 		return;
 	}
 
@@ -261,15 +242,7 @@ void UGA_Boss_Kashapa_Skill03::OnBossSkillBranchEvent(FGameplayEventData Payload
 {
 	const int32 BranchStepIndex = FMath::RoundToInt(Payload.EventMagnitude);
 
-	Debug::Print(
-		FString::Printf(
-			TEXT("[Skill03] BranchEvent=%d MainHit=%s FirstHit=%s"),
-			BranchStepIndex,
-			bHasAnyMainWaveHit ? TEXT("true") : TEXT("false"),
-			bHasFirstFollowUpHit ? TEXT("true") : TEXT("false")
-		),
-		FColor::Cyan
-	);
+	
 
 	if (BranchStepIndex == MainToFirstFollowUpBranchStepIndex)
 	{
@@ -359,13 +332,8 @@ bool UGA_Boss_Kashapa_Skill03::JumpToMontageSection(FName SectionName)
 		CurrentSkillData->Montage
 	);
 	
-	Debug::Print(
-	FString::Printf(
-		TEXT("[Skill03] JumpToSection: %s"),
-		*SectionName.ToString()
-	),
-	FColor::Yellow
-);
+	
+
 
 	return true;
 }

@@ -33,6 +33,8 @@ void UDGOverlayWidgetController::BroadcastInitialValues()
 	if (ADG_PlayerState* PS = Cast<ADG_PlayerState>(PlayerState))
 	{
 		OnPlayerLevelChanged.Broadcast(PS->GetCharacterLevel());
+		OnPlayerExpChanged.Broadcast(PS->GetCurrentExp());
+		OnPlayerMaxExpChanged.Broadcast(PS->GetMaxExp());
 	}
 
 	// 미니맵 초기 마커 
@@ -183,6 +185,8 @@ void UDGOverlayWidgetController::BindCallbacksToDependencies()
 	{
 		PS->OnSkillComboStepChanged.AddDynamic(this, &UDGOverlayWidgetController::OnSkillComboStepChanged);
 		PS->OnLevelChangedDelegate.AddDynamic(this, &UDGOverlayWidgetController::OnPlayerLevelChangedCallback);
+		PS->OnExpChangedDelegate.AddDynamic(this, &UDGOverlayWidgetController::OnPlayerExpChangedCallback);
+		PS->OnMaxExpChangedDelegate.AddDynamic(this, &UDGOverlayWidgetController::OnPlayerMaxExpChangedCallback);
 	}
 
 	// 플레이어 스킬의 쿨타임 태그들을 리스닝
@@ -532,4 +536,14 @@ void UDGOverlayWidgetController::OnSkillComboStepChanged(FGameplayTag SkillTag, 
 void UDGOverlayWidgetController::OnPlayerLevelChangedCallback(int32 NewLevel)
 {
 	OnPlayerLevelChanged.Broadcast(NewLevel);
+}
+
+void UDGOverlayWidgetController::OnPlayerExpChangedCallback(int32 NewExp)
+{
+	OnPlayerExpChanged.Broadcast(NewExp);
+}
+
+void UDGOverlayWidgetController::OnPlayerMaxExpChangedCallback(int32 NewMaxExp)
+{
+	OnPlayerMaxExpChanged.Broadcast(NewMaxExp);
 }
