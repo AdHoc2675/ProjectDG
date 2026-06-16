@@ -48,7 +48,7 @@ UDG_AttributeSet* ADG_PlayerState::GetDGAttributeSet() const
 	return AttributeSet;
 }
 
-void ADG_PlayerState::InitializeAttributesFromDataTable() const
+void ADG_PlayerState::InitializeAttributesFromDataTable()
 {
 	/**
 	 * DataTable 유효성 검사
@@ -90,18 +90,21 @@ void ADG_PlayerState::InitializeAttributesFromDataTable() const
 		return;
 	}
 
-	AttributeSet->InitHealth(InitRow->MaxHealth);
-	AttributeSet->InitMaxHealth(InitRow->MaxHealth);
+	float LevelMultiplier = FMath::Max(0.0f, static_cast<float>(Level - 1));
 
-	AttributeSet->InitMental(InitRow->MaxMental);
-	AttributeSet->InitMaxMental(InitRow->MaxMental);
+	AttributeSet->InitHealth(InitRow->MaxHealth + (InitRow->MaxHealthGrowth * LevelMultiplier));
+	AttributeSet->InitMaxHealth(InitRow->MaxHealth + (InitRow->MaxHealthGrowth * LevelMultiplier));
 
-	AttributeSet->InitStamina(InitRow->MaxStamina);
-	AttributeSet->InitMaxStamina(InitRow->MaxStamina);
+	AttributeSet->InitMental(InitRow->MaxMental + (InitRow->MaxMentalGrowth * LevelMultiplier));
+	AttributeSet->InitMaxMental(InitRow->MaxMental + (InitRow->MaxMentalGrowth * LevelMultiplier));
 
-	AttributeSet->InitMainStat(InitRow->MainStat);
-	AttributeSet->InitAttackPower(InitRow->AttackPower);
-	AttributeSet->InitDefense(InitRow->Defense);
+	AttributeSet->InitStamina(InitRow->MaxStamina + (InitRow->MaxStaminaGrowth * LevelMultiplier));
+	AttributeSet->InitMaxStamina(InitRow->MaxStamina + (InitRow->MaxStaminaGrowth * LevelMultiplier));
+
+	AttributeSet->InitMainStat(InitRow->MainStat + (InitRow->MainStatGrowth * LevelMultiplier));
+	AttributeSet->InitAttackPower(InitRow->AttackPower + (InitRow->AttackPowerGrowth * LevelMultiplier));
+	AttributeSet->InitDefense(InitRow->Defense + (InitRow->DefenseGrowth * LevelMultiplier));
+
 	AttributeSet->InitHealthCoefficient(InitRow->HealthCoefficient);
 	AttributeSet->InitDefenseCoefficient(InitRow->DefenseCoefficient);
 	AttributeSet->InitCriticalRate(InitRow->CriticalRate);
@@ -115,6 +118,13 @@ void ADG_PlayerState::InitializeAttributesFromDataTable() const
 	AttributeSet->InitMentalRecoveryIncrease(InitRow->MentalRecoveryIncrease);
 	AttributeSet->InitLifeSteal(InitRow->LifeSteal);
 	AttributeSet->InitGroggyDamageIncreaseRate(InitRow->GroggyDamageIncreaseRate);
+
+	int32 CalculatedMaxExp = InitRow->BaseMaxExp + (InitRow->MaxExpGrowthAmount * FMath::Max(0, Level - 1));
+	if (MaxExp != CalculatedMaxExp)
+	{
+		MaxExp = CalculatedMaxExp;
+		OnMaxExpChangedDelegate.Broadcast(MaxExp);
+	}
 }
 
 float ADG_PlayerState::GetSkillComboServerTime() const
@@ -349,6 +359,7 @@ void ADG_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(ADG_PlayerState, CharacterClassTag);
 	DOREPLIFETIME(ADG_PlayerState, Level);
 	DOREPLIFETIME(ADG_PlayerState, CurrentExp);
+	DOREPLIFETIME(ADG_PlayerState, MaxExp);
 	DOREPLIFETIME(ADG_PlayerState, OwnedGold);
 	DOREPLIFETIME(ADG_PlayerState, SkillComboStates);
 }
@@ -369,6 +380,11 @@ void ADG_PlayerState::OnRep_CurrentExp()
 	// 클라이언트에서 경험치 UI 갱신
 }
 
+void ADG_PlayerState::OnRep_MaxExp()
+{
+	OnMaxExpChangedDelegate.Broadcast(MaxExp);
+}
+
 void ADG_PlayerState::OnRep_SkillComboStates()
 {
 	for (const FPlayerSkillChainRuntimeState& State : SkillComboStates)
@@ -384,6 +400,12 @@ void ADG_PlayerState::AddExpAndGold(int32 ExpAmount, int32 GoldAmount)
 	if (ExpAmount > 0)
 	{
 		CurrentExp += ExpAmount;
+
+		while (CurrentExp >= MaxExp)
+		{
+			CurrentExp -= MaxExp;
+			LevelUp();
+		}
 	}
 
 	if (GoldAmount > 0)
@@ -392,8 +414,29 @@ void ADG_PlayerState::AddExpAndGold(int32 ExpAmount, int32 GoldAmount)
 		OnGoldChangedDelegate.Broadcast(OwnedGold);
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[DG_PlayerState] AddExpAndGold called. Exp: %d, Gold: %d, TotalExp: %d, TotalGold: %d"), ExpAmount, GoldAmount, CurrentExp, OwnedGold);
+	UE_LOG(LogTemp, Log, TEXT("[DG_PlayerState] AddExpAndGold called. Exp: %d, Gold: %d, TotalExp: %d, TotalGold: %d, Level: %d, MaxExp: %d"), ExpAmount, GoldAmount, CurrentExp, OwnedGold, Level, MaxExp);
 
+	ForceNetUpdate();
+}
+
+void ADG_PlayerState::LevelUp()
+{
+	if (!HasAuthority()) return;
+
+	Level++;
+
+	// 성장치가 반영되도록 스탯 재계산 및 적용
+	InitializeAttributesFromDataTable();
+
+	// 레벨업 시 체력/정신력 완전 회복 (필요시)
+	if (AttributeSet)
+	{
+		AttributeSet->SetHealth(AttributeSet->GetMaxHealth());
+		AttributeSet->SetMental(AttributeSet->GetMaxMental());
+		AttributeSet->SetStamina(AttributeSet->GetMaxStamina());
+	}
+
+	OnLevelChangedDelegate.Broadcast(Level);
 	ForceNetUpdate();
 }
 
