@@ -199,6 +199,12 @@ namespace DGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase2_Skill5, "Boss.Kashapa.Phase2.SKill5")
 	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase2_Skill6, "Boss.Kashapa.Phase2.SKill6")
 	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase2_Skill7, "Boss.Kashapa.Phase2.SKill7")
+	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase2_Skill8, "Boss.Kashapa.Phase2.SKill8")
+	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase2_Skill9, "Boss.Kashapa.Phase2.SKill9")
+	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase2_Skill10, "Boss.Kashapa.Phase2.SKill10")
+	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase2_Skill11, "Boss.Kashapa.Phase2.SKill11")
+	UE_DEFINE_GAMEPLAY_TAG(Boss_Kashapa_Phase2_Skill12, "Boss.Kashapa.Phase2.SKill12")
+	
 
 
 	// State

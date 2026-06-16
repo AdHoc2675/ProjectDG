@@ -11,7 +11,32 @@
 #include "GAS/Attributes/DG_BossAttributeSet.h"
 #include "GameplayAbilitySpec.h"
 #include "Materials/MaterialInterface.h"
-#include "Net/UnrealNetwork.h"
+
+namespace
+{
+	bool HasActiveEnemySkillDataAbility(const UAbilitySystemComponent* ASC)
+	{
+		if (!ASC)
+		{
+			return false;
+		}
+
+		for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+		{
+			if (!Spec.IsActive())
+			{
+				continue;
+			}
+
+			if (Cast<UEnemySkillData>(Spec.SourceObject.Get()))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+}
 
 ABossKashapaD::ABossKashapaD()
 {
@@ -22,7 +47,9 @@ void ABossKashapaD::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ABossKashapaD, CurrentPhaseIndex);
+	// CurrentPhaseIndex는 ABossCharacterBase로 이동했으므로
+	// 여기서 DOREPLIFETIME 하면 자식 클래스 중복 멤버 기준으로 빌드 에러가 난다.
+	// 외형 동기화 Replication은 추후 별도 정리.
 }
 
 void ABossKashapaD::BeginPlay()
@@ -96,22 +123,43 @@ void ABossKashapaD::UpdateHealthPhaseTags(float HealthRatio)
 		return;
 	}
 
+	UAbilitySystemComponent* ASC = GetCharacterAbilitySystemComponent();
+
+	if (HasActiveEnemySkillDataAbility(ASC))
+	{
+		if (!bHasPendingPhaseChange || PendingPhaseIndex != NextPhaseData->PhaseIndex)
+		{
+			bHasPendingPhaseChange = true;
+			PendingPhaseIndex = NextPhaseData->PhaseIndex;
+
+			UE_LOG(
+				LogTemp,
+				Warning,
+				TEXT("[BossKashapaD] Phase change pending. CurrentPhase=%d PendingPhase=%d"),
+				CurrentPhase,
+				PendingPhaseIndex
+			);
+		}
+
+		return;
+	}
+
 	ApplyPhaseDataByIndex(NextPhaseData->PhaseIndex);
 }
 
 void ABossKashapaD::OnRep_CurrentPhaseIndex()
 {
-	const FBossPhaseData* PhaseData = FindPhaseDataByIndex(CurrentPhaseIndex);
+	const FBossPhaseData* PhaseData = FindKashapaPhaseDataByIndex(CurrentPhaseIndex);
 	if (!PhaseData)
 	{
 		return;
 	}
 
-	CurrentSkillSetData = PhaseData->SkillSetData;
+	CurrentPhaseSkillSetData = PhaseData->SkillSetData;
 	ApplyPhaseVisual(*PhaseData);
 }
 
-const FBossPhaseData* ABossKashapaD::FindPhaseDataByIndex(int32 PhaseIndex) const
+const FBossPhaseData* ABossKashapaD::FindKashapaPhaseDataByIndex(int32 PhaseIndex) const
 {
 	if (!BossClassData)
 	{
@@ -131,18 +179,37 @@ const FBossPhaseData* ABossKashapaD::FindPhaseDataByIndex(int32 PhaseIndex) cons
 
 bool ABossKashapaD::ApplyPhaseDataByIndex(int32 PhaseIndex)
 {
-	const FBossPhaseData* PhaseData = FindPhaseDataByIndex(PhaseIndex);
+	const FBossPhaseData* PhaseData = FindKashapaPhaseDataByIndex(PhaseIndex);
 	if (!PhaseData)
 	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossKashapaD] ApplyPhaseDataByIndex Failed. PhaseIndex=%d"),
+			PhaseIndex
+		);
+
 		return false;
 	}
 
 	CurrentPhaseIndex = PhaseIndex;
-	CurrentSkillSetData = PhaseData->SkillSetData;
+	CurrentPhaseSkillSetData = PhaseData->SkillSetData;
+
+	bHasPendingPhaseChange = false;
+	PendingPhaseIndex = INDEX_NONE;
 
 	ApplyPhaseVisual(*PhaseData);
 	ApplyPhaseTags(*PhaseData);
-	GrantSkillSetAbilities(CurrentSkillSetData);
+	GrantSkillSetAbilities(CurrentPhaseSkillSetData);
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[BossKashapaD] Phase Applied. PhaseIndex=%d SkillSet=%s SkillCount=%d"),
+		CurrentPhaseIndex,
+		CurrentPhaseSkillSetData ? *CurrentPhaseSkillSetData->GetName() : TEXT("None"),
+		CurrentPhaseSkillSetData ? CurrentPhaseSkillSetData->Skills.Num() : 0
+	);
 
 	ForceNetUpdate();
 
@@ -283,12 +350,50 @@ const TArray<TObjectPtr<UEnemySkillData>>& ABossKashapaD::GetAttackSkillDataList
 {
 	static const TArray<TObjectPtr<UEnemySkillData>> EmptySkills;
 
-	if (!CurrentSkillSetData)
+	ABossKashapaD* MutableThis = const_cast<ABossKashapaD*>(this);
+
+	if (MutableThis->bHasPendingPhaseChange)
 	{
+		UAbilitySystemComponent* ASC = MutableThis->GetCharacterAbilitySystemComponent();
+
+		if (!HasActiveEnemySkillDataAbility(ASC))
+		{
+			const int32 PhaseIndexToApply = MutableThis->PendingPhaseIndex;
+			MutableThis->ApplyPhaseDataByIndex(PhaseIndexToApply);
+		}
+		else
+		{
+			UE_LOG(
+				LogTemp,
+				Warning,
+				TEXT("[BossKashapaD] Pending phase exists but active skill remains. PendingPhase=%d"),
+				MutableThis->PendingPhaseIndex
+			);
+		}
+	}
+
+	if (!CurrentPhaseSkillSetData)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossKashapaD] GetAttackSkillDataList Failed. CurrentPhaseSkillSetData is null. CurrentPhase=%d"),
+			CurrentPhaseIndex
+		);
+
 		return EmptySkills;
 	}
 
-	return CurrentSkillSetData->Skills;
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[BossKashapaD] GetAttackSkillDataList Phase=%d SkillSet=%s SkillCount=%d"),
+		CurrentPhaseIndex,
+		*CurrentPhaseSkillSetData->GetName(),
+		CurrentPhaseSkillSetData->Skills.Num()
+	);
+
+	return CurrentPhaseSkillSetData->Skills;
 }
 
 UEnemySkillData* ABossKashapaD::GetRandomAttackSkillData() const

@@ -4,8 +4,8 @@
 
 #include "AbilitySystemComponent.h"
 #include "Character/Enemy/Boss/Data/BossCharacterClassData.h"
-#include "Character/Enemy/Data/EnemySkillData.h"
 #include "Character/Enemy/Data/BossSkillSetData.h"
+#include "Character/Enemy/Data/EnemySkillData.h"
 #include "Components/UI/DGMinimapMarkerComponent.h"
 #include "Core/DG_GameplayTags.h"
 #include "GAS/Attributes/DG_AttributeSet.h"
@@ -15,35 +15,35 @@
 
 namespace
 {
-	namespace
+	bool HasGrantedEnemySkillDataAbility(
+		const UAbilitySystemComponent* ASC,
+		const UEnemySkillData* SkillData
+	)
 	{
-		bool HasGrantedEnemySkillDataAbility(const UAbilitySystemComponent* ASC, const UEnemySkillData* SkillData)
+		if (!ASC || !SkillData || !SkillData->AbilityClass)
 		{
-			if (!ASC || !SkillData || !SkillData->AbilityClass)
-			{
-				return false;
-			}
-
-			for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
-			{
-				if (!Spec.Ability)
-				{
-					continue;
-				}
-
-				if (Spec.Ability->GetClass() != SkillData->AbilityClass)
-				{
-					continue;
-				}
-
-				if (Spec.SourceObject.Get() == SkillData)
-				{
-					return true;
-				}
-			}
-
 			return false;
 		}
+
+		for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+		{
+			if (!Spec.Ability)
+			{
+				continue;
+			}
+
+			if (Spec.Ability->GetClass() != SkillData->AbilityClass)
+			{
+				continue;
+			}
+
+			if (Spec.SourceObject.Get() == SkillData)
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 }
 
@@ -168,7 +168,12 @@ void ABossCharacterBase::ApplyDefaultEffects()
 		{
 			if (EffectClass)
 			{
-				FGameplayEffectSpecHandle Spec = AbilitySystemComponent->MakeOutgoingSpec(EffectClass, 1.f, Context);
+				FGameplayEffectSpecHandle Spec = AbilitySystemComponent->MakeOutgoingSpec(
+					EffectClass,
+					1.f,
+					Context
+				);
+
 				if (Spec.IsValid())
 				{
 					AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
@@ -184,7 +189,12 @@ void ABossCharacterBase::ApplyDefaultEffects()
 		{
 			if (EffectClass)
 			{
-				FGameplayEffectSpecHandle Spec = AbilitySystemComponent->MakeOutgoingSpec(EffectClass, 1.f, Context);
+				FGameplayEffectSpecHandle Spec = AbilitySystemComponent->MakeOutgoingSpec(
+					EffectClass,
+					1.f,
+					Context
+				);
+
 				if (Spec.IsValid())
 				{
 					AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
@@ -221,7 +231,12 @@ void ABossCharacterBase::ApplyBossSpecialEffects()
 	{
 		if (EffectClass)
 		{
-			FGameplayEffectSpecHandle Spec = AbilitySystemComponent->MakeOutgoingSpec(EffectClass, 1.f, Context);
+			FGameplayEffectSpecHandle Spec = AbilitySystemComponent->MakeOutgoingSpec(
+				EffectClass,
+				1.f,
+				Context
+			);
+
 			if (Spec.IsValid())
 			{
 				AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
@@ -252,7 +267,10 @@ void ABossCharacterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
 		return;
 	}
 
-	const float MaxHealth = AbilitySystemComponent->GetNumericAttribute(UDG_AttributeSet::GetMaxHealthAttribute());
+	const float MaxHealth = AbilitySystemComponent->GetNumericAttribute(
+		UDG_AttributeSet::GetMaxHealthAttribute()
+	);
+
 	if (MaxHealth <= 0.f)
 	{
 		return;
@@ -328,17 +346,10 @@ void ABossCharacterBase::UpdateHealthPhaseTags(float HealthRatio)
 		return;
 	}
 
-	AbilitySystemComponent->RemoveLooseGameplayTag(DGGameplayTags::State_Boss_Phase_1, 1);
-	AbilitySystemComponent->RemoveLooseGameplayTag(DGGameplayTags::State_Boss_Phase_2, 1);
-	AbilitySystemComponent->RemoveLooseGameplayTag(DGGameplayTags::State_Boss_Phase_3, 1);
-
-	AbilitySystemComponent->AddLooseGameplayTag(
-		NextPhaseData->PhaseTag,
-		1,
-		EGameplayTagReplicationState::TagOnly
-	);
-
-	BossAttributeSet->SetCurrentPhase(static_cast<float>(NextPhaseData->PhaseIndex));
+	// 중요:
+	// GA 실행 중에는 PhaseTag / CurrentPhase / SkillSet을 즉시 바꾸지 않는다.
+	// 현재 GA가 정상 종료된 뒤 다음 스킬 선택 시점에 TryApplyPendingPhaseChange()에서 적용된다.
+	RequestPhaseChange(*NextPhaseData);
 }
 
 void ABossCharacterBase::GrantDefaultAbilities()
@@ -392,22 +403,57 @@ const TArray<TObjectPtr<UEnemySkillData>>& ABossCharacterBase::GetAttackSkillDat
 		return EmptySkills;
 	}
 
-	for (const FBossPhaseData& PhaseData : BossClassData->PhaseDataList)
+	// 다음 스킬 선택 직전, 대기 중인 페이즈 전환이 있고 현재 활성 GA가 없으면 여기서 적용.
+	const_cast<ABossCharacterBase*>(this)->TryApplyPendingPhaseChange();
+
+	if (CurrentPhaseSkillSetData)
 	{
-		if (PhaseData.PhaseIndex != 1)
-		{
-			continue;
-		}
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossCharacterBase] GetAttackSkillDataList CurrentPhaseIndex=%d SkillSet=%s SkillCount=%d"),
+			CurrentPhaseIndex,
+			*CurrentPhaseSkillSetData->GetName(),
+			CurrentPhaseSkillSetData->Skills.Num()
+		);
 
-		if (!PhaseData.SkillSetData)
-		{
-			return EmptySkills;
-		}
-
-		return PhaseData.SkillSetData->Skills;
+		return CurrentPhaseSkillSetData->Skills;
 	}
 
-	return EmptySkills;
+	// 초기 상태 보정:
+	// CurrentPhaseSkillSetData가 아직 세팅되지 않았다면 AttributeSet의 CurrentPhase 기준으로 1회 캐싱.
+	const int32 AttributePhase =
+		BossAttributeSet
+			? FMath::RoundToInt(BossAttributeSet->GetCurrentPhase())
+			: 1;
+
+	const FBossPhaseData* PhaseData = FindPhaseDataByIndex(AttributePhase);
+	if (!PhaseData || !PhaseData->SkillSetData)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossCharacterBase] GetAttackSkillDataList Failed. Phase=%d SkillSet=None"),
+			AttributePhase
+		);
+
+		return EmptySkills;
+	}
+
+	ABossCharacterBase* MutableThis = const_cast<ABossCharacterBase*>(this);
+	MutableThis->CurrentPhaseIndex = PhaseData->PhaseIndex;
+	MutableThis->CurrentPhaseSkillSetData = PhaseData->SkillSetData;
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[BossCharacterBase] GetAttackSkillDataList InitPhase=%d SkillSet=%s SkillCount=%d"),
+		MutableThis->CurrentPhaseIndex,
+		*MutableThis->CurrentPhaseSkillSetData->GetName(),
+		MutableThis->CurrentPhaseSkillSetData->Skills.Num()
+	);
+
+	return MutableThis->CurrentPhaseSkillSetData->Skills;
 }
 
 UEnemySkillData* ABossCharacterBase::GetRandomAttackSkillData() const
@@ -430,6 +476,156 @@ FGameplayTag ABossCharacterBase::GetAttributeSourceTag() const
 	}
 
 	return DGGameplayTags::Team_Enemy_Boss;
+}
+
+bool ABossCharacterBase::HasActiveEnemySkillAbility() const
+{
+	const UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC)
+	{
+		return false;
+	}
+
+	for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+	{
+		if (!Spec.IsActive())
+		{
+			continue;
+		}
+
+		if (Cast<UEnemySkillData>(Spec.SourceObject.Get()))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+const FBossPhaseData* ABossCharacterBase::FindPhaseDataByIndex(int32 PhaseIndex) const
+{
+	if (!BossClassData)
+	{
+		return nullptr;
+	}
+
+	for (const FBossPhaseData& PhaseData : BossClassData->PhaseDataList)
+	{
+		if (PhaseData.PhaseIndex == PhaseIndex)
+		{
+			return &PhaseData;
+		}
+	}
+
+	return nullptr;
+}
+
+void ABossCharacterBase::RequestPhaseChange(const FBossPhaseData& PhaseData)
+{
+	const int32 AttributeCurrentPhase =
+		BossAttributeSet
+			? FMath::RoundToInt(BossAttributeSet->GetCurrentPhase())
+			: CurrentPhaseIndex;
+
+	if (AttributeCurrentPhase == PhaseData.PhaseIndex)
+	{
+		return;
+	}
+
+	if (bHasPendingPhaseChange && PendingPhaseIndex == PhaseData.PhaseIndex)
+	{
+		return;
+	}
+
+	if (HasActiveEnemySkillAbility())
+	{
+		bHasPendingPhaseChange = true;
+		PendingPhaseIndex = PhaseData.PhaseIndex;
+
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossCharacterBase] Phase change pending. CurrentPhase=%d PendingPhase=%d"),
+			AttributeCurrentPhase,
+			PendingPhaseIndex
+		);
+
+		return;
+	}
+
+	ApplyPhaseChange(PhaseData);
+}
+
+void ABossCharacterBase::ApplyPhaseChange(const FBossPhaseData& PhaseData)
+{
+	if (!HasAuthority() || !AbilitySystemComponent || !BossAttributeSet)
+	{
+		return;
+	}
+
+	AbilitySystemComponent->RemoveLooseGameplayTag(DGGameplayTags::State_Boss_Phase_1, 1);
+	AbilitySystemComponent->RemoveLooseGameplayTag(DGGameplayTags::State_Boss_Phase_2, 1);
+	AbilitySystemComponent->RemoveLooseGameplayTag(DGGameplayTags::State_Boss_Phase_3, 1);
+
+	if (PhaseData.PhaseTag.IsValid())
+	{
+		AbilitySystemComponent->AddLooseGameplayTag(
+			PhaseData.PhaseTag,
+			1,
+			EGameplayTagReplicationState::TagOnly
+		);
+	}
+
+	BossAttributeSet->SetCurrentPhase(static_cast<float>(PhaseData.PhaseIndex));
+
+	CurrentPhaseIndex = PhaseData.PhaseIndex;
+	CurrentPhaseSkillSetData = PhaseData.SkillSetData;
+
+	bHasPendingPhaseChange = false;
+	PendingPhaseIndex = INDEX_NONE;
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[BossCharacterBase] Phase changed. PhaseIndex=%d PhaseTag=%s SkillSet=%s SkillCount=%d"),
+		CurrentPhaseIndex,
+		PhaseData.PhaseTag.IsValid() ? *PhaseData.PhaseTag.ToString() : TEXT("None"),
+		CurrentPhaseSkillSetData ? *CurrentPhaseSkillSetData->GetName() : TEXT("None"),
+		CurrentPhaseSkillSetData ? CurrentPhaseSkillSetData->Skills.Num() : 0
+	);
+
+	// Mesh / AnimClass / Material 변경 로직이 기존에 별도 함수로 있다면
+	// 여기서 호출해야 GA 종료 이후 안전하게 외형 전환된다.
+}
+
+void ABossCharacterBase::TryApplyPendingPhaseChange()
+{
+	if (!bHasPendingPhaseChange)
+	{
+		return;
+	}
+
+	if (HasActiveEnemySkillAbility())
+	{
+		return;
+	}
+
+	const FBossPhaseData* PendingPhaseData = FindPhaseDataByIndex(PendingPhaseIndex);
+	if (!PendingPhaseData)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossCharacterBase] Pending phase data not found. PendingPhaseIndex=%d"),
+			PendingPhaseIndex
+		);
+
+		bHasPendingPhaseChange = false;
+		PendingPhaseIndex = INDEX_NONE;
+		return;
+	}
+
+	ApplyPhaseChange(*PendingPhaseData);
 }
 
 void ABossCharacterBase::HandleDeath()
