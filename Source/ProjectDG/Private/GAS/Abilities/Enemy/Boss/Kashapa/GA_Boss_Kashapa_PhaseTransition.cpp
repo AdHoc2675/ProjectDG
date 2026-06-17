@@ -7,16 +7,15 @@
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
 #include "Character/Enemy/Boss/BossCharacterBase.h"
+#include "Character/Enemy/Boss/Data/BossCharacterClassData.h"
 #include "Character/Enemy/Data/EnemySkillData.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/DG_PlayerController.h"
 #include "LevelSequence.h"
-#include "LevelSequenceActor.h"
-#include "LevelSequencePlayer.h"
-#include "MovieSceneSequencePlaybackSettings.h"
 #include "TimerManager.h"
-#include "UObject/ConstructorHelpers.h"
 
 UGA_Boss_Kashapa_PhaseTransition::UGA_Boss_Kashapa_PhaseTransition()
 {
@@ -99,6 +98,8 @@ void UGA_Boss_Kashapa_PhaseTransition::ActivateAbility(
 
 	RegisterPhaseApplyEvent();
 
+	// 서버에서 직접 LS를 재생하지 않는다.
+	// 클라이언트 PlayerController RPC로 LS 재생 요청.
 	PlayPhaseTransitionCinematic();
 
 	// PlayMontageAndWait 사용 금지.
@@ -150,6 +151,7 @@ void UGA_Boss_Kashapa_PhaseTransition::EndAbility(
 		PhaseApplyEventTask = nullptr;
 	}
 
+	// 클라이언트 컷신 정지 + 카메라 복귀 요청.
 	StopPhaseTransitionCinematic();
 
 	Super::EndAbility(
@@ -222,25 +224,13 @@ void UGA_Boss_Kashapa_PhaseTransition::RegisterPhaseApplyEvent()
 
 	PhaseApplyEventTask->ReadyForActivation();
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] Wait PhaseApply Event Registered. Tag=%s"),
-		*PhaseApplyEventTag.ToString()
-	);
 }
 
 void UGA_Boss_Kashapa_PhaseTransition::OnPhaseApplyEventReceived(FGameplayEventData Payload)
 {
 	if (bPhaseAppliedByNotify || bPhaseApplyQueued)
 	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[GA_Boss_Kashapa_PhaseTransition] PhaseApply ignored. Already applied or queued. Applied=%s Queued=%s"),
-			bPhaseAppliedByNotify ? TEXT("true") : TEXT("false"),
-			bPhaseApplyQueued ? TEXT("true") : TEXT("false")
-		);
+		
 		return;
 	}
 
@@ -278,12 +268,7 @@ void UGA_Boss_Kashapa_PhaseTransition::QueuePendingPhaseApplyFromEvent(
 		false
 	);
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] PhaseApply queued. TargetPhase=%d"),
-		QueuedPhaseApplyIndex
-	);
+	
 }
 
 void UGA_Boss_Kashapa_PhaseTransition::ApplyQueuedPendingPhase()
@@ -316,13 +301,7 @@ void UGA_Boss_Kashapa_PhaseTransition::ApplyQueuedPendingPhase()
 		PlayPostPhaseApplyMontage();
 	}
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] Queued PhaseApply executed. TargetPhase=%d Applied=%s"),
-		TargetPhaseIndex,
-		bApplied ? TEXT("true") : TEXT("false")
-	);
+	
 }
 
 bool UGA_Boss_Kashapa_PhaseTransition::ApplyPendingPhaseFromEvent(const FGameplayEventData& Payload)
@@ -330,11 +309,7 @@ bool UGA_Boss_Kashapa_PhaseTransition::ApplyPendingPhaseFromEvent(const FGamepla
 	ABossCharacterBase* BossCharacter = Cast<ABossCharacterBase>(GetAvatarActorFromActorInfo());
 	if (!BossCharacter)
 	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[GA_Boss_Kashapa_PhaseTransition] BossCharacter invalid.")
-		);
+		
 		return false;
 	}
 
@@ -347,14 +322,7 @@ bool UGA_Boss_Kashapa_PhaseTransition::ApplyPendingPhaseFromEvent(const FGamepla
 	const bool bApplied = BossCharacter->ApplyPendingPhaseChangeFromNotify(TargetPhaseIndex);
 	bPhaseAppliedByNotify = bApplied;
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] PhaseApply Event Received. TargetPhase=%d Applied=%s Owner=%s"),
-		TargetPhaseIndex,
-		bApplied ? TEXT("true") : TEXT("false"),
-		*GetNameSafe(BossCharacter)
-	);
+	
 
 	return bApplied;
 }
@@ -364,12 +332,7 @@ bool UGA_Boss_Kashapa_PhaseTransition::PlayPhaseTransitionMontageManually(FName 
 	UEnemySkillData* CurrentSkillData = GetEnemySkillData();
 	if (!CurrentSkillData || !CurrentSkillData->Montage)
 	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[GA_Boss_Kashapa_PhaseTransition] Montage invalid. SkillData=%s"),
-			*GetNameSafe(CurrentSkillData)
-		);
+		
 		return false;
 	}
 
@@ -423,15 +386,15 @@ bool UGA_Boss_Kashapa_PhaseTransition::PlayPhaseTransitionMontageManually(FName 
 		CurrentSkillData->Montage
 	);
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] Montage played manually. Montage=%s Section=%s PlayRate=%.2f AnimInstance=%s"),
-		*GetNameSafe(CurrentSkillData->Montage),
-		StartSectionName != NAME_None ? *StartSectionName.ToString() : TEXT("None"),
-		PlayRate,
-		*GetNameSafe(AnimInstance)
-	);
+	if (ABossCharacterBase* BossCharacter = Cast<ABossCharacterBase>(Character))
+	{
+		BossCharacter->Multicast_PlayBossMontage(
+			CurrentSkillData->Montage,
+			PlayRate,
+			StartSectionName
+		);
+	}
+	
 
 	return true;
 }
@@ -442,13 +405,7 @@ bool UGA_Boss_Kashapa_PhaseTransition::PlayPostPhaseApplyMontage()
 
 	const bool bPlayed = PlayPhaseTransitionMontageManually(PostPhaseApplySectionName);
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] PostPhaseApply Montage Play Result=%s Section=%s"),
-		bPlayed ? TEXT("true") : TEXT("false"),
-		*PostPhaseApplySectionName.ToString()
-	);
+	
 
 	if (!bPlayed)
 	{
@@ -465,17 +422,7 @@ void UGA_Boss_Kashapa_PhaseTransition::OnPhaseTransitionMontageEnded(
 	bool bInterrupted
 )
 {
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] Montage Ended. Montage=%s Interrupted=%s PhaseApplied=%s PhaseQueued=%s WaitingPostApplyEnd=%s"),
-		*GetNameSafe(Montage),
-		bInterrupted ? TEXT("true") : TEXT("false"),
-		bPhaseAppliedByNotify ? TEXT("true") : TEXT("false"),
-		bPhaseApplyQueued ? TEXT("true") : TEXT("false"),
-		bWaitingForPostPhaseApplyMontageEnd ? TEXT("true") : TEXT("false")
-	);
-
+	
 	// PhaseApply 전, Mesh/AnimClass 교체로 인해 기존 Montage가 끊기는 경우가 있다.
 	// 이 Interrupt는 Ability 종료 조건이 아니다.
 	if (!bWaitingForPostPhaseApplyMontageEnd)
@@ -489,16 +436,7 @@ void UGA_Boss_Kashapa_PhaseTransition::OnPhaseTransitionMontageEnded(
 		return;
 	}
 
-	// PhaseApply 후 P2 AnimInstance에서 재생한 Montage가 끝났을 때만 종료.
-	if (bInterrupted)
-	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[GA_Boss_Kashapa_PhaseTransition] PostPhaseApply Montage interrupted. Keep ability alive.")
-		);
-		return;
-	}
+	
 
 	FinishPhaseTransitionByMontageEnd();
 }
@@ -509,11 +447,7 @@ void UGA_Boss_Kashapa_PhaseTransition::FinishPhaseTransitionByMontageEnd()
 		!bPhaseApplyQueued &&
 		bFailSafeApplyPhaseOnMontageEndIfNotifyMissed)
 	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[GA_Boss_Kashapa_PhaseTransition] PhaseApply Notify missed. FailSafe apply before finish.")
-		);
+		
 
 		FGameplayEventData DummyPayload;
 		DummyPayload.EventTag = PhaseApplyEventTag;
@@ -524,28 +458,41 @@ void UGA_Boss_Kashapa_PhaseTransition::FinishPhaseTransitionByMontageEnd()
 		ApplyPendingPhaseFromEvent(DummyPayload);
 	}
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] Finish by AM end.")
-	);
+	
 
 	FinishEnemySkill(false);
 }
 
-void UGA_Boss_Kashapa_PhaseTransition::PlayPhaseTransitionCinematic()
+ULevelSequence* UGA_Boss_Kashapa_PhaseTransition::ResolvePhaseTransitionLevelSequence() const
 {
-	if (!PhaseTransitionLevelSequence)
+	const ABossCharacterBase* BossCharacter = Cast<ABossCharacterBase>(GetAvatarActorFromActorInfo());
+	if (BossCharacter)
 	{
-		PhaseTransitionLevelSequence = LoadObject<ULevelSequence>(nullptr, TEXT("/Script/LevelSequence.LevelSequence'/Game/__ProjectDG/__BP/CutScene/LS_Kashapa_Phase1To2.LS_Kashapa_Phase1To2'"));
+		const UBossCharacterClassData* BossClassData = BossCharacter->GetBossClassData();
+		if (BossClassData && BossClassData->Phase1To2LevelSequence)
+		{
+			return BossClassData->Phase1To2LevelSequence;
+		}
 	}
 
-	if (!PhaseTransitionLevelSequence)
+	if (PhaseTransitionLevelSequence)
+	{
+		return PhaseTransitionLevelSequence;
+	}
+
+	return nullptr;
+}
+
+void UGA_Boss_Kashapa_PhaseTransition::PlayPhaseTransitionCinematic()
+{
+	ULevelSequence* ResolvedLevelSequence = ResolvePhaseTransitionLevelSequence();
+
+	if (!ResolvedLevelSequence)
 	{
 		UE_LOG(
 			LogTemp,
 			Warning,
-			TEXT("[GA_Boss_Kashapa_PhaseTransition] PhaseTransitionLevelSequence null. Skip camera sequence.")
+			TEXT("[GA_Boss_Kashapa_PhaseTransition] PhaseTransitionLevelSequence null. BossClassData or GA fallback not assigned.")
 		);
 		return;
 	}
@@ -556,58 +503,42 @@ void UGA_Boss_Kashapa_PhaseTransition::PlayPhaseTransitionCinematic()
 		return;
 	}
 
-	FMovieSceneSequencePlaybackSettings PlaybackSettings;
-	PlaybackSettings.bAutoPlay = false;
-	PlaybackSettings.bHideHud = false;
-	PlaybackSettings.bDisableMovementInput = false;
-	PlaybackSettings.bDisableLookAtInput = false;
+	const FSoftObjectPath SequencePath(ResolvedLevelSequence);
 
-	ALevelSequenceActor* CreatedSequenceActor = nullptr;
-
-	ULevelSequencePlayer* CreatedSequencePlayer =
-		ULevelSequencePlayer::CreateLevelSequencePlayer(
-			World,
-			PhaseTransitionLevelSequence,
-			PlaybackSettings,
-			CreatedSequenceActor
-		);
-
-	PhaseTransitionSequencePlayer = CreatedSequencePlayer;
-	PhaseTransitionSequenceActor = CreatedSequenceActor;
-
-	if (!PhaseTransitionSequencePlayer)
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[GA_Boss_Kashapa_PhaseTransition] Failed to create LevelSequencePlayer.")
-		);
-		return;
+		ADG_PlayerController* DGPlayerController = Cast<ADG_PlayerController>(It->Get());
+		if (!DGPlayerController)
+		{
+			continue;
+		}
+
+		DGPlayerController->Client_PlayBossPhaseTransitionCinematic(SequencePath);
 	}
 
-	PhaseTransitionSequencePlayer->Play();
-
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] LevelSequence started. SequenceActor=%s"),
-		*GetNameSafe(PhaseTransitionSequenceActor.Get())
-	);
+	
 }
 
 void UGA_Boss_Kashapa_PhaseTransition::StopPhaseTransitionCinematic()
 {
-	if (PhaseTransitionSequencePlayer)
+	UWorld* World = GetWorld();
+	if (!World)
 	{
-		PhaseTransitionSequencePlayer->Stop();
-		PhaseTransitionSequencePlayer = nullptr;
+		return;
 	}
 
-	if (PhaseTransitionSequenceActor)
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 	{
-		PhaseTransitionSequenceActor->Destroy();
-		PhaseTransitionSequenceActor = nullptr;
+		ADG_PlayerController* DGPlayerController = Cast<ADG_PlayerController>(It->Get());
+		if (!DGPlayerController)
+		{
+			continue;
+		}
+
+		DGPlayerController->Client_StopBossPhaseTransitionCinematic();
 	}
+
+	
 }
 
 void UGA_Boss_Kashapa_PhaseTransition::StopBossPhaseTransitionMovement() const

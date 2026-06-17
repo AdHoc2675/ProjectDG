@@ -12,8 +12,6 @@
 class UAbilityTask_WaitGameplayEvent;
 class UAnimMontage;
 class ULevelSequence;
-class ULevelSequencePlayer;
-class ALevelSequenceActor;
 
 /**
  * 카샤파 1페이즈 -> 2페이즈 전환 GA.
@@ -23,6 +21,8 @@ class ALevelSequenceActor;
  * - AN_BossPhaseApply가 Event.Boss.PhaseApply를 보낸 순간에만 Pending Phase를 적용한다.
  * - PlayMontageAndWait를 쓰지 않는다.
  *   PhaseApply 시점에 Mesh / AnimClass가 바뀌면서 Montage가 Interrupt될 수 있기 때문.
+ * - LevelSequence 카메라 전환은 서버 GA에서 직접 재생하지 않는다.
+ *   PlayerController Client RPC를 통해 각 클라이언트에서 재생한다.
  */
 UCLASS()
 class PROJECTDG_API UGA_Boss_Kashapa_PhaseTransition : public UGA_EnemySkillBase
@@ -54,6 +54,9 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Kashapa|Phase Transition")
 	FGameplayTag PhaseApplyEventTag;
 
+	// fallback용.
+	// 1순위는 BossClassData->Phase1To2LevelSequence.
+	// 이 값은 DA에 비어 있을 때만 사용.
 	UPROPERTY(EditDefaultsOnly, Category = "Kashapa|Phase Transition|Cinematic")
 	TObjectPtr<ULevelSequence> PhaseTransitionLevelSequence = nullptr;
 
@@ -67,12 +70,6 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UAbilityTask_WaitGameplayEvent> PhaseApplyEventTask = nullptr;
-
-	UPROPERTY(Transient)
-	TObjectPtr<ULevelSequencePlayer> PhaseTransitionSequencePlayer = nullptr;
-
-	UPROPERTY(Transient)
-	TObjectPtr<ALevelSequenceActor> PhaseTransitionSequenceActor = nullptr;
 
 	bool bPhaseAppliedByNotify = false;
 
@@ -92,6 +89,8 @@ private:
 
 private:
 	void RegisterPhaseApplyEvent();
+
+	ULevelSequence* ResolvePhaseTransitionLevelSequence() const;
 
 	void PlayPhaseTransitionCinematic();
 	void StopPhaseTransitionCinematic();

@@ -10,11 +10,12 @@
 class UAnimInstance;
 class UBossSkillData;
 class UBossSkillSetData;
+class UGameplayAbility;
 class UGameplayEffect;
+class ULevelSequence;
 class UMaterialInterface;
 class USkeletalMesh;
 class UBehaviorTree;
-class UGameplayAbility;
 
 /**
  * 구형 보스 페이즈 전환 데이터.
@@ -114,6 +115,12 @@ public:
 	// 이 보스가 사용할 AI Behavior Tree
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BossCharacter|AI")
 	TObjectPtr<UBehaviorTree> BehaviorTree = nullptr;
+
+	// 1페이즈 -> 2페이즈 전환 컷신.
+	// DA_Boss_Kashapa에서 직접 지정해서 쿠킹에 확실히 포함시킨다.
+	// 코드 문자열 LoadObject보다 안전하다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BossCharacter|Cutscene")
+	TObjectPtr<ULevelSequence> Phase1To2LevelSequence = nullptr;
 	
 
 	// 구형 페이즈 전환 데이터.

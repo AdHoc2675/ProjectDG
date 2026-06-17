@@ -15,6 +15,7 @@ class UBossCharacterClassData;
 class UEnemySkillData;
 class UBossSkillSetData;
 class UDG_BossAttributeSet;
+class UAnimMontage;
 class UDG_EnemyAttributeSet;
 
 /**
@@ -29,7 +30,7 @@ public:
 	ABossCharacterBase();
 
 protected:
-	// 보스 전용 데이터 에셋 (초기 스탯/GE/BT 등)
+	// 보스 전용 데이터 에셋 (초기 스탯/GE/BT/컷신 등)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BossCharacterBase|Data")
 	TObjectPtr<UBossCharacterClassData> BossClassData = nullptr;
 
@@ -97,14 +98,23 @@ protected:
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Data")
-	UBossCharacterClassData* GetBossClassData() const { return BossClassData; }
+	UBossCharacterClassData* GetBossClassData() const
+	{
+		return BossClassData;
+	}
 
 	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|ASC")
-	UDG_BossAttributeSet* GetBossAttributeSet() const { return BossAttributeSet; }
+	UDG_BossAttributeSet* GetBossAttributeSet() const
+	{
+		return BossAttributeSet;
+	}
 
 	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Team")
-	FGameplayTag GetBossTag() const { return BossTag; }
-
+	FGameplayTag GetBossTag() const
+	{
+		return BossTag;
+	}
+	
 	virtual const TArray<TObjectPtr<UEnemySkillData>>& GetAttackSkillDataList() const;
 
 	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Skill")
@@ -132,9 +142,19 @@ public:
 	virtual bool MoveToInitialBossTransformForCutscene();
 
 	UFUNCTION(BlueprintCallable, Category = "BossCharacterBase|Cutscene")
-	FTransform GetInitialBossTransform() const { return InitialBossTransform; }
+	FTransform GetInitialBossTransform() const
+	{
+		return InitialBossTransform;
+	}
 
 	virtual FGameplayTag GetAttributeSourceTag() const override;
+	
+	UFUNCTION(NetMulticast, Unreliable)
+    void Multicast_PlayBossMontage(
+    	UAnimMontage* Montage,
+    	float PlayRate,
+    	FName StartSectionName
+    );
 
 private:
 	bool bBossSpecialEffectsApplied = false;

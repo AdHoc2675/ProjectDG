@@ -46,8 +46,12 @@ void AEnemySkillIndicatorActor::Tick(float DeltaSeconds)
 	if (TelegraphTime <= 0.0f)
 	{
 		SetFillAmount(1.0f);
+
 		bIsRunning = false;
 		SetActorTickEnabled(false);
+		SetDecalComponentsVisible(false);
+
+		Destroy();
 		return;
 	}
 
@@ -65,6 +69,10 @@ void AEnemySkillIndicatorActor::Tick(float DeltaSeconds)
 	{
 		bIsRunning = false;
 		SetActorTickEnabled(false);
+
+		// 인디케이터는 텔레그래프가 끝나면 시각용 Actor이므로 제거한다.
+		SetDecalComponentsVisible(false);
+		Destroy();
 	}
 }
 
@@ -129,6 +137,9 @@ void AEnemySkillIndicatorActor::StopIndicator()
 {
 	bIsRunning = false;
 	SetActorTickEnabled(false);
+	SetDecalComponentsVisible(false);
+
+	Destroy();
 }
 
 void AEnemySkillIndicatorActor::SetFillAmount(float InFillAmount)

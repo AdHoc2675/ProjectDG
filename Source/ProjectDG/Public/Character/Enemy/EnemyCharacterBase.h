@@ -180,6 +180,13 @@ public:
 	
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_SpawnEnemySkillIndicator(UEnemySkillData* InSkillData, const FTransform& SpawnTransform);
+	
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_SpawnEnemySkillHitStepIndicator(
+		const UEnemySkillData* SourceSkillData,
+		int32 StepIndex,
+		FTransform SpawnTransform
+	);
 
 	/** HitStep 판정 중심 위치에서 VFX + SFX를 한 번에 재생한다. */
 	UFUNCTION(NetMulticast, Unreliable)
