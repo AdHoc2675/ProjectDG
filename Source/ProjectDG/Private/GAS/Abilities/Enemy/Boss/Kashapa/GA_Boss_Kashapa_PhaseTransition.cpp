@@ -224,25 +224,13 @@ void UGA_Boss_Kashapa_PhaseTransition::RegisterPhaseApplyEvent()
 
 	PhaseApplyEventTask->ReadyForActivation();
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] Wait PhaseApply Event Registered. Tag=%s"),
-		*PhaseApplyEventTag.ToString()
-	);
 }
 
 void UGA_Boss_Kashapa_PhaseTransition::OnPhaseApplyEventReceived(FGameplayEventData Payload)
 {
 	if (bPhaseAppliedByNotify || bPhaseApplyQueued)
 	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[GA_Boss_Kashapa_PhaseTransition] PhaseApply ignored. Already applied or queued. Applied=%s Queued=%s"),
-			bPhaseAppliedByNotify ? TEXT("true") : TEXT("false"),
-			bPhaseApplyQueued ? TEXT("true") : TEXT("false")
-		);
+		
 		return;
 	}
 
@@ -280,12 +268,7 @@ void UGA_Boss_Kashapa_PhaseTransition::QueuePendingPhaseApplyFromEvent(
 		false
 	);
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] PhaseApply queued. TargetPhase=%d"),
-		QueuedPhaseApplyIndex
-	);
+	
 }
 
 void UGA_Boss_Kashapa_PhaseTransition::ApplyQueuedPendingPhase()
@@ -318,13 +301,7 @@ void UGA_Boss_Kashapa_PhaseTransition::ApplyQueuedPendingPhase()
 		PlayPostPhaseApplyMontage();
 	}
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] Queued PhaseApply executed. TargetPhase=%d Applied=%s"),
-		TargetPhaseIndex,
-		bApplied ? TEXT("true") : TEXT("false")
-	);
+	
 }
 
 bool UGA_Boss_Kashapa_PhaseTransition::ApplyPendingPhaseFromEvent(const FGameplayEventData& Payload)
@@ -332,11 +309,7 @@ bool UGA_Boss_Kashapa_PhaseTransition::ApplyPendingPhaseFromEvent(const FGamepla
 	ABossCharacterBase* BossCharacter = Cast<ABossCharacterBase>(GetAvatarActorFromActorInfo());
 	if (!BossCharacter)
 	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[GA_Boss_Kashapa_PhaseTransition] BossCharacter invalid.")
-		);
+		
 		return false;
 	}
 
@@ -349,14 +322,7 @@ bool UGA_Boss_Kashapa_PhaseTransition::ApplyPendingPhaseFromEvent(const FGamepla
 	const bool bApplied = BossCharacter->ApplyPendingPhaseChangeFromNotify(TargetPhaseIndex);
 	bPhaseAppliedByNotify = bApplied;
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] PhaseApply Event Received. TargetPhase=%d Applied=%s Owner=%s"),
-		TargetPhaseIndex,
-		bApplied ? TEXT("true") : TEXT("false"),
-		*GetNameSafe(BossCharacter)
-	);
+	
 
 	return bApplied;
 }
@@ -366,12 +332,7 @@ bool UGA_Boss_Kashapa_PhaseTransition::PlayPhaseTransitionMontageManually(FName 
 	UEnemySkillData* CurrentSkillData = GetEnemySkillData();
 	if (!CurrentSkillData || !CurrentSkillData->Montage)
 	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[GA_Boss_Kashapa_PhaseTransition] Montage invalid. SkillData=%s"),
-			*GetNameSafe(CurrentSkillData)
-		);
+		
 		return false;
 	}
 
@@ -425,15 +386,15 @@ bool UGA_Boss_Kashapa_PhaseTransition::PlayPhaseTransitionMontageManually(FName 
 		CurrentSkillData->Montage
 	);
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] Montage played manually. Montage=%s Section=%s PlayRate=%.2f AnimInstance=%s"),
-		*GetNameSafe(CurrentSkillData->Montage),
-		StartSectionName != NAME_None ? *StartSectionName.ToString() : TEXT("None"),
-		PlayRate,
-		*GetNameSafe(AnimInstance)
-	);
+	if (ABossCharacterBase* BossCharacter = Cast<ABossCharacterBase>(Character))
+	{
+		BossCharacter->Multicast_PlayBossMontage(
+			CurrentSkillData->Montage,
+			PlayRate,
+			StartSectionName
+		);
+	}
+	
 
 	return true;
 }
@@ -444,13 +405,7 @@ bool UGA_Boss_Kashapa_PhaseTransition::PlayPostPhaseApplyMontage()
 
 	const bool bPlayed = PlayPhaseTransitionMontageManually(PostPhaseApplySectionName);
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] PostPhaseApply Montage Play Result=%s Section=%s"),
-		bPlayed ? TEXT("true") : TEXT("false"),
-		*PostPhaseApplySectionName.ToString()
-	);
+	
 
 	if (!bPlayed)
 	{
@@ -467,17 +422,7 @@ void UGA_Boss_Kashapa_PhaseTransition::OnPhaseTransitionMontageEnded(
 	bool bInterrupted
 )
 {
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] Montage Ended. Montage=%s Interrupted=%s PhaseApplied=%s PhaseQueued=%s WaitingPostApplyEnd=%s"),
-		*GetNameSafe(Montage),
-		bInterrupted ? TEXT("true") : TEXT("false"),
-		bPhaseAppliedByNotify ? TEXT("true") : TEXT("false"),
-		bPhaseApplyQueued ? TEXT("true") : TEXT("false"),
-		bWaitingForPostPhaseApplyMontageEnd ? TEXT("true") : TEXT("false")
-	);
-
+	
 	// PhaseApply 전, Mesh/AnimClass 교체로 인해 기존 Montage가 끊기는 경우가 있다.
 	// 이 Interrupt는 Ability 종료 조건이 아니다.
 	if (!bWaitingForPostPhaseApplyMontageEnd)
@@ -491,16 +436,7 @@ void UGA_Boss_Kashapa_PhaseTransition::OnPhaseTransitionMontageEnded(
 		return;
 	}
 
-	// PhaseApply 후 P2 AnimInstance에서 재생한 Montage가 끝났을 때만 종료.
-	if (bInterrupted)
-	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[GA_Boss_Kashapa_PhaseTransition] PostPhaseApply Montage interrupted. Keep ability alive.")
-		);
-		return;
-	}
+	
 
 	FinishPhaseTransitionByMontageEnd();
 }
@@ -511,11 +447,7 @@ void UGA_Boss_Kashapa_PhaseTransition::FinishPhaseTransitionByMontageEnd()
 		!bPhaseApplyQueued &&
 		bFailSafeApplyPhaseOnMontageEndIfNotifyMissed)
 	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[GA_Boss_Kashapa_PhaseTransition] PhaseApply Notify missed. FailSafe apply before finish.")
-		);
+		
 
 		FGameplayEventData DummyPayload;
 		DummyPayload.EventTag = PhaseApplyEventTag;
@@ -526,11 +458,7 @@ void UGA_Boss_Kashapa_PhaseTransition::FinishPhaseTransitionByMontageEnd()
 		ApplyPendingPhaseFromEvent(DummyPayload);
 	}
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] Finish by AM end.")
-	);
+	
 
 	FinishEnemySkill(false);
 }
@@ -588,13 +516,7 @@ void UGA_Boss_Kashapa_PhaseTransition::PlayPhaseTransitionCinematic()
 		DGPlayerController->Client_PlayBossPhaseTransitionCinematic(SequencePath);
 	}
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] Boss phase cinematic RPC sent. Sequence=%s Path=%s"),
-		*GetNameSafe(ResolvedLevelSequence),
-		*SequencePath.ToString()
-	);
+	
 }
 
 void UGA_Boss_Kashapa_PhaseTransition::StopPhaseTransitionCinematic()
@@ -616,11 +538,7 @@ void UGA_Boss_Kashapa_PhaseTransition::StopPhaseTransitionCinematic()
 		DGPlayerController->Client_StopBossPhaseTransitionCinematic();
 	}
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] Boss phase cinematic stop RPC sent.")
-	);
+	
 }
 
 void UGA_Boss_Kashapa_PhaseTransition::StopBossPhaseTransitionMovement() const

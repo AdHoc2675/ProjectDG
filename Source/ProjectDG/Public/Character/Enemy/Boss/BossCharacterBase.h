@@ -15,6 +15,7 @@ class UBossCharacterClassData;
 class UEnemySkillData;
 class UBossSkillSetData;
 class UDG_BossAttributeSet;
+class UAnimMontage;
 class UDG_EnemyAttributeSet;
 
 /**
@@ -147,6 +148,13 @@ public:
 	}
 
 	virtual FGameplayTag GetAttributeSourceTag() const override;
+	
+	UFUNCTION(NetMulticast, Unreliable)
+    void Multicast_PlayBossMontage(
+    	UAnimMontage* Montage,
+    	float PlayRate,
+    	FName StartSectionName
+    );
 
 private:
 	bool bBossSpecialEffectsApplied = false;

@@ -14,6 +14,9 @@
 #include "GAS/Attributes/DG_BossAttributeSet.h"
 #include "GAS/Attributes/DG_EnemyAttributeSet.h"
 #include "GameplayAbilitySpec.h"
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
+#include "Components/SkeletalMeshComponent.h"
 
 namespace
 {
@@ -642,6 +645,89 @@ FGameplayTag ABossCharacterBase::GetAttributeSourceTag() const
 	}
 
 	return DGGameplayTags::Team_Enemy_Boss;
+}
+
+void ABossCharacterBase::Multicast_PlayBossMontage_Implementation(
+	UAnimMontage* Montage,
+	float PlayRate,
+	FName StartSectionName
+)
+{
+	// 서버는 GA에서 이미 Montage_Play를 직접 실행한다.
+	// 여기서는 클라이언트 보스 Mesh에만 재생시킨다.
+	if (HasAuthority())
+	{
+		return;
+	}
+
+	if (!Montage)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossCharacterBase] Multicast_PlayBossMontage failed. Montage null. Boss=%s"),
+			*GetNameSafe(this)
+		);
+		return;
+	}
+
+	USkeletalMeshComponent* MeshComp = GetMesh();
+	if (!MeshComp)
+	{
+		return;
+	}
+
+	UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
+	if (!AnimInstance)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossCharacterBase] Multicast_PlayBossMontage failed. AnimInstance null. Boss=%s Montage=%s"),
+			*GetNameSafe(this),
+			*GetNameSafe(Montage)
+		);
+		return;
+	}
+
+	const float SafePlayRate = FMath::Max(PlayRate, 0.01f);
+
+	const float PlayedDuration = AnimInstance->Montage_Play(
+		Montage,
+		SafePlayRate
+	);
+
+	if (PlayedDuration <= 0.0f)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossCharacterBase] Multicast_PlayBossMontage Montage_Play failed. Boss=%s Montage=%s AnimInstance=%s"),
+			*GetNameSafe(this),
+			*GetNameSafe(Montage),
+			*GetNameSafe(AnimInstance)
+		);
+		return;
+	}
+
+	if (StartSectionName != NAME_None)
+	{
+		AnimInstance->Montage_JumpToSection(
+			StartSectionName,
+			Montage
+		);
+	}
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[BossCharacterBase] Multicast_PlayBossMontage played on client. Boss=%s Montage=%s Section=%s PlayRate=%.2f AnimInstance=%s"),
+		*GetNameSafe(this),
+		*GetNameSafe(Montage),
+		StartSectionName != NAME_None ? *StartSectionName.ToString() : TEXT("None"),
+		SafePlayRate,
+		*GetNameSafe(AnimInstance)
+	);
 }
 
 bool ABossCharacterBase::HasActiveEnemySkillAbility() const

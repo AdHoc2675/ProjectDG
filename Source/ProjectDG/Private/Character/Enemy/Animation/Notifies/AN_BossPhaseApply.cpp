@@ -50,6 +50,21 @@ void UAN_BossPhaseApply::Notify(
 		return;
 	}
 
+	// 중요:
+	// PhaseTransition GA는 ServerOnly이고 Pending Phase 적용도 서버에서만 해야 한다.
+	// 클라에서도 Multicast Montage가 재생되면서 Notify가 발동할 수 있으므로,
+	// 클라에서는 이벤트를 보내지 않는다.
+	if (!OwnerActor->HasAuthority())
+	{
+		UE_LOG(
+			LogTemp,
+			Verbose,
+			TEXT("[AN_BossPhaseApply] Ignored on client. Owner=%s"),
+			*OwnerActor->GetName()
+		);
+		return;
+	}
+
 	if (!PhaseApplyEventTag.IsValid())
 	{
 		PhaseApplyEventTag = FGameplayTag::RequestGameplayTag(
