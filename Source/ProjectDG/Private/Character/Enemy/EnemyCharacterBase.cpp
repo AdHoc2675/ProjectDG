@@ -96,6 +96,7 @@ void AEnemyCharacterBase::PossessedBy(AController* NewController)
 	}
 }
 
+
 void AEnemyCharacterBase::Multicast_SpawnEnemySkillIndicator_Implementation(
 	UEnemySkillData* InSkillData,
 	const FTransform& SpawnTransform
@@ -147,6 +148,147 @@ void AEnemyCharacterBase::Multicast_SpawnEnemySkillIndicator_Implementation(
 		FMath::Max(InSkillData->IndicatorTelegraphTime + 0.1f, 0.2f);
 
 	IndicatorActor->SetLifeSpan(LifeSpan);
+}
+
+void AEnemyCharacterBase::Multicast_SpawnEnemySkillHitStepIndicator_Implementation(
+	const UEnemySkillData* SourceSkillData,
+	int32 StepIndex,
+	FTransform SpawnTransform
+)
+{
+	if (!SourceSkillData)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[EnemyCharacterBase] StepIndicator Failed. SourceSkillData null")
+		);
+		return;
+	}
+
+	if (!SourceSkillData->HitStepList.IsValidIndex(StepIndex))
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[EnemyCharacterBase] StepIndicator Failed. Invalid StepIndex=%d Skill=%s"),
+			StepIndex,
+			*GetNameSafe(SourceSkillData)
+		);
+		return;
+	}
+
+	const FDGEnemySkillHitStep& HitStep = SourceSkillData->HitStepList[StepIndex];
+
+	if (!HitStep.bUseIndicator)
+	{
+		return;
+	}
+
+	TSubclassOf<AEnemySkillIndicatorActor> IndicatorActorClass =
+		HitStep.IndicatorActorClass
+			? HitStep.IndicatorActorClass
+			: SourceSkillData->IndicatorActorClass;
+
+	if (!IndicatorActorClass)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[EnemyCharacterBase] StepIndicator Failed. IndicatorActorClass null. Skill=%s Step=%d"),
+			*GetNameSafe(SourceSkillData),
+			StepIndex
+		);
+		return;
+	}
+
+	UMaterialInterface* IndicatorMaterial =
+		HitStep.IndicatorMaterialOverride
+			? HitStep.IndicatorMaterialOverride
+			: SourceSkillData->IndicatorMaterialOverride;
+
+	if (!IndicatorMaterial)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[EnemyCharacterBase] StepIndicator Failed. IndicatorMaterial null. Skill=%s Step=%d"),
+			*GetNameSafe(SourceSkillData),
+			StepIndex
+		);
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	AEnemySkillIndicatorActor* IndicatorActor =
+		World->SpawnActorDeferred<AEnemySkillIndicatorActor>(
+			IndicatorActorClass,
+			SpawnTransform,
+			this,
+			nullptr,
+			ESpawnActorCollisionHandlingMethod::AlwaysSpawn
+		);
+
+	if (!IndicatorActor)
+	{
+		return;
+	}
+
+	// 클라 로컬에서만 사용할 임시 SkillData.
+	// RPC로 RuntimeSkillData를 받는 게 아니라,
+	// 원본 에셋 + StepIndex로 각 클라가 자기 로컬 RuntimeSkillData를 만든다.
+	UEnemySkillData* LocalRuntimeSkillData =
+		DuplicateObject<UEnemySkillData>(
+			const_cast<UEnemySkillData*>(SourceSkillData),
+			IndicatorActor
+		);
+
+	if (!LocalRuntimeSkillData)
+	{
+		IndicatorActor->Destroy();
+		return;
+	}
+
+	LocalRuntimeSkillData->bUseHitSteps = false;
+	LocalRuntimeSkillData->HitStepList.Reset();
+
+	LocalRuntimeSkillData->bUseIndicator = HitStep.bUseIndicator;
+	LocalRuntimeSkillData->IndicatorShape = HitStep.IndicatorShape;
+
+	LocalRuntimeSkillData->IndicatorActorClass = IndicatorActorClass;
+	LocalRuntimeSkillData->IndicatorMaterialOverride = IndicatorMaterial;
+
+	LocalRuntimeSkillData->IndicatorTelegraphTime = HitStep.IndicatorTelegraphTime;
+	LocalRuntimeSkillData->IndicatorProjectionDepth = HitStep.IndicatorProjectionDepth;
+	LocalRuntimeSkillData->IndicatorZOffset = HitStep.IndicatorZOffset;
+	LocalRuntimeSkillData->IndicatorPreviewOpacity = HitStep.IndicatorPreviewOpacity;
+	LocalRuntimeSkillData->IndicatorFillOpacity = HitStep.IndicatorFillOpacity;
+	LocalRuntimeSkillData->IndicatorYawOffsetDegrees = HitStep.IndicatorYawOffsetDegrees;
+
+	LocalRuntimeSkillData->Radius = HitStep.Radius;
+	LocalRuntimeSkillData->InnerRadius = HitStep.InnerRadius;
+	LocalRuntimeSkillData->SectorAngleDegrees = HitStep.SectorAngleDegrees;
+	LocalRuntimeSkillData->BoxExtent = HitStep.BoxExtent;
+
+	IndicatorActor->ConfigureFromSkillData(LocalRuntimeSkillData);
+
+	IndicatorActor->FinishSpawning(SpawnTransform);
+	IndicatorActor->StartIndicator();
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[EnemyCharacterBase] StepIndicator Spawned. Skill=%s Step=%d Actor=%s Material=%s"),
+		*GetNameSafe(SourceSkillData),
+		StepIndex,
+		*GetNameSafe(IndicatorActor),
+		*GetNameSafe(IndicatorMaterial)
+	);
 }
 
 void AEnemyCharacterBase::InitializeEnemyAbilitySystem()

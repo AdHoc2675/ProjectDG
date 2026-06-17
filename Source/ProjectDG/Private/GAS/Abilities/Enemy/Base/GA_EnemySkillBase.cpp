@@ -2119,12 +2119,11 @@ void UGA_EnemySkillBase::SpawnEnemySkillHitStepIndicatorByNotify(
 
 	if (!IsValidHitStepIndex(CurrentSkillData, StepIndex))
 	{
-		
 		return;
 	}
 
 	TSharedRef<FDGEnemySkillRuntimeHitStepContext> StepContext =
-	GetOrCreateRuntimeHitStepContext(CurrentSkillData, StepIndex);
+		GetOrCreateRuntimeHitStepContext(CurrentSkillData, StepIndex);
 
 	UEnemySkillData* RuntimeSkillData = StepContext->RuntimeSkillData.Get();
 	if (!RuntimeSkillData)
@@ -2132,21 +2131,19 @@ void UGA_EnemySkillBase::SpawnEnemySkillHitStepIndicatorByNotify(
 		return;
 	}
 
-	if (StepContext->bHasSpawnedIndicator)
-	{
-		
-
-		return;
-	}
-
-	StepContext->bHasSpawnedIndicator = true;
-	StepContext->IndicatorPayload = Payload;
-
 	AEnemyCharacterBase* EnemyCharacter = GetEnemyCharacterFromActorInfo();
 	if (!EnemyCharacter || !EnemyCharacter->HasAuthority())
 	{
 		return;
 	}
+
+	if (StepContext->bHasSpawnedIndicator)
+	{
+		return;
+	}
+
+	StepContext->bHasSpawnedIndicator = true;
+	StepContext->IndicatorPayload = Payload;
 
 	FTransform SpawnTransform =
 		MakeEnemySkillIndicatorTransform(RuntimeSkillData);
@@ -2176,13 +2173,16 @@ void UGA_EnemySkillBase::SpawnEnemySkillHitStepIndicatorByNotify(
 		return;
 	}
 
-	EnemyCharacter->Multicast_SpawnEnemySkillIndicator(
-		RuntimeSkillData,
+	// 중요:
+	// RuntimeSkillData는 DuplicateObject로 만든 서버 임시 UObject라
+	// 쿠킹 클라에 RPC 파라미터로 넘기면 정상 복원되지 않을 수 있음.
+	// 원본 CurrentSkillData + StepIndex를 보내고,
+	// 클라에서 StepIndex로 로컬 RuntimeSkillData를 만들어 표시하게 한다.
+	EnemyCharacter->Multicast_SpawnEnemySkillHitStepIndicator(
+		CurrentSkillData,
+		StepIndex,
 		SpawnTransform
 	);
-	
-	
-	
 }
 
 void UGA_EnemySkillBase::ExecuteEnemySkillHitStepByNotify(
