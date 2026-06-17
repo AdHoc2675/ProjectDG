@@ -7,17 +7,15 @@
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
 #include "Character/Enemy/Boss/BossCharacterBase.h"
+#include "Character/Enemy/Boss/Data/BossCharacterClassData.h"
 #include "Character/Enemy/Data/EnemySkillData.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/DG_PlayerController.h"
 #include "LevelSequence.h"
-#include "LevelSequenceActor.h"
-#include "LevelSequencePlayer.h"
-#include "Character/Enemy/Boss/Data/BossCharacterClassData.h"
-#include "MovieSceneSequencePlaybackSettings.h"
 #include "TimerManager.h"
-
 
 UGA_Boss_Kashapa_PhaseTransition::UGA_Boss_Kashapa_PhaseTransition()
 {
@@ -100,6 +98,8 @@ void UGA_Boss_Kashapa_PhaseTransition::ActivateAbility(
 
 	RegisterPhaseApplyEvent();
 
+	// 서버에서 직접 LS를 재생하지 않는다.
+	// 클라이언트 PlayerController RPC로 LS 재생 요청.
 	PlayPhaseTransitionCinematic();
 
 	// PlayMontageAndWait 사용 금지.
@@ -151,6 +151,7 @@ void UGA_Boss_Kashapa_PhaseTransition::EndAbility(
 		PhaseApplyEventTask = nullptr;
 	}
 
+	// 클라이언트 컷신 정지 + 카메라 복귀 요청.
 	StopPhaseTransitionCinematic();
 
 	Super::EndAbility(
@@ -574,60 +575,52 @@ void UGA_Boss_Kashapa_PhaseTransition::PlayPhaseTransitionCinematic()
 		return;
 	}
 
-	FMovieSceneSequencePlaybackSettings PlaybackSettings;
-	PlaybackSettings.bAutoPlay = false;
-	PlaybackSettings.bHideHud = false;
-	PlaybackSettings.bDisableMovementInput = false;
-	PlaybackSettings.bDisableLookAtInput = false;
+	const FSoftObjectPath SequencePath(ResolvedLevelSequence);
 
-	ALevelSequenceActor* CreatedSequenceActor = nullptr;
-
-	ULevelSequencePlayer* CreatedSequencePlayer =
-		ULevelSequencePlayer::CreateLevelSequencePlayer(
-			World,
-			ResolvedLevelSequence,
-			PlaybackSettings,
-			CreatedSequenceActor
-		);
-
-	PhaseTransitionSequencePlayer = CreatedSequencePlayer;
-	PhaseTransitionSequenceActor = CreatedSequenceActor;
-
-	if (!PhaseTransitionSequencePlayer)
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[GA_Boss_Kashapa_PhaseTransition] Failed to create LevelSequencePlayer. Sequence=%s"),
-			*GetNameSafe(ResolvedLevelSequence)
-		);
-		return;
-	}
+		ADG_PlayerController* DGPlayerController = Cast<ADG_PlayerController>(It->Get());
+		if (!DGPlayerController)
+		{
+			continue;
+		}
 
-	PhaseTransitionSequencePlayer->Play();
+		DGPlayerController->Client_PlayBossPhaseTransitionCinematic(SequencePath);
+	}
 
 	UE_LOG(
 		LogTemp,
 		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] LevelSequence started. Sequence=%s SequenceActor=%s"),
+		TEXT("[GA_Boss_Kashapa_PhaseTransition] Boss phase cinematic RPC sent. Sequence=%s Path=%s"),
 		*GetNameSafe(ResolvedLevelSequence),
-		*GetNameSafe(PhaseTransitionSequenceActor.Get())
+		*SequencePath.ToString()
 	);
 }
 
 void UGA_Boss_Kashapa_PhaseTransition::StopPhaseTransitionCinematic()
 {
-	if (PhaseTransitionSequencePlayer)
+	UWorld* World = GetWorld();
+	if (!World)
 	{
-		PhaseTransitionSequencePlayer->Stop();
-		PhaseTransitionSequencePlayer = nullptr;
+		return;
 	}
 
-	if (PhaseTransitionSequenceActor)
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 	{
-		PhaseTransitionSequenceActor->Destroy();
-		PhaseTransitionSequenceActor = nullptr;
+		ADG_PlayerController* DGPlayerController = Cast<ADG_PlayerController>(It->Get());
+		if (!DGPlayerController)
+		{
+			continue;
+		}
+
+		DGPlayerController->Client_StopBossPhaseTransitionCinematic();
 	}
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[GA_Boss_Kashapa_PhaseTransition] Boss phase cinematic stop RPC sent.")
+	);
 }
 
 void UGA_Boss_Kashapa_PhaseTransition::StopBossPhaseTransitionMovement() const
