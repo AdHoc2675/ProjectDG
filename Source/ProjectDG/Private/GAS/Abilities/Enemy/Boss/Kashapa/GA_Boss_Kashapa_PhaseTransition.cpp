@@ -27,15 +27,6 @@ UGA_Boss_Kashapa_PhaseTransition::UGA_Boss_Kashapa_PhaseTransition()
 		FName(TEXT("Event.Boss.PhaseApply")),
 		false
 	);
-
-	static ConstructorHelpers::FObjectFinder<ULevelSequence> PhaseTransitionSequenceFinder(
-		TEXT("/Script/LevelSequence.LevelSequence'/Game/__ProjectDG/__BP/CutScene/LS_Kashapa_Phase1To2.LS_Kashapa_Phase1To2'")
-	);
-
-	if (PhaseTransitionSequenceFinder.Succeeded())
-	{
-		PhaseTransitionLevelSequence = PhaseTransitionSequenceFinder.Object;
-	}
 }
 
 void UGA_Boss_Kashapa_PhaseTransition::ActivateAbility(
@@ -544,6 +535,11 @@ void UGA_Boss_Kashapa_PhaseTransition::FinishPhaseTransitionByMontageEnd()
 
 void UGA_Boss_Kashapa_PhaseTransition::PlayPhaseTransitionCinematic()
 {
+	if (!PhaseTransitionLevelSequence)
+	{
+		PhaseTransitionLevelSequence = LoadObject<ULevelSequence>(nullptr, TEXT("/Script/LevelSequence.LevelSequence'/Game/__ProjectDG/__BP/CutScene/LS_Kashapa_Phase1To2.LS_Kashapa_Phase1To2'"));
+	}
+
 	if (!PhaseTransitionLevelSequence)
 	{
 		UE_LOG(
