@@ -47,9 +47,8 @@ void ABossKashapaD::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	// CurrentPhaseIndex는 ABossCharacterBase로 이동했으므로
-	// 여기서 DOREPLIFETIME 하면 자식 클래스 중복 멤버 기준으로 빌드 에러가 난다.
-	// 외형 동기화 Replication은 추후 별도 정리.
+	// CurrentPhaseIndex는 ABossCharacterBase 쪽 멤버를 사용 중.
+	// 여기서는 외형 동기화를 Multicast_ApplyPhaseVisualByIndex로 처리한다.
 }
 
 void ABossKashapaD::BeginPlay()
@@ -135,6 +134,60 @@ bool ABossKashapaD::ApplyPendingPhaseChangeFromNotify(int32 ExpectedPhaseIndex)
 	);
 
 	return bApplied;
+}
+
+void ABossKashapaD::Multicast_ApplyPhaseVisualByIndex_Implementation(int32 PhaseIndex)
+{
+	// 서버는 ApplyPhaseDataByIndex에서 이미 적용함.
+	// 여기서는 클라이언트 시각 갱신용.
+	if (HasAuthority())
+	{
+		return;
+	}
+
+	if (!BossClassData)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossKashapaD] Multicast_ApplyPhaseVisualByIndex failed. BossClassData null. Phase=%d"),
+			PhaseIndex
+		);
+		return;
+	}
+
+	const FBossPhaseData* PhaseData = nullptr;
+
+	for (const FBossPhaseData& CandidatePhaseData : BossClassData->PhaseDataList)
+	{
+		if (CandidatePhaseData.PhaseIndex == PhaseIndex)
+		{
+			PhaseData = &CandidatePhaseData;
+			break;
+		}
+	}
+
+	if (!PhaseData)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossKashapaD] Multicast_ApplyPhaseVisualByIndex failed. PhaseData not found. Phase=%d"),
+			PhaseIndex
+		);
+		return;
+	}
+
+	ApplyPhaseVisual(*PhaseData);
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[BossKashapaD] Phase visual applied on client. Phase=%d Mesh=%s AnimClass=%s"),
+		PhaseIndex,
+		*GetNameSafe(PhaseData->SkeletalMesh),
+		*GetNameSafe(PhaseData->AnimClass)
+	);
 }
 
 void ABossKashapaD::UpdateHealthPhaseTags(float HealthRatio)
@@ -253,17 +306,29 @@ bool ABossKashapaD::ApplyPhaseDataByIndex(int32 PhaseIndex)
 	bHasPendingPhaseChange = false;
 	PendingPhaseIndex = INDEX_NONE;
 
+	// 서버 자신에게 먼저 외형 적용.
 	ApplyPhaseVisual(*PhaseData);
+
+	// 중요:
+	// SkeletalMesh / Material / AnimClass 런타임 변경은 자동으로 클라에 전파되지 않는다.
+	// 따라서 클라 외형 갱신용 Multicast를 직접 호출한다.
+	if (HasAuthority())
+	{
+		Multicast_ApplyPhaseVisualByIndex(PhaseIndex);
+	}
+
 	ApplyPhaseTags(*PhaseData);
 	GrantSkillSetAbilities(CurrentPhaseSkillSetData);
 
 	UE_LOG(
 		LogTemp,
 		Warning,
-		TEXT("[BossKashapaD] Phase Applied. PhaseIndex=%d SkillSet=%s SkillCount=%d"),
+		TEXT("[BossKashapaD] Phase Applied. PhaseIndex=%d SkillSet=%s SkillCount=%d Mesh=%s AnimClass=%s"),
 		CurrentPhaseIndex,
 		CurrentPhaseSkillSetData ? *CurrentPhaseSkillSetData->GetName() : TEXT("None"),
-		CurrentPhaseSkillSetData ? CurrentPhaseSkillSetData->Skills.Num() : 0
+		CurrentPhaseSkillSetData ? CurrentPhaseSkillSetData->Skills.Num() : 0,
+		*GetNameSafe(PhaseData->SkeletalMesh),
+		*GetNameSafe(PhaseData->AnimClass)
 	);
 
 	ForceNetUpdate();
@@ -276,6 +341,11 @@ void ABossKashapaD::ApplyPhaseVisual(const FBossPhaseData& PhaseData)
 	USkeletalMeshComponent* MeshComp = GetMesh();
 	if (!MeshComp)
 	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossKashapaD] ApplyPhaseVisual Failed. MeshComp null.")
+		);
 		return;
 	}
 
@@ -301,6 +371,18 @@ void ABossKashapaD::ApplyPhaseVisual(const FBossPhaseData& PhaseData)
 
 		MeshComp->SetMaterial(MaterialIndex, Material);
 	}
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[BossKashapaD] ApplyPhaseVisual. Owner=%s HasAuthority=%s Phase=%d Mesh=%s AnimClass=%s MaterialCount=%d"),
+		*GetNameSafe(this),
+		HasAuthority() ? TEXT("true") : TEXT("false"),
+		PhaseData.PhaseIndex,
+		*GetNameSafe(PhaseData.SkeletalMesh),
+		*GetNameSafe(PhaseData.AnimClass),
+		PhaseData.OverrideMaterials.Num()
+	);
 }
 
 void ABossKashapaD::ApplyPhaseTags(const FBossPhaseData& PhaseData)
@@ -415,7 +497,6 @@ const TArray<TObjectPtr<UEnemySkillData>>& ABossKashapaD::GetAttackSkillDataList
 			PendingPhaseIndex
 		);
 	}
-	
 
 	if (!CurrentPhaseSkillSetData)
 	{

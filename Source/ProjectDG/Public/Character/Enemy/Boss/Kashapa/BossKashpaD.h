@@ -35,10 +35,16 @@ public:
 	bool SetKashapaPhase(int32 NewPhaseIndex);
 
 	UFUNCTION(BlueprintCallable, Category = "Kashapa|Phase")
-	int32 GetCurrentPhaseIndex() const { return CurrentPhaseIndex; }
+	int32 GetCurrentPhaseIndex() const
+	{
+		return CurrentPhaseIndex;
+	}
 
 	UFUNCTION(BlueprintCallable, Category = "Kashapa|Skill")
-	UBossSkillSetData* GetCurrentSkillSetData() const { return CurrentPhaseSkillSetData; }
+	UBossSkillSetData* GetCurrentSkillSetData() const
+	{
+		return CurrentPhaseSkillSetData;
+	}
 
 	virtual const TArray<TObjectPtr<UEnemySkillData>>& GetAttackSkillDataList() const override;
 	virtual UEnemySkillData* GetRandomAttackSkillData() const override;
@@ -46,6 +52,13 @@ public:
 	// PhaseTransition GA의 AN_BossPhaseApply 수신 시점에서만 호출된다.
 	// 여기서 2페 SkeletalMesh / AnimClass / Material / SkillSet이 실제 적용된다.
 	virtual bool ApplyPendingPhaseChangeFromNotify(int32 ExpectedPhaseIndex = INDEX_NONE) override;
+
+	// 서버에서 PhaseData를 실제 적용한 뒤,
+	// 클라이언트에도 SkeletalMesh / AnimClass / Materials 외형만 동기화한다.
+	// 클라에서는 SkillSet / Ability 부여를 하지 않고 ApplyPhaseVisual만 실행한다.
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_ApplyPhaseVisualByIndex(int32 PhaseIndex);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;
