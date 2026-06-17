@@ -14,9 +14,10 @@
 #include "LevelSequence.h"
 #include "LevelSequenceActor.h"
 #include "LevelSequencePlayer.h"
+#include "Character/Enemy/Boss/Data/BossCharacterClassData.h"
 #include "MovieSceneSequencePlaybackSettings.h"
 #include "TimerManager.h"
-#include "UObject/ConstructorHelpers.h"
+
 
 UGA_Boss_Kashapa_PhaseTransition::UGA_Boss_Kashapa_PhaseTransition()
 {
@@ -533,19 +534,36 @@ void UGA_Boss_Kashapa_PhaseTransition::FinishPhaseTransitionByMontageEnd()
 	FinishEnemySkill(false);
 }
 
-void UGA_Boss_Kashapa_PhaseTransition::PlayPhaseTransitionCinematic()
+ULevelSequence* UGA_Boss_Kashapa_PhaseTransition::ResolvePhaseTransitionLevelSequence() const
 {
-	if (!PhaseTransitionLevelSequence)
+	const ABossCharacterBase* BossCharacter = Cast<ABossCharacterBase>(GetAvatarActorFromActorInfo());
+	if (BossCharacter)
 	{
-		PhaseTransitionLevelSequence = LoadObject<ULevelSequence>(nullptr, TEXT("/Script/LevelSequence.LevelSequence'/Game/__ProjectDG/__BP/CutScene/LS_Kashapa_Phase1To2.LS_Kashapa_Phase1To2'"));
+		const UBossCharacterClassData* BossClassData = BossCharacter->GetBossClassData();
+		if (BossClassData && BossClassData->Phase1To2LevelSequence)
+		{
+			return BossClassData->Phase1To2LevelSequence;
+		}
 	}
 
-	if (!PhaseTransitionLevelSequence)
+	if (PhaseTransitionLevelSequence)
+	{
+		return PhaseTransitionLevelSequence;
+	}
+
+	return nullptr;
+}
+
+void UGA_Boss_Kashapa_PhaseTransition::PlayPhaseTransitionCinematic()
+{
+	ULevelSequence* ResolvedLevelSequence = ResolvePhaseTransitionLevelSequence();
+
+	if (!ResolvedLevelSequence)
 	{
 		UE_LOG(
 			LogTemp,
 			Warning,
-			TEXT("[GA_Boss_Kashapa_PhaseTransition] PhaseTransitionLevelSequence null. Skip camera sequence.")
+			TEXT("[GA_Boss_Kashapa_PhaseTransition] PhaseTransitionLevelSequence null. BossClassData or GA fallback not assigned.")
 		);
 		return;
 	}
@@ -567,7 +585,7 @@ void UGA_Boss_Kashapa_PhaseTransition::PlayPhaseTransitionCinematic()
 	ULevelSequencePlayer* CreatedSequencePlayer =
 		ULevelSequencePlayer::CreateLevelSequencePlayer(
 			World,
-			PhaseTransitionLevelSequence,
+			ResolvedLevelSequence,
 			PlaybackSettings,
 			CreatedSequenceActor
 		);
@@ -580,7 +598,8 @@ void UGA_Boss_Kashapa_PhaseTransition::PlayPhaseTransitionCinematic()
 		UE_LOG(
 			LogTemp,
 			Warning,
-			TEXT("[GA_Boss_Kashapa_PhaseTransition] Failed to create LevelSequencePlayer.")
+			TEXT("[GA_Boss_Kashapa_PhaseTransition] Failed to create LevelSequencePlayer. Sequence=%s"),
+			*GetNameSafe(ResolvedLevelSequence)
 		);
 		return;
 	}
@@ -590,7 +609,8 @@ void UGA_Boss_Kashapa_PhaseTransition::PlayPhaseTransitionCinematic()
 	UE_LOG(
 		LogTemp,
 		Warning,
-		TEXT("[GA_Boss_Kashapa_PhaseTransition] LevelSequence started. SequenceActor=%s"),
+		TEXT("[GA_Boss_Kashapa_PhaseTransition] LevelSequence started. Sequence=%s SequenceActor=%s"),
+		*GetNameSafe(ResolvedLevelSequence),
 		*GetNameSafe(PhaseTransitionSequenceActor.Get())
 	);
 }

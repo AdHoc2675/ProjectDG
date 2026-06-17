@@ -93,6 +93,8 @@ private:
 private:
 	void RegisterPhaseApplyEvent();
 
+	ULevelSequence* ResolvePhaseTransitionLevelSequence() const;
+
 	void PlayPhaseTransitionCinematic();
 	void StopPhaseTransitionCinematic();
 

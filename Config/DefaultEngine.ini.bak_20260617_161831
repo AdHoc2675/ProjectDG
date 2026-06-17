@@ -1,6 +1,6 @@
 [/Script/EngineSettings.GameMapsSettings]
-GameDefaultMap=/Game/__ProjectDG/Maps/LV_Lobby.LV_Lobby
-EditorStartupMap=/Game/__ProjectDG/Maps/LV_Lobby.LV_Lobby
+GameDefaultMap=/Game/Personal/DOHEE/Level/ServerTest.ServerTest
+EditorStartupMap=/Game/Personal/DOHEE/Level/ServerTest.ServerTest
 GlobalDefaultGameMode=/Game/__ProjectDG/__BP/GameFramework/BP_DG_GameMode.BP_DG_GameMode_C
 ServerDefaultMap=/Game/Personal/DOHEE/Level/ServerTest.ServerTest
 GameInstanceClass=/Script/Engine.GameInstance
