@@ -60,6 +60,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	float GroggyDamage = 0.f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Groggy")
+	float MaxGroggyGauge = 100.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	float FinalDamageIncrease = 0.f;

@@ -14,6 +14,7 @@ class UGameplayEffect;
 class UMaterialInterface;
 class USkeletalMesh;
 class UBehaviorTree;
+class UGameplayAbility;
 
 /**
  * 구형 보스 페이즈 전환 데이터.
@@ -106,9 +107,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS")
 	TArray<TSubclassOf<UGameplayEffect>> EnemyStartupEffects;
 	
+	// 그로기 게이지가 최대치에 도달했을 때 Event_Boss_Groggy로 실행될 보스 전용 그로기 Ability
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Ability")
+	TSubclassOf<UGameplayAbility> GroggyAbilityClass;
+	
 	// 이 보스가 사용할 AI Behavior Tree
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "BossCharacter|AI")
 	TObjectPtr<UBehaviorTree> BehaviorTree = nullptr;
+	
 
 	// 구형 페이즈 전환 데이터.
 	// 새 DA 기반 보스에서는 사용하지 않는다.

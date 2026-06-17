@@ -3,6 +3,8 @@
 #include "Character/Enemy/Boss/BossCharacterBase.h"
 
 #include "AbilitySystemComponent.h"
+#include "Abilities/GameplayAbility.h"
+#include "AI/Controller/BossAIController.h"
 #include "Character/Enemy/Boss/Data/BossCharacterClassData.h"
 #include "Character/Enemy/Data/BossSkillSetData.h"
 #include "Character/Enemy/Data/EnemySkillData.h"
@@ -12,7 +14,6 @@
 #include "GAS/Attributes/DG_BossAttributeSet.h"
 #include "GAS/Attributes/DG_EnemyAttributeSet.h"
 #include "GameplayAbilitySpec.h"
-#include "AI/Controller/BossAIController.h"
 
 namespace
 {
@@ -46,6 +47,32 @@ namespace
 
 		return false;
 	}
+
+	bool HasGrantedBossAbilityClass(
+		const UAbilitySystemComponent* ASC,
+		const TSubclassOf<UGameplayAbility> AbilityClass
+	)
+	{
+		if (!ASC || !AbilityClass)
+		{
+			return false;
+		}
+
+		for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+		{
+			if (!Spec.Ability)
+			{
+				continue;
+			}
+
+			if (Spec.Ability->GetClass() == AbilityClass)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
 }
 
 ABossCharacterBase::ABossCharacterBase()
@@ -54,7 +81,6 @@ ABossCharacterBase::ABossCharacterBase()
 	
 	AIControllerClass = ABossAIController::StaticClass();
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
-
 
 	if (MinimapMarkerComponent)
 	{
@@ -302,29 +328,126 @@ void ABossCharacterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
 
 void ABossCharacterBase::OnGroggyGaugeChanged(const FOnAttributeChangeData& Data)
 {
-	if (!HasAuthority() || !AbilitySystemComponent || !EnemyAttributeSet)
+	if (!HasAuthority())
 	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossGroggy] GaugeChanged ignored. NoAuthority Owner=%s Old=%.2f New=%.2f"),
+			*GetName(),
+			Data.OldValue,
+			Data.NewValue
+		);
 		return;
 	}
 
-	if (AbilitySystemComponent->HasMatchingGameplayTag(DGGameplayTags::State_Boss_Groggy) || IsDead())
+	if (!AbilitySystemComponent)
 	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossGroggy] GaugeChanged failed. ASC is null Owner=%s Old=%.2f New=%.2f"),
+			*GetName(),
+			Data.OldValue,
+			Data.NewValue
+		);
+		return;
+	}
+
+	if (!EnemyAttributeSet)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossGroggy] GaugeChanged failed. EnemyAttributeSet is null Owner=%s Old=%.2f New=%.2f"),
+			*GetName(),
+			Data.OldValue,
+			Data.NewValue
+		);
 		return;
 	}
 
 	const float MaxGroggyGauge = EnemyAttributeSet->GetMaxGroggyGauge();
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[BossGroggy] GaugeChanged Owner=%s Old=%.2f New=%.2f Max=%.2f HasGroggyTag=%d IsDead=%d"),
+		*GetName(),
+		Data.OldValue,
+		Data.NewValue,
+		MaxGroggyGauge,
+		AbilitySystemComponent->HasMatchingGameplayTag(DGGameplayTags::State_Boss_Groggy) ? 1 : 0,
+		IsDead() ? 1 : 0
+	);
+
+	if (AbilitySystemComponent->HasMatchingGameplayTag(DGGameplayTags::State_Boss_Groggy))
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossGroggy] Event skipped. Already groggy Owner=%s"),
+			*GetName()
+		);
+		return;
+	}
+
+	if (IsDead())
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossGroggy] Event skipped. Boss is dead Owner=%s"),
+			*GetName()
+		);
+		return;
+	}
+
 	if (MaxGroggyGauge <= 0.f)
 	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossGroggy] Event skipped. Invalid MaxGroggyGauge Owner=%s Max=%.2f"),
+			*GetName(),
+			MaxGroggyGauge
+		);
 		return;
 	}
 
 	if (Data.NewValue < MaxGroggyGauge)
 	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[BossGroggy] Event skipped. Gauge not full Owner=%s New=%.2f Max=%.2f"),
+			*GetName(),
+			Data.NewValue,
+			MaxGroggyGauge
+		);
 		return;
 	}
 
 	FGameplayEventData Payload;
-	AbilitySystemComponent->HandleGameplayEvent(DGGameplayTags::Event_Boss_Groggy, &Payload);
+	Payload.EventTag = DGGameplayTags::Event_Boss_Groggy;
+	Payload.Instigator = this;
+	Payload.Target = this;
+
+	const int32 TriggeredAbilities = AbilitySystemComponent->HandleGameplayEvent(
+		DGGameplayTags::Event_Boss_Groggy,
+		&Payload
+	);
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[BossGroggy] Event Sent Owner=%s Tag=%s TriggeredAbilities=%d New=%.2f Max=%.2f"),
+		*GetName(),
+		*DGGameplayTags::Event_Boss_Groggy.GetTag().ToString(),
+		TriggeredAbilities,
+		Data.NewValue,
+		MaxGroggyGauge
+	);
 }
 
 void ABossCharacterBase::UpdateHealthPhaseTags(float HealthRatio)
@@ -379,6 +502,21 @@ void ABossCharacterBase::GrantDefaultAbilities()
 	if (!HasAuthority() || !AbilitySystemComponent || !BossClassData)
 	{
 		return;
+	}
+	
+	if (BossClassData->GroggyAbilityClass)
+	{
+		if (!HasGrantedBossAbilityClass(AbilitySystemComponent, BossClassData->GroggyAbilityClass))
+		{
+			FGameplayAbilitySpec GroggyAbilitySpec(
+				BossClassData->GroggyAbilityClass,
+				1,
+				INDEX_NONE,
+				BossClassData
+			);
+
+			AbilitySystemComponent->GiveAbility(GroggyAbilitySpec);
+		}
 	}
 
 	for (const FBossPhaseData& PhaseData : BossClassData->PhaseDataList)

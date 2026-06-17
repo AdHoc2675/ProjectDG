@@ -358,9 +358,22 @@ void AEnemyCharacterBase::ApplyAttributeRowToAttributeSet(const FDT_Attribute& A
 	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetCriticalRateAttribute(), AttributeRow.CriticalRate);
 	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetCriticalDamageAttribute(), AttributeRow.CriticalDamage);
 	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetMoveSpeedAttribute(), AttributeRow.MoveSpeed);
+	
 	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetAttackSpeedAttribute(), AttributeRow.AttackSpeed);
 	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetGroggyDamageAttribute(), AttributeRow.GroggyDamage);
+
+	AbilitySystemComponent->SetNumericAttributeBase(
+		UDG_EnemyAttributeSet::GetMaxGroggyGaugeAttribute(),
+		FMath::Max(AttributeRow.MaxGroggyGauge, 0.f)
+	);
+
+	AbilitySystemComponent->SetNumericAttributeBase(
+		UDG_EnemyAttributeSet::GetGroggyGaugeAttribute(),
+		0.f
+	);
+
 	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetFinalDamageIncreaseAttribute(), AttributeRow.FinalDamageIncrease);
+	
 	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetDamageReductionAttribute(), AttributeRow.DamageReduction);
 	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetCooldownReductionAttribute(), AttributeRow.CooldownReduction);
 	AbilitySystemComponent->SetNumericAttributeBase(UDG_AttributeSet::GetMentalRecoveryIncreaseAttribute(), AttributeRow.MentalRecoveryIncrease);
