@@ -562,7 +562,7 @@ void UDGOverlayWidgetController::OnPlayerMaxExpChangedCallback(int32 NewMaxExp)
 	OnPlayerMaxExpChanged.Broadcast(NewMaxExp);
 }
 
-void UDGOverlayWidgetController::OnItemLootedCallback(UDGItemDefinition* ItemDef, int32 Quantity)
+void UDGOverlayWidgetController::OnItemLootedCallback(UDGItemDefinition* ItemDef, int32 Quantity, EDGItemGrade Grade)
 {
-	OnItemLooted.Broadcast(ItemDef, Quantity);
+	OnItemLooted.Broadcast(ItemDef, Quantity, Grade);
 }

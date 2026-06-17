@@ -5,6 +5,7 @@
 #include "UI/WidgetController/DGOverlayWidgetController.h"
 #include "UI/Widget/Toggleable/DGLootItemInfoWidget.h"
 #include "Components/VerticalBox.h"
+#include "Components/VerticalBoxSlot.h"
 
 void UDGLootItemInfoListWidget::SetWidgetController(UObject* InWidgetController)
 {
@@ -23,7 +24,7 @@ void UDGLootItemInfoListWidget::BindToController(UDGOverlayWidgetController* Con
 	}
 }
 
-void UDGLootItemInfoListWidget::OnItemLootedCallback(UDGItemDefinition* ItemDef, int32 Quantity)
+void UDGLootItemInfoListWidget::OnItemLootedCallback(UDGItemDefinition* ItemDef, int32 Quantity, EDGItemGrade Grade)
 {
 	if (!ItemDef || !LootContainer || !LootItemWidgetClass) return;
 
@@ -32,10 +33,14 @@ void UDGLootItemInfoListWidget::OnItemLootedCallback(UDGItemDefinition* ItemDef,
 	if (NewLootWidget)
 	{
 		// 데이터 세팅
-		NewLootWidget->InitLootItem(ItemDef, Quantity);
+		NewLootWidget->InitLootItem(ItemDef, Quantity, Grade);
 
-		// 버티컬 박스에 자식으로 추가
-		LootContainer->AddChildToVerticalBox(NewLootWidget);
+		// 버티컬 박스에 자식으로 추가하고 생성된 슬롯의 패딩 조절
+		if (UVerticalBoxSlot* BoxSlot = LootContainer->AddChildToVerticalBox(NewLootWidget))
+		{
+			// Left, Top, Right, Bottom 순서
+			BoxSlot->SetPadding(FMargin(0.f, 0.f, 0.f, 0.f));
+		}
 	}
 }
 
