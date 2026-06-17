@@ -24,7 +24,7 @@ public:
 protected:
 	// 아이템 획득 이벤트 수신부
 	UFUNCTION()
-	void OnItemLootedCallback(class UDGItemDefinition* ItemDef, int32 Quantity);
+	void OnItemLootedCallback(class UDGItemDefinition* ItemDef, int32 Quantity, EDGItemGrade Grade);
 
 	// 개별 획득 UI를 추가할 부모 컨테이너
 	UPROPERTY(meta = (BindWidget))

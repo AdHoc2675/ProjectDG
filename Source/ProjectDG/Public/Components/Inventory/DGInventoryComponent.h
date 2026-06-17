@@ -8,7 +8,7 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEquipmentChanged, EDGEquipmentType, SlotType, class UDGItemDefinition*, EquippedItemDef);
 
 // 아이템 습득 시 UI(오버레이 등)에 알리기 위한 델리게이트
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemLootedSignature, class UDGItemDefinition*, ItemDef, int32, Quantity);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnItemLootedSignature, class UDGItemDefinition*, ItemDef, int32, Quantity, EDGItemGrade, Grade);
 
 class UDGItemInstance;
 class UDGItemDefinition;

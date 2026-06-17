@@ -56,7 +56,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStatMaxExpChangedSignature,
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemCooldownSignature, float, CooldownDuration);
 
 // HUD로 획득한 아이템 정보를 전달하기 위한 델리게이트
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnOverlayItemLootedSignature, class UDGItemDefinition*, ItemDef, int32, Quantity);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnOverlayItemLootedSignature, class UDGItemDefinition*, ItemDef, int32, Quantity, EDGItemGrade, Grade);
 
 
 UCLASS()
@@ -242,7 +242,7 @@ protected:
 	void OnPlayerMaxExpChangedCallback(int32 NewMaxExp);
 
 	UFUNCTION()
-	void OnItemLootedCallback(class UDGItemDefinition* ItemDef, int32 Quantity);
+	void OnItemLootedCallback(class UDGItemDefinition* ItemDef, int32 Quantity, EDGItemGrade Grade);
 
 #pragma region Skill Info
 };

@@ -180,6 +180,11 @@ void APlayerCharacterBase::BeginPlay()
 				MeshComp->GetCollisionEnabled();
 	}
 	
+	if (CameraBoom)
+	{
+		TargetCameraArmLength = CameraBoom->TargetArmLength;
+	}
+	
 	// 월드시작시 ASC초기화
 	InitializePlayerAbilitySystem();
 
@@ -193,6 +198,16 @@ void APlayerCharacterBase::BeginPlay()
 void APlayerCharacterBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	
+	if (IsLocallyControlled() && CameraBoom)
+	{
+		CameraBoom->TargetArmLength = FMath::FInterpTo(
+				CameraBoom->TargetArmLength,
+				TargetCameraArmLength,
+				DeltaSeconds,
+				CameraZoomInterpSpeed
+		);
+	}
 }
 
 void APlayerCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -483,6 +498,16 @@ void APlayerCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	if (IA_Look)
 	{
 		EnhancedInputComponent->BindAction(IA_Look, ETriggerEvent::Triggered, this, &APlayerCharacterBase::LookAction);
+	}
+	
+	if (IA_CameraZoom)
+	{
+		EnhancedInputComponent->BindAction(
+				IA_CameraZoom,
+				ETriggerEvent::Triggered,
+				this,
+				&APlayerCharacterBase::CameraZoomAction
+		);
 	}
 
 	if (IA_Jump)
@@ -1129,6 +1154,26 @@ void APlayerCharacterBase::LookAction(const FInputActionValue& InputActionValue)
 
 	AddControllerPitchInput(-InputValue.Y);
 	AddControllerYawInput(InputValue.X);
+}
+
+void APlayerCharacterBase::CameraZoomAction(const FInputActionValue& InputActionValue)
+{
+	if (!CameraBoom)
+	{
+		return;
+	}
+
+	const float ZoomInput = InputActionValue.Get<float>();
+	if (FMath::IsNearlyZero(ZoomInput))
+	{
+		return;
+	}
+
+	TargetCameraArmLength = FMath::Clamp(
+			TargetCameraArmLength - ZoomInput * CameraZoomStep,
+			MinCameraArmLength,
+			MaxCameraArmLength
+	);
 }
 
 void APlayerCharacterBase::MoveAction(const FInputActionValue& InputActionValue)

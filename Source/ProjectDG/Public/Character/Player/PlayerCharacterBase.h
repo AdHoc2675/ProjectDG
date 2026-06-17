@@ -160,6 +160,24 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PlayerCharacterBase|Targeting")
 	TObjectPtr<ULockOnComponent> LockOnComponent;
+
+protected:
+	// 카메라 줌 설정
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|View|Zoom", meta = (ClampMin = "0.0"))
+	float MinCameraArmLength = 200.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|View|Zoom", meta = (ClampMin = "0.0"))
+	float MaxCameraArmLength = 1000.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|View|Zoom", meta = (ClampMin = "0.0"))
+	float CameraZoomStep = 100.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|View|Zoom", meta = (ClampMin = "0.0"))
+	float CameraZoomInterpSpeed = 12.f;
+
+	float TargetCameraArmLength = 450.f;
+
+	void CameraZoomAction(const FInputActionValue& InputActionValue);
 	
 public:
 	UFUNCTION(BlueprintCallable, Category = "PlayerCharacterBase|Targeting")
@@ -239,6 +257,9 @@ protected:
 	//회피 및 질주를 위한 Shift키 입력 (통일)
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
 	class UInputAction* IA_Shift;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
+	class UInputAction* IA_CameraZoom;
 
 	// 맵과 인벤토리를 열기 위한 InputAction
 	UPROPERTY(EditDefaultsOnly, Category = "PlayerCharacterBase|Input")
