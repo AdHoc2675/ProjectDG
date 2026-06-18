@@ -118,6 +118,9 @@ private:
 	// 새로 타겟팅 되었을 때 즉시 값을 반영하기 위한 플래그
 	bool bJustTargeted = false;
 
+	// 색상 업데이트 최적화를 위한 캐시
+	int32 CachedColorBarIndex = -1;
+
 	UPROPERTY(EditAnywhere, Category = "Settings")
 	float InterpSpeed = 10.0f;
 };
