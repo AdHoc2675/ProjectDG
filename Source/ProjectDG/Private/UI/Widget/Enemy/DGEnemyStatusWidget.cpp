@@ -5,6 +5,9 @@
 #include "UI/WidgetController/DGOverlayWidgetController.h"
 #include "Components/TextBlock.h"
 #include "Components/ProgressBar.h"
+#include "Components/Image.h"
+#include "Engine/Texture2D.h"
+#include "Styling/SlateTypes.h"
 #include "Core/DG_Debug.h"
 
 void UDGEnemyStatusWidget::BindToController(UDGOverlayWidgetController* Controller) {
@@ -28,10 +31,22 @@ void UDGEnemyStatusWidget::BindToController(UDGOverlayWidgetController* Controll
 
 }
 
-void UDGEnemyStatusWidget::InitEnemyStatus(const FString& InName, int32 InMaxBars)
+void UDGEnemyStatusWidget::InitEnemyStatus(const FString& InName, int32 InMaxBars, bool bIsBoss)
 {
 	SetEnemyName(InName);
 	MaxHealthBars = FMath::Max(1, InMaxBars);
+
+	if (HPBar_Background)
+	{
+		if (bIsBoss && BossBackgroundTexture)
+		{
+			HPBar_Background->SetBrushFromTexture(BossBackgroundTexture);
+		}
+		else if (!bIsBoss && NormalBackgroundTexture)
+		{
+			HPBar_Background->SetBrushFromTexture(NormalBackgroundTexture);
+		}
+	}
 
 	// 새로운 타겟이므로 애니메이션 없이 즉시 값을 세팅하기 위한 플래그
 	bJustTargeted = true;
@@ -95,6 +110,31 @@ void UDGEnemyStatusWidget::UpdateHealthUI() {
 	if (HealthProgressBar)
 	{
 		HealthProgressBar->SetPercent(BarPercent);
+
+		// 색상 갱신 로직
+		if (HealthBarColors.Num() > 0)
+		{
+			int32 ColorCount = HealthBarColors.Num();
+
+			// 현재 줄의 색상
+			int32 CurrentColorIndex = (CurrentBarIndex - 1) % ColorCount;
+			FLinearColor CurrentColor = HealthBarColors[CurrentColorIndex];
+
+			// 배경 줄의 색상
+			FLinearColor BackgroundColor = DefaultBackgroundColor;
+			if (CurrentBarIndex > 1)
+			{
+				int32 BgColorIndex = (CurrentBarIndex - 2 + ColorCount) % ColorCount;
+				BackgroundColor = HealthBarColors[BgColorIndex];
+			}
+
+			HealthProgressBar->SetFillColorAndOpacity(CurrentColor);
+			
+			// 배경색 변경
+			FProgressBarStyle NewStyle = HealthProgressBar->GetWidgetStyle();
+			NewStyle.BackgroundImage.TintColor = FSlateColor(BackgroundColor);
+			HealthProgressBar->SetWidgetStyle(NewStyle);
+		}
 	}
 }
 
