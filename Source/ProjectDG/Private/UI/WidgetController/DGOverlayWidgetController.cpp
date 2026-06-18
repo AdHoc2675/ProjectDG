@@ -13,6 +13,7 @@
 #include "Character/Player/Data/PlayerCharacterClassData.h"
 #include "Character/Player/Data/PlayerSkillData.h"
 #include "Character/Enemy/EnemyCharacterBase.h"
+#include "Character/Enemy/Boss/BossCharacterBase.h"
 #include "Core/DG_Debug.h"
 #include "Components/Inventory/DGInventoryComponent.h"
 #include "GameFramework/Character.h"
@@ -310,7 +311,12 @@ void UDGOverlayWidgetController::SetEnemyTarget(UAbilitySystemComponent* InEnemy
 	float CurrentMaxHealth = CurrentEnemyAS->GetMaxHealth();
 	int32 CalculatedMaxBars = 1;
 
-	OnEnemyTargetSet.Broadcast(EnemyName, CalculatedMaxBars);
+	bool bIsBoss = false;
+	if (CurrentEnemyASC && CurrentEnemyASC->GetAvatarActor())
+	{
+		bIsBoss = CurrentEnemyASC->GetAvatarActor()->IsA(ABossCharacterBase::StaticClass());
+	}
+	OnEnemyTargetSet.Broadcast(EnemyName, CalculatedMaxBars, bIsBoss);
 
 	// MaxHealth에 따라 UI에서 보여줄 체력바 줄 수 계산 (예시 로직, 필요에 따라 조정)
 	if (CurrentMaxHealth > 0.0f)
@@ -319,7 +325,7 @@ void UDGOverlayWidgetController::SetEnemyTarget(UAbilitySystemComponent* InEnemy
 	}
 
 	// 타겟 설정 방송 (이름과 계산된 최대 줄 수)
-	OnEnemyTargetSet.Broadcast(EnemyName, CalculatedMaxBars);
+	OnEnemyTargetSet.Broadcast(EnemyName, CalculatedMaxBars, bIsBoss);
 
 	// 즉시 초기값 방송하여 UI를 띄움
 	OnEnemyHealthChanged.Broadcast(CurrentEnemyAS->GetHealth(), CurrentEnemyAS->GetMaxHealth());

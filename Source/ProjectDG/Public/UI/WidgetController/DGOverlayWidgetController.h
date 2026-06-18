@@ -20,7 +20,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxMentalChangedSignature, float,
 // 적 정보 갱신 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyHealthChangedSignature, float, CurrentHealth, float, MaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyGroggyChangedSignature, float, CurrentGroggy, float, MaxGroggy);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyTargetSetSignature, const FString&, EnemyName, int32, MaxHealthBars);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnEnemyTargetSetSignature, const FString&, EnemyName, int32, MaxHealthBars, bool, bIsBoss);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyTargetClearedSignature);
 
 // 미니맵 마커 전방 선언

@@ -5,6 +5,9 @@
 #include "UI/WidgetController/DGOverlayWidgetController.h"
 #include "Components/TextBlock.h"
 #include "Components/ProgressBar.h"
+#include "Components/Image.h"
+#include "Engine/Texture2D.h"
+#include "Styling/SlateTypes.h"
 #include "Core/DG_Debug.h"
 
 void UDGEnemyStatusWidget::BindToController(UDGOverlayWidgetController* Controller) {
@@ -28,13 +31,26 @@ void UDGEnemyStatusWidget::BindToController(UDGOverlayWidgetController* Controll
 
 }
 
-void UDGEnemyStatusWidget::InitEnemyStatus(const FString& InName, int32 InMaxBars)
+void UDGEnemyStatusWidget::InitEnemyStatus(const FString& InName, int32 InMaxBars, bool bIsBoss)
 {
 	SetEnemyName(InName);
 	MaxHealthBars = FMath::Max(1, InMaxBars);
 
+	if (HPBar_Background)
+	{
+		if (bIsBoss && BossBackgroundTexture)
+		{
+			HPBar_Background->SetBrushFromTexture(BossBackgroundTexture);
+		}
+		else if (!bIsBoss && NormalBackgroundTexture)
+		{
+			HPBar_Background->SetBrushFromTexture(NormalBackgroundTexture);
+		}
+	}
+
 	// 새로운 타겟이므로 애니메이션 없이 즉시 값을 세팅하기 위한 플래그
 	bJustTargeted = true;
+	CachedColorBarIndex = -1; // 타겟이 바뀌면 색상도 다시 계산하도록 초기화
 
 	// 초기 설정 후 표시
 	ShowEnemyStatus();
@@ -43,6 +59,17 @@ void UDGEnemyStatusWidget::InitEnemyStatus(const FString& InName, int32 InMaxBar
 void UDGEnemyStatusWidget::UpdateHealth(float InCurrentHealth, float MaxHealth) {
 	TargetHealth = InCurrentHealth;
 	CurrentMaxHealth = MaxHealth;
+
+	// 리플리케이션 지연으로 인해 처음에 MaxHealth가 0이었다가 나중에 들어오는 경우를 대비해 체력 줄 수 동적 갱신
+	if (CurrentMaxHealth > 0.0f)
+	{
+		int32 ExpectedBars = FMath::Max(1, FMath::FloorToInt(CurrentMaxHealth / 1000.0f));
+		if (MaxHealthBars != ExpectedBars)
+		{
+			MaxHealthBars = ExpectedBars;
+			CachedColorBarIndex = -1; // 줄 수가 바뀌었으므로 색상 다시 계산
+		}
+	}
 
 	if (bJustTargeted)
 	{
@@ -95,6 +122,45 @@ void UDGEnemyStatusWidget::UpdateHealthUI() {
 	if (HealthProgressBar)
 	{
 		HealthProgressBar->SetPercent(BarPercent);
+
+		// 색상 갱신 로직
+		if (HealthBarColors.Num() > 0)
+		{
+			int32 ColorCount = HealthBarColors.Num();
+
+			// 맨 윗줄부터 0번째 인덱스를 쓰기 위해 현재 줄이 위에서부터 몇 번째인지 계산
+			int32 DepthFromTop = MaxHealthBars - CurrentBarIndex;
+
+			// 현재 줄의 색상
+			int32 CurrentColorIndex = DepthFromTop % ColorCount;
+			FLinearColor CurrentColor = HealthBarColors[CurrentColorIndex];
+
+			// 배경 줄의 색상 (다음 줄 색상)
+			FLinearColor BackgroundColor = DefaultBackgroundColor;
+			if (CurrentBarIndex > 1)
+			{
+				int32 BgColorIndex = (DepthFromTop + 1) % ColorCount;
+				BackgroundColor = HealthBarColors[BgColorIndex];
+			}
+
+			// WidgetStyle 갱신은 무거우므로 바 인덱스가 바뀔 때만 한 번 수행
+			if (CachedColorBarIndex != CurrentBarIndex)
+			{
+				CachedColorBarIndex = CurrentBarIndex;
+			
+			FProgressBarStyle NewStyle = HealthProgressBar->GetWidgetStyle();
+			NewStyle.BackgroundImage.TintColor = FSlateColor(BackgroundColor);
+				
+				// UMG 브러시 설정에 따라 SetFillColorAndOpacity가 안 먹히는 현상이 있으므로
+				// 직접 스타일 객체의 FillImage에 색상을 씌워줍니다.
+				NewStyle.FillImage.TintColor = FSlateColor(CurrentColor);
+				
+			HealthProgressBar->SetWidgetStyle(NewStyle);
+		}
+			
+			// FillImage.TintColor가 제대로 렌더링되도록 겉의 ColorAndOpacity는 하얀색으로 덮어씁니다.
+			HealthProgressBar->SetFillColorAndOpacity(FLinearColor::White);
+		}
 	}
 }
 

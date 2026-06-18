@@ -8,6 +8,8 @@
 
 class UProgressBar;
 class UTextBlock;
+class UImage;
+class UTexture2D;
 
 /**
  * 적 몬스터의 상태 및 정보를 표시하는 UI 위젯
@@ -25,7 +27,7 @@ public:
 	// 적 등장 또는 타겟팅 시 기본 정보를 초기화하는 함수
 	// @param InMaxBars: 이 적이 가진 총 체력줄 개수 (일반 몬스터는 1, 보스는 25, 100 등)
 	UFUNCTION(BlueprintCallable, Category = "Enemy Status")
-	void InitEnemyStatus(const FString& InName, int32 InMaxBars = 1);
+	void InitEnemyStatus(const FString& InName, int32 InMaxBars = 1, bool bIsBoss = false);
 
 	// 위젯 데이터 업데이트
 	// 내부에서 다중 체력바 비율 및 체력 퍼센트를 계산하여 UI를 업데이트
@@ -74,6 +76,26 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UProgressBar> GroggyProgressBar;
 
+	// 보스 여부에 따라 변경할 배경 이미지
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> HPBar_Background;
+
+	// 일반 몬스터용 배경 텍스처
+	UPROPERTY(EditDefaultsOnly, Category = "Settings|Background")
+	TObjectPtr<UTexture2D> NormalBackgroundTexture;
+
+	// 보스 몬스터용 배경 텍스처
+	UPROPERTY(EditDefaultsOnly, Category = "Settings|Background")
+	TObjectPtr<UTexture2D> BossBackgroundTexture;
+
+	// 체력줄 겹침 표시를 위한 색상 배열 (예: [노랑, 주황, 빨강])
+	UPROPERTY(EditDefaultsOnly, Category = "Settings|Health Colors")
+	TArray<FLinearColor> HealthBarColors;
+
+	// 마지막(1번째) 체력줄이 달았을 때 배경색
+	UPROPERTY(EditDefaultsOnly, Category = "Settings|Health Colors")
+	FLinearColor DefaultBackgroundColor = FLinearColor(0.05f, 0.05f, 0.05f, 1.0f);
+
 private:
 	FTimerHandle HideTimerHandle;
 
@@ -95,6 +117,9 @@ private:
 	
 	// 새로 타겟팅 되었을 때 즉시 값을 반영하기 위한 플래그
 	bool bJustTargeted = false;
+
+	// 색상 업데이트 최적화를 위한 캐시
+	int32 CachedColorBarIndex = -1;
 
 	UPROPERTY(EditAnywhere, Category = "Settings")
 	float InterpSpeed = 10.0f;
