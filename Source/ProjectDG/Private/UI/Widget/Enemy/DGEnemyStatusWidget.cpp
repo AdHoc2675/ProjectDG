@@ -143,12 +143,23 @@ void UDGEnemyStatusWidget::UpdateHealthUI() {
 				BackgroundColor = HealthBarColors[BgColorIndex];
 			}
 
-			// 기존에 작동했던 순서와 방법 그대로 복구
-			HealthProgressBar->SetFillColorAndOpacity(CurrentColor);
+			// WidgetStyle 갱신은 무거우므로 바 인덱스가 바뀔 때만 한 번 수행
+			if (CachedColorBarIndex != CurrentBarIndex)
+			{
+				CachedColorBarIndex = CurrentBarIndex;
 			
 			FProgressBarStyle NewStyle = HealthProgressBar->GetWidgetStyle();
 			NewStyle.BackgroundImage.TintColor = FSlateColor(BackgroundColor);
+				
+				// UMG 브러시 설정에 따라 SetFillColorAndOpacity가 안 먹히는 현상이 있으므로
+				// 직접 스타일 객체의 FillImage에 색상을 씌워줍니다.
+				NewStyle.FillImage.TintColor = FSlateColor(CurrentColor);
+				
 			HealthProgressBar->SetWidgetStyle(NewStyle);
+		}
+			
+			// FillImage.TintColor가 제대로 렌더링되도록 겉의 ColorAndOpacity는 하얀색으로 덮어씁니다.
+			HealthProgressBar->SetFillColorAndOpacity(FLinearColor::White);
 		}
 	}
 }
