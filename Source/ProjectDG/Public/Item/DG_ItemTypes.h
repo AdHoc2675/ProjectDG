@@ -42,7 +42,7 @@ enum class EDGMaterialType : uint8
 
 
 /**
- * 1. DT_ItemGrade : 장비 등급, 색상, 보조옵션 개수
+ * 1. DT_ItemGrade : 장비 등급, 색상, 보조옵션 개수.
  */
 USTRUCT(BlueprintType)
 struct FDGItemGradeTableRow : public FTableRowBase
