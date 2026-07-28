@@ -1,10 +1,10 @@
-# 🎮 Project DG (Project Dragon Gate)
+# 🎮 Project DG
 
 Project DG는 **Gameplay Ability System (GAS)**을 기반으로 설계된 **3인칭 오픈월드 멀티플레이어 ARPG** 개발용 언리얼 엔진 5 프로젝트입니다. 최대 4인 협동(Co-op) 플레이를 핵심 가치로 삼고 있으며, 다양한 직업군 간의 파티 시너지 전투 및 보스 공략, 데이터 주도형 장비 제작/성장 시스템을 제공합니다.
 
 ---
 
-## 🛠️ 핵심 기술 스택 및 특징
+## 핵심 기술 스택 및 특징
 
 1. **GAS (Gameplay Ability System) 연동**:
    - 캐릭터의 스킬, 콤보 공격, 버프/디버프 및 피해 판정을 모두 GAS 구조 안에서 완전한 멀티플레이어 예측(Prediction)과 동기화(Replication) 하에 처리합니다.
@@ -19,7 +19,7 @@ Project DG는 **Gameplay Ability System (GAS)**을 기반으로 설계된 **3인
 
 ---
 
-## 📁 주요 디렉터리 및 코드 안내
+## 주요 디렉터리 및 코드 안내
 
 ### 1. [GAS (Gameplay Ability System)](Source/ProjectDG/Public/GAS)
 전투 및 특수 스킬 시스템을 정의하는 핵심 폴더입니다.
@@ -48,20 +48,10 @@ Project DG는 **Gameplay Ability System (GAS)**을 기반으로 설계된 **3인
 
 ---
 
-## 🛠️ 기획서 & 개발 문서
+## 기획서 & 개발 문서
 프로젝트의 세부 수치 설계 및 스펙은 `Readme/` 디렉터리에 기획서 문서로 정리되어 있습니다.
-* 📄 [DG_시스템_기획서](Readme/ProjectDG_시스템_기획서.md): GAS 연동 로직, 클래스별 스탯 스케일링, 인벤토리 MVC 아키텍처.
-* 📄 [DG_아이템_기획서](Readme/DG_아이템_기획서.md): 등급별 색상, 주/부스탯 목록, 제작/강화(+4차)/재설정(Reroll & 메모리 기능) 시스템 데이터 및 테이블 설계서.
-* 📄 [필드몬스터 스폰 시스템](Readme/필드몬스터 스폰 시스템.md): 오브젝트 풀링 라이프사이클 복구 항목, 멀티캐스트 RPC 동기화 및 트러블슈팅 이력 가이드.
+* [DG_시스템_기획서](Readme/ProjectDG_시스템_기획서.md): GAS 연동 로직, 클래스별 스탯 스케일링, 인벤토리 MVC 아키텍처.
+* [DG_아이템_기획서](Readme/DG_아이템_기획서.md): 등급별 색상, 주/부스탯 목록, 제작/강화(+4차)/재설정(Reroll & 메모리 기능) 시스템 데이터 및 테이블 설계서.
+* [필드몬스터 스폰 시스템](Readme/필드몬스터 스폰 시스템.md): 오브젝트 풀링 라이프사이클 복구 항목, 멀티캐스트 RPC 동기화 및 트러블슈팅 이력 가이드.
 
----
 
-## 💡 시작하기 및 컴파일 방법
-
-1. **개발 환경**: 
-   - Unreal Engine 5.3+
-   - Visual Studio 2022 / JetBrains Rider
-2. **빌드 순서**:
-   - `ProjectDG.uproject` 파일 우클릭 후 **Generate Visual Studio project files** 클릭.
-   - `.sln` 파일을 개발 툴로 열어 **Development Editor** 구성으로 컴파일 진행.
-   - 에디터를 실행한 후 `Content/` 폴더 내의 각 데이터 테이블 에셋(`DT_ItemGrade`, `DT_EquipmentMainStatByLevel` 등)의 연결 상태를 확인합니다.
